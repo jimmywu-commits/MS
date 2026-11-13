@@ -1066,6 +1066,7 @@ html,body{height:100%;background:var(--bg);color:var(--ink);
   border-radius:var(--radius-sm);background:#fff;color:var(--ink);font-size:12.5px;font-weight:700;cursor:pointer;}
 #import-level select:hover{border-color:var(--teal);}
 #import-level select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-tint);}
+#import-level select:disabled{background:#e5e7eb;border-color:#cbd5e1;color:#6b7280;cursor:not-allowed;opacity:1;box-shadow:none;}
 #import-level .lv-hint{font-size:11px;color:var(--ink2);line-height:1.6;}
 #import-level .lv-hint b{color:var(--teal-dark);}
 /* UI-012 第二輪（2026-11-13）：活動頁資源左側欄說明文字精簡——只做 CSS 隱藏，DOM 與 JS 不動。
@@ -1901,7 +1902,7 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
           <!-- UI-012 第五輪（2026-11-13）：左側欄控制項靜態搬入右側欄（只搬移，id／class／事件不變）：活動等級、載入狀態、商品影子、顏色、直接預覽全部版位 -->
           <div id="import-level">
             <label for="import-level-select">活動等級</label><!-- UI-012 第三輪：原「等級」 -->
-            <select id="import-level-select" aria-describedby="import-level-hint"></select>
+            <select id="import-level-select" aria-describedby="import-level-hint" disabled aria-disabled="true" title="活動等級由工單決定，此處僅供查看"></select>
             <div class="lv-hint" id="import-level-hint"></div>
           </div>
           <div id="import-canvas-log" aria-live="polite"></div>
@@ -13807,6 +13808,7 @@ function applyExposureShadowBackgroundOnce(background) {
       var sourceBase = product.baseSrc || sourceMeta.baseSrc || product.src;
       var sourceRotate = Number(sourceMeta.rotate) || 0;
       var sourceShadowSignature = JSON.stringify(sourceMeta.groundShadow || null);
+      var sourceProductRect = sourceMeta.productRect ? JSON.parse(JSON.stringify(sourceMeta.productRect)) : null;
       var draft = Object.assign({}, product, {
         baseSrc: sourceBase,
         meta: Object.assign({}, sourceMeta, {
@@ -13833,7 +13835,9 @@ function applyExposureShadowBackgroundOnce(background) {
         product.meta.baseSrc = draft.meta && draft.meta.baseSrc;
         product.meta.groundShadow = draft.meta && draft.meta.groundShadow;
         product.meta.rotate = draft.meta && draft.meta.rotate;
-        product.meta.productRect = draft.meta && draft.meta.productRect;
+        /* 只換影子顏色：商品本體邊界也沿用換色前的值，
+           避免新一輪像素偵測的 1～2px 誤差被放大成畫布上的閃跳。 */
+        product.meta.productRect = sourceProductRect;
         updateExposureProductImageInPlace(win, product);
         changed++;
       })['catch'](function (err) {
@@ -27326,6 +27330,12 @@ function applyCanvasZoom(el) {
   var importHint = document.getElementById('import-level-hint');
   var uploadHint = document.getElementById('upload-level-hint');
   if (!sel) return;
+  /* 活動頁資源右側只顯示工單帶入的活動等級，不允許在此處自行切換。 */
+  if (importSel) {
+    importSel.disabled = true;
+    importSel.setAttribute('aria-disabled', 'true');
+    importSel.title = '活動等級由工單決定，此處僅供查看';
+  }
   function paintImportLevelHints() {
     var html = levelResourceSummaryHtml(currentLevel());
     if (importHint) importHint.innerHTML = html;
@@ -27436,7 +27446,7 @@ function applyCanvasZoom(el) {
 
   sel.addEventListener('change', function () { applyLevelId(sel.value, false); });
   if (bottomSel) bottomSel.addEventListener('change', function () { applyLevelId(bottomSel.value, false); });
-  if (importSel) importSel.addEventListener('change', function () { applyLevelId(importSel.value, false); });
+  /* importSel 為唯讀顯示；程式仍由 syncLevelSelects() 更新它的 value。 */
   if (uploadSel) uploadSel.addEventListener('change', function () { applyLevelId(uploadSel.value, false); });
 
   /* 曝光資源那頁（iframe）改了等級 → 這邊跟著改 */

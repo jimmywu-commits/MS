@@ -972,6 +972,7 @@
         var sourceBase = product.baseSrc || meta.baseSrc || product.src;
         var sourceRotate = Number(meta.rotate) || 0;
         var sourceSignature = JSON.stringify(existing || null);
+        var sourceProductRect = meta.productRect ? JSON.parse(JSON.stringify(meta.productRect)) : null;
         var draft = Object.assign({}, product, {
           baseSrc: sourceBase,
           meta: Object.assign({}, meta, {
@@ -990,6 +991,7 @@
           product.baseSrc = draft.baseSrc;
           product.ratio = draft.ratio;
           product.meta = Object.assign({}, liveMeta, draft.meta || {});
+          product.meta.productRect = sourceProductRect;
           sendBodaShadowProductInPlace(product);
           changed++;
         })['catch'](function () { skipped++; });
