@@ -12646,6 +12646,10 @@ function parseWorkbookOverviewByLabels(wb) {
     for (var hr = anchorRow + 1; hr <= Math.min(maxRow, anchorRow + 40) && !contentFrom; hr++) {
       var ctaCol = 0, checkCol = 0, contentCol = 0;
       for (var hc = 1; hc <= maxCol; hc++) {
+        /* ExcelJS 讀取合併儲存格時，H14:J14 的 I14／J14 也會回傳主格
+           H14 的「內容」。只認合併主格，否則 contentCol 會被推到 J 欄，
+           導致只填在 H 欄、未合併的主標被誤判為空白。 */
+        if (isMergedSlave(cellAt(hr, hc))) continue;
         var ht0 = norm(text(hr, hc));
         if (ht0 === '內容') contentCol = hc;
         else if (/^CTA$/i.test(ht0)) ctaCol = hc;
