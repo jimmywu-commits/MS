@@ -1,0 +1,2860 @@
+/* ════════════════════════════════════════
+   BN Schema Renderer — 純資料驅動的版位渲染引擎
+   ────────────────────────────────────────
+   版位不再自己寫 render() 邏輯，只需要提供一份 block.json 描述：
+     - layers：不會重複的圖層（背景、漸層…）
+     - repeats：會重複的一組圖層（例如「每品」×3），
+       只需要給一份「樣板座標」+ 每個重複實例的位移基準點，
+       這支引擎會自動算出每個實例的實際座標。
+
+   這樣子以後新增版位、修改座標，都只是改數字（JSON），
+   不會再因為手寫 render() 忘記加 position:absolute、
+   z-index 排錯、transform-origin 亂加這類人為疏失而跑版。
+
+   ── JSON 結構 ──
+   {
+     "id": "msbn3p", "name": "三品比對 MSBN_3P", "width": 1200, "height": 400,
+     "layers": [                       // 不重複的圖層
+       { "type":"image", "left":0,"top":0,"width":1200,"height":400,"zIndex":1,
+         "backgroundColor":"#4f96c6", "field":"bgImage", "fieldLabel":"整體底圖" }
+     ],
+     "repeats": [
+       {
+         "templateBaseLeft": 804,      // 這份樣板座標是照哪一個實例量的
+         "instances": [
+           { "key":"p1", "baseLeft":30,  "label":"左" },
+           { "key":"p2", "baseLeft":418, "label":"中" },
+           { "key":"p3", "baseLeft":804, "label":"右" }
+         ],
+         "layers": [
+           { "type":"text", "left":892.222,"top":306.2,"zIndex":360,
+             "fontSize":29,"color":"rgb(255,255,255)","textAlign":"center",
+             "field":"Name","fieldLabel":"品名","default":"品名一排7字內" }
+         ]
+       }
+     ]
+   }
+
+   圖層 type：
+     "image"  → 有 field(圖片網址) 時顯示圖片鋪滿；沒有時顯示 backgroundColor+opacity 佔位色
+     "rect"   → 純色矩形（可加 clipPath 做三角形等形狀）
+     "circle" → 圓形（border-radius:50%），可用 field 做顏色覆寫（globalField:true 代表三個實例共用一個欄位）
+     "text"   → 文字，field 對應到可編輯內容
+
+   renderInstance 的 opts（都可以不給）：
+     opts.editable          文字圖層加上 contenteditable，可以直接在畫布上點著改
+     opts.theme             全站統一的顏色覆寫，改一次所有版位一起變（匯入工單頁面在用）
+     opts.imageAbsorb       false 時保留所有圖片預設範圍（維修／全部預覽模式使用）
+     opts.forceImageAbsorb  true 時，即使版型原本關閉吸收，也在匯入編輯模式套用：
+                            沒有贈品／代言人／簽名圖時，空間由曝品圖使用。
+════════════════════════════════════════ */
+(function (global) {
+
+  /* ════════════════════════════════════════
+     可調參數設定檔（render-config.json）
+     ────────────────────────────────────────
+     這些是「針對PS CSS額外做的調整」的可調數字，跟每個版位自己的座標資料(block.json)
+     分開放。使用者可以直接編輯 render-config.json 微調這些值，不用碰程式碼。
+     這裡先給一組預設值，setConfig() 載入實際檔案內容後會覆蓋掉。
+  ════════════════════════════════════════ */
+  var CONFIG = {
+    textVerticalCorrection: { promo: 0, name: 0, warn: 0, badgeText: 0, ctaText: -3, logoText: 0, twoLineText: 4 },
+    letterSpacing: { promo: 0, name: 0, warn: 0, badgeText: 0, ctaText: 0, logoText: 0 },
+    /* 7 字圓標固定最多兩行：四字那一行保留足夠寬度，不讓瀏覽器再折出第三行。 */
+    badge: { maxWidth: 112, lineHeight: 53 },
+    /* 特定文字的行距覆寫（數字＝倍數，1 就是貼在一起）。
+       代言人／簽名小字本來是 1.667，兩行之間太開，這裡壓緊一點。 */
+    textLineHeight: { signNote: 1.15, endorserNote: 1.15 },
+    image: { logoInsetScalePercent: 70, productImageInsetScalePercent: 100 },
+    /* ctaBgCornerRadius：CTA 底色塊統一的圓角（不管原本是方角、圓角還是整顆圓形，
+       一律用這個值；框比圓角小的時候瀏覽器會自己等比例收斂，看起來就是圓形） */
+    cardStyle: { cardCornerRadius: 15, promoBarTopCornerRadius: 15, ctaBgCornerRadius: 35 }
+  };
+
+  function setConfig(cfg) {
+    if (!cfg) return;
+    Object.keys(cfg).forEach(function (k) {
+      if (CONFIG[k] && typeof CONFIG[k] === 'object' && !Array.isArray(CONFIG[k])) {
+        Object.assign(CONFIG[k], cfg[k]);
+      } else {
+        CONFIG[k] = cfg[k];
+      }
+    });
+  }
+
+  /* 讀取 render-config.js（用 <script> 標籤同步載入，寫在 window.BN_RENDER_CONFIG 上）。
+     這個檔案要在 core-engine.js / schema-renderer.js 之前用 <script src="render-config.js">
+     載入，才能保證這裡讀到的時候資料已經在了；如果沒放這個檔案，或忘記在 index.html
+     加載入標籤，就繼續用上面寫死的預設值，不影響其他功能。 */
+  if (window.BN_RENDER_CONFIG) setConfig(window.BN_RENDER_CONFIG);
+
+  /* 一次性注入字型宣告：所有版位統一用 ShopeeNotoSans (content)，
+     字型檔放在跟 index.html 同層的 fonts/ 資料夾底下，檔名如下三個：
+       fonts/ShopeeNotoSans(content)-Regular.ttf （400 Regular，CTA文字用）
+       fonts/ShopeeNotoSans(content)-Medium.ttf  （500 Medium，警語/圓標用）
+       fonts/ShopeeNotoSans(content)-Bold.ttf    （700 Bold，促標/品名用）
+     檔名要完全一致才抓得到；如果你實際拿到的字型檔名不同，把下面三個 url() 路徑改成實際檔名即可。 */
+  if (!document.getElementById('bn-fontface')) {
+    var fontStyle = document.createElement('style');
+    fontStyle.id = 'bn-fontface';
+    fontStyle.textContent =
+      '@font-face{font-family:"ShopeeNotoSans (content)";font-weight:400;font-style:normal;' +
+      'src:url("fonts/woff2/ShopeeNotoSans-400.woff2") format("woff2"),url("fonts/ShopeeNotoSans(content)-Regular.ttf") format("truetype");}' +
+      '@font-face{font-family:"ShopeeNotoSans (content)";font-weight:500;font-style:normal;' +
+      'src:url("fonts/woff2/ShopeeNotoSans-500.woff2") format("woff2"),url("fonts/ShopeeNotoSans(content)-Medium.ttf") format("truetype");}' +
+      '@font-face{font-family:"ShopeeNotoSans (content)";font-weight:700;font-style:normal;' +
+      'src:url("fonts/woff2/ShopeeNotoSans-700.woff2") format("woff2"),url("fonts/ShopeeNotoSans(content)-Bold.ttf") format("truetype");}';
+    document.head.appendChild(fontStyle);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* 把「逗號分隔的多張圖」欄位值拆成陣列。
+     dataURL（data:image/png;base64,xxxx）本身固定含有一個逗號，
+     不能直接用逗號切，切開後遇到 data: 開頭的片段，
+     要把緊接著的下一段（base64 內容）接回來，才是完整的一張圖。 */
+  /* 「1,000」這種千分位逗號（數字,三位數字且後面不再接數字）不是多圖分隔符，跟 index.html 的 splitImageList 同一套規則。 */
+  /* 效能：值常是好幾 MB 的 dataURL，不對整串跑正規表示式，只看切開後片段的頭尾字元。 */
+  function isDigitCode(code) { return code >= 48 && code <= 57; }
+  function startsWithThousandsGroup(s) {
+    return s.length >= 3 && isDigitCode(s.charCodeAt(0)) && isDigitCode(s.charCodeAt(1)) && isDigitCode(s.charCodeAt(2)) &&
+      !(s.length > 3 && isDigitCode(s.charCodeAt(3)));
+  }
+  function splitImageList(v) {
+    var s = String(v == null ? '' : v);
+    if (s.indexOf(',') === -1) { s = s.trim(); return s ? [s] : []; }
+    var raw = s.split(',');
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      var piece = raw[i];
+      var t = piece.trim();
+      if (!t) continue;
+      if (/^data:/i.test(t.slice(0, 5))) {
+        if (i + 1 < raw.length) { out.push(t + ',' + raw[i + 1].trim()); i++; }
+        else out.push(t);
+        continue;
+      }
+      while (i + 1 < raw.length && piece.length && isDigitCode(piece.charCodeAt(piece.length - 1)) &&
+             startsWithThousandsGroup(raw[i + 1])) {
+        piece = piece + ',' + raw[i + 1];
+        i++;
+      }
+      t = piece.trim();
+      if (t) out.push(t);
+    }
+    return out;
+  }
+  function px(n) { return n + 'px'; }
+
+  /* 只有「真的可以載入的圖片網址」才會畫成 <img>。
+     試算表的圖片欄位平常填的是檔名（例如 apple.png），還沒上傳對應的圖片素材時，
+     那串檔名當然抓不到檔案，瀏覽器就會畫出「破圖」的圖示（還會帶出滾輪縮放的
+     提示文字），看起來像壞掉。所以這裡只認 data: / http(s): / blob: 這三種
+     真的可以載入的來源，其他（純檔名、空白、還沒填）一律走下面的「尚未上傳圖片」佔位卡。 */
+  function isRenderableImageUrl(u) {
+    return /^(data:|https?:|blob:)/i.test(String(u == null ? '' : u).trim());
+  }
+  function hasRenderableImageValue(v) {
+    return splitImageList(v).some(isRenderableImageUrl);
+  }
+  /* 商品／贈品／人物／簽名的預設圖片框可以是分開的；在匯入工單與維修
+     編輯模式中，image-layout.js 會把它們視為同一個編號區域的聯集。
+     這些外層框不能各自 overflow:hidden，否則即使算出聯集邊界，圖片仍
+     會被原本的小框裁住，無法跨到相鄰的預設範圍。 */
+  function isSharedMovableImageField(fieldKey) {
+    return /^(.*?)(?:productImg|giftImg|endorserImg|signImg)[0-9]*$/i.test(String(fieldKey || ''));
+  }
+  function isContentImageField(fieldKey) {
+    return /^(?:productImg|giftImg|endorserImg)[0-9]*$/i.test(String(fieldKey || ''));
+  }
+  /* 空的圖片欄位要用淡色框提示可放圖；不同範圍依設計需求使用不同透明度。
+     這裡同時看中文欄位名與 field key，讓舊版位（例如 MSBN D 的「商品圖／情境圖」）
+     也能和新版位一樣顯示可編輯的範圍。實際圖片存在時不套用這個透明度。 */
+  function rangePlaceholderOpacityOf(layer) {
+    if (!layer || layer.type !== 'image') return null;
+    var label = String(layer.fieldLabel || '');
+    var field = String(layer.field || '');
+    if (/贈品範圍|贈品/.test(label) || /^giftImg\d*$/i.test(field) ||
+        /簽名範圍|簽名/.test(label) || /^signImg\d*$/i.test(field)) return 0.3;
+    if (/曝品範圍|商品範圍|商品圖|商品圖片|代言人範圍|代言人/.test(label) ||
+        /^(?:productImg|endorserImg)\d*$/i.test(field)) return 0.6;
+    return null;
+  }
+  /* 雙行文字「第二行有沒有內容」的唯一判斷：尾端換行與空白行都不算有第二行。
+     畫布的「+」按鈕顯示與點擊、刪除一行後的即時增減，都用這一支。 */
+  function hasSecondLineText(value) {
+    var text = String(value == null ? '' : value).replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+    var at = text.indexOf('\n');
+    return at >= 0 && text.slice(at + 1).trim() !== '';
+  }
+  /* 「+」加回第二行的按鈕標記。符號用 SVG 兩條線畫在 18px 的底色塊正中央，
+     不再用字型的 "+" 字形，避免字型上下基線不一致造成偏移。 */
+  function addLineButtonHtml(fieldKey) {
+    return '<span data-add-line-field="' + esc(fieldKey) + '" ' +
+      'style="position:absolute;top:0;right:0;width:18px;height:18px;' +
+      'display:flex;align-items:center;justify-content:center;' +
+      'cursor:pointer;pointer-events:auto;' +
+      'background:rgba(0,0,0,.45);border-radius:3px;z-index:2;user-select:none;" title="加回第二行">' +
+      '<svg width="10" height="10" viewBox="0 0 10 10" style="display:block;pointer-events:none;">' +
+      '<path d="M5 0.5V9.5M0.5 5H9.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>' +
+      '</svg></span>';
+  }
+  function isMsbnC15ProductBoundary(schemaId, fieldKey) {
+    return /^msbn_C_1_5$/i.test(String(schemaId || '')) && /^productImg$/i.test(String(fieldKey || ''));
+  }
+  function isMsbnB34ProductBoundary(schemaId, fieldKey) {
+    return /^msbn_B_3_4$/i.test(String(schemaId || '')) && /^productImg[0-9]*$/i.test(String(fieldKey || ''));
+  }
+  /* 曝品／贈品／代言人圖要在底層，但仍須位於卡片背景之上；促標、圓標、
+     CTA、品名與其他資訊則全部壓在它們上方。以每個 schema 的背景與資訊層
+     找出中間的安全 z-index，避免用固定數字破壞不同版位的原始座標。 */
+  function contentImageZIndexOf(schema) {
+    var layers = (schema && schema.layers || []).slice();
+    (schema && schema.repeats || []).forEach(function (repeat) {
+      layers = layers.concat(repeat.layers || []);
+    });
+    var maxBase = -Infinity;
+    var minInfo = Infinity;
+    layers.forEach(function (layer) {
+      if (!layer || layer.zIndex == null || layer.type === 'image' && isContentImageField(layer.field)) return;
+      var z = Number(layer.zIndex);
+      if (!isFinite(z)) return;
+      var role = themeRoleOf(layer, schema && schema.id);
+      var isBase = role === 'bg' || (role === 'cardBg' && layer.type === 'rect') ||
+        (layer.type === 'rect' && /^bgColor$/i.test(String(layer.field || '')));
+      if (isBase) maxBase = Math.max(maxBase, z);
+      else minInfo = Math.min(minInfo, z);
+    });
+    if (maxBase === -Infinity && minInfo === Infinity) return 1;
+    if (minInfo === Infinity) return maxBase + 1;
+    if (maxBase === -Infinity) return minInfo - 1;
+    /* CSS 的 z-index 只接受整數；寫成 1568.5 這種小數會被瀏覽器整個忽略，
+       圖片就掉到卡片底色下面看不見（MSBN D-2-1-2、D-1-1-1、D-1-1-2、B-1-1）。
+       取背景與資訊層中間的整數；兩者只差 1 時，放在背景正上方。 */
+    if (maxBase < minInfo) return Math.max(maxBase + 1, Math.floor((maxBase + minInfo) / 2));
+    return maxBase + 1;
+  }
+  /* MSBN B-1-1～B-1-4 的商品圖要留在白底圓角框內；
+     這些版位的底色矩形只是整張卡片背景，不能被當成商品圖可移動範圍。 */
+  function isMsbnB1WhiteProductBoundary(schemaId, fieldKey) {
+    return /^msbn_B_1_[1-4]$/i.test(String(schemaId || '')) &&
+      /^productImg$/i.test(String(fieldKey || ''));
+  }
+  function msbnB1WhiteProductClipPath(schemaId, layer) {
+    if (!isMsbnB1WhiteProductBoundary(schemaId, 'productImg')) return null;
+    var radius = layer && layer.borderRadius != null ? String(layer.borderRadius).trim() : '15px';
+    return 'inset(0 round ' + radius + ')';
+  }
+  /* LOGO 圖層的底色改由匯入頁寫進資料（見 isLogoPlateLayer），畫面上不再自己取樣。 */
+  function shouldSampleLogoBackground(layer, imageCount) {
+    return false;
+  }
+  /* LOGO 底板：放 LOGO 的圖片框，本身是設計稿上一塊看得到的（通常是圓角白色）色塊。 */
+  function isLogoPlateLayer(layer) {
+    if (!layer || layer.type !== 'image') return false;
+    if (String(layer.id || '') === 'logoBg') return true;
+    return !!layer.keepBgWithImage && /^logoImg\d*$/i.test(String(layer.field || ''));
+  }
+
+  /* 尚未上傳圖片時的佔位卡：柔和的底色＋淡淡的虛線框＋小圖示，
+     空間夠大才連檔名一起顯示，小範圍只放圖示，不會擠成一團。 */
+  function imagePlaceholderHtml(layer, rawValue) {
+    var w = layer.width || 0, h = layer.height || 0;
+    var pending = String(rawValue == null ? '' : rawValue).trim();
+    var label = String(layer.fieldLabel || '').replace(/圖片網址|網址/g, '').trim();
+    var showText = w >= 96 && h >= 56;
+    var showName = pending && w >= 130 && h >= 78;
+    var iconSize = Math.max(12, Math.min(26, Math.round(Math.min(w, h) * 0.28)));
+    var html = '<div style="width:100%;height:100%;display:flex;flex-direction:column;' +
+      'align-items:center;justify-content:center;gap:3px;box-sizing:border-box;padding:4px;' +
+      'border:1px dashed rgba(31,43,41,.18);border-radius:8px;background:rgba(255,255,255,.34);' +
+      'color:rgba(31,43,41,.42);font-family:\'PingFang TC\',\'Microsoft JhengHei\',\'Segoe UI\',Arial,sans-serif;' +
+      'line-height:1.35;text-align:center;overflow:hidden;">' +
+      '<div style="font-size:' + iconSize + 'px;line-height:1;opacity:.5;">🖼</div>';
+    if (showText) {
+      html += '<div style="font-size:11px;font-weight:600;white-space:nowrap;">' +
+        esc(label ? label : '圖片') + '</div>';
+    }
+    if (showName) {
+      html += '<div style="font-size:9.5px;opacity:.72;max-width:100%;overflow:hidden;' +
+        'text-overflow:ellipsis;white-space:nowrap;">' + esc(pending) + '</div>';
+    }
+    return html + '</div>';
+  }
+
+  /* ── 全站統一的顏色覆寫（opts.theme）──────────────────────────
+     匯入工單頁面左邊有一組「背景顏色／促標底色・字色／圓標底色・字色／CTA底色・字色」，
+     改一次就要讓畫布上「所有」版位一起變。與其去每個版位的資料裡一格一格改，
+     這裡在渲染階段直接依圖層的角色覆寫顏色──圖層有沒有對應的可編輯欄位都吃得到
+     （例如很多版位的 CTA 底色本來就沒有欄位，只寫死在圖層上）。
+     角色判斷同時看 layer.id 與 layer.field，並且忽略結尾的編號（bgColor2、badgeBg1…）。 */
+  function normColor(c) { return String(c == null ? '' : c).replace(/\s+/g, '').toLowerCase(); }
+
+  /* CTA 旁邊那個小三角形：PS 匯出時是一個用 clip-path 切成三角形的矩形。
+     有些版位有 id=ctaTri，有些沒有 id，但 clip-path 的形狀都一樣，用形狀認最準。 */
+  var CTA_TRIANGLE_CLIP = normColor('polygon(0 0,100% 50%,0 100%)');
+  function isCtaTriangle(layer) {
+    if (layer.id === 'ctaTri') return true;
+    return layer.type === 'rect' && normColor(layer.clipPath) === CTA_TRIANGLE_CLIP;
+  }
+
+  /* 以前這裡有一段「用藍綠色認出促標色帶」的特例：當時以為 MSBN B-4-1、B-4-2
+     沒有促標底的 rect，那條色帶是「LOGO 圖片範圍自己的底色」。
+     那是看錯了 —— 對照參考圖，那條色帶就是一般的促標底色，上面放的是促標文字，
+     跟 LOGO 無關。它被存成 image + field=logoImg，才會在色帶上冒出 LOGO 佔位卡、
+     工單也多出一欄「LOGO圖」。已經在 block.json 改成正常的
+     rect(id=promoBg*, field=promoColor*)，所以這個以顏色判斷的特例不需要了。
+     （留著反而危險：真的有一張 LOGO 圖底色剛好是這個藍綠色時會被誤判成促標底。） */
+
+  function themeRoleOf(layer, schemaId) {
+    /* 少數圖層的欄位 key 是沿用舊命名，但視覺語意不同。
+       例如 MSBN B-1-4 的「文案」仍使用 field=promo，若只看欄位名，
+       會誤套全域的「促標字色」（常見預設為白色）。
+       block.json 可用 themeRole 明確指定它應歸類到哪一種顏色角色。 */
+    if (layer && layer.themeRole) return String(layer.themeRole);
+    var rawId = String(layer.id || '');
+    var rawIdLower = rawId.toLowerCase();
+    var rawField = String(layer.field || '').toLowerCase();
+    var id = rawId.replace(/[0-9]+$/, '');
+    var fld = rawField.replace(/[0-9]+$/, '');
+    /* 三角形跟著 CTA 的「字色」走，不是底色（不然改底色時三角形會跟底色融成一塊看不見） */
+    if (isCtaTriangle(layer)) return 'ctaText';
+    if (layer.type === 'text') {
+      if (isEndorserNoteLayer(layer)) return 'endorserText';
+      if (/^itemtext\d*$/i.test(fld) || /^content\d*$/i.test(fld) || /項目文字|內文/.test(String(layer.fieldLabel || ''))) return 'itemText';
+      if (id === 'promo' || fld === 'promo') return 'promoText';
+      if (id === 'badgeText' || fld === 'badge') return 'badgeText';
+      if (id === 'ctaText' || fld === 'cta') return 'ctaText';
+      if (id === 'warn' || fld === 'warn') return 'warnText';
+      /* 其他所有文字（品名、內文、文案、簽名小字、LOGO 佔位字…）算一般文字 */
+      return 'bodyText';
+    }
+    if (layer.type === 'image') {
+      /* 有些版位的整體底圖本身是 image 圖層；沒有上傳圖片時仍會顯示
+         backgroundColor，所以也要能把畫布上的實際底色帶回工具列。 */
+      if (id === 'bg' || fld === 'bgimage' || String(layer.bgField || '').replace(/[0-9]+$/, '').toLowerCase() === 'bgcolor') return 'bg';
+      return null;   /* 其他圖片沒有顏色角色（促標色帶已經改成 rect，走下面那條） */
+    }
+    if (layer.type === 'rect' || layer.type === 'circle') {
+      /* MSBN A-2-3 的左右兩張卡片是唯一需要獨立背景色的例外；
+         其他版位仍沿用單一 cardBg 角色。 */
+      if (/^msbn_A_2_3$/i.test(String(schemaId || ''))) {
+        if (rawIdLower === 'bg' || rawField === 'bgcolor') return 'cardBgA23Left';
+        if (rawIdLower === 'bg2' || rawField === 'bgcolor2') return 'cardBgA23Right';
+      }
+      if (id === 'bg' || fld === 'bgcolor') return 'cardBg';
+      if (id === 'promoBg' || id === 'promoBar' || fld === 'promocolor') return 'promoBg';
+      if (id === 'badgeBg' || fld === 'badgecolor') return 'badgeBg';
+      if (id === 'ctaBg' || fld === 'ctacolor') return 'ctaBg';
+    }
+    return null;
+  }
+
+  function isEndorserNoteLayer(layer) {
+    if (!layer || layer.type !== 'text') return false;
+    var field = String(layer.field || '').replace(/[0-9]+$/, '');
+    return /^endorserNote$/i.test(field) || /代言人小字/.test(String(layer.fieldLabel || ''));
+  }
+
+  /* 簽名小字（signNote、signNote2…）：跟代言人小字一樣，可以在畫布上用滑鼠拖曳移動位置。 */
+  function isSignNoteLayer(layer) {
+    if (!layer || layer.type !== 'text') return false;
+    var field = String(layer.field || '').replace(/[0-9]+$/, '');
+    return /^signNote$/i.test(field) || /簽名小字/.test(String(layer.fieldLabel || ''));
+  }
+  function isMovableCanvasTextLayer(layer) {
+    return isEndorserNoteLayer(layer) || isSignNoteLayer(layer);
+  }
+
+  /*
+   * 同一種文案在不同版位的 block.json 可能有的寫 bold、有的沒寫 fontWeight，
+   * 造成「匯入工單」與「維修」看到相同欄位時粗細不一致。
+   * 這裡以欄位語意作最後統一，兩個畫面都經過同一個 renderer，因此不再各自漂移。
+   * 未辨識的特殊文字仍保留版位原本的設定，避免影響簽名檔或裝飾字的個別設計。
+   */
+  function semanticTextWeight(layer) {
+    if (!layer || layer.type !== 'text') return layer && layer.fontWeight;
+    /* 特定版型仍可明確覆寫未列入共通規則的特殊文字；品名與圓標則以目前
+       匯入工單／維修的統一規格為準，不再被舊版 semanticWeight 蓋回去。 */
+    var explicitWeight = layer.semanticWeight != null && String(layer.semanticWeight).trim()
+      ? String(layer.semanticWeight).trim() : '';
+    var field = String(layer.field || '').replace(/[0-9]+$/, '').toLowerCase();
+    var label = String(layer.fieldLabel || '').replace(/[0-9]+$/, '').toLowerCase();
+
+    if (field === 'promo' || /促標/.test(label)) return '700';
+    if (field === 'name' || /品名/.test(label)) return '500';
+    if (field === 'warn' || /警語|警告|warning/.test(label)) return '500';
+    if (field === 'badge' || field === 'badgetext' || /圓標文字/.test(label)) return '700';
+    if (field === 'cta' || /cta文字/.test(label)) return '400';
+    if (field === 'brand' || field === 'main' || field === 'sub' || field === 'date' ||
+        /品牌|主標|副標|日期/.test(label)) return '400';
+    if (explicitWeight) return explicitWeight;
+    return layer.fontWeight;
+  }
+  /* 這個圖層是不是「CTA 底色塊」（要套統一圓角的那個；三角形不算） */
+  function isCtaBgLayer(layer) {
+    if (layer.type !== 'rect' && layer.type !== 'circle') return false;
+    if (isCtaTriangle(layer)) return false;
+    return themeRoleOf(layer) === 'ctaBg';
+  }
+
+  /* ── 有字 CTA 的垂直置中 ────────────────────────────────────
+     「逛逛去／領券去」這種有文字的 CTA 是三個獨立圖層：
+       1. CTA 底色塊
+       2. CTA 文字
+       3. 右側白色三角形
+
+     PS 匯出的三層座標各自量測，文字還會再經過字型 topExact、行距、padding
+     修正，因此換電腦、換字型載入時機或調整版位後，三者可能差 1～3px。
+     這裡把「CTA 底色塊」當成唯一基準：文字使用同高的 flex 容器置中，
+     三角形則直接以幾何中心對齊。只要版位裡同時存在 CTA 文字與底色塊，
+     就自動套用；純圓鈕／只有三角形、沒有文字的 CTA 完全不受影響。 */
+  function ctaTextSuffix(layer) {
+    var m = /^cta(\d*)$/i.exec(String(layer.field || ''));
+    if (m) return m[1] || '';
+    m = /^ctaText(\d*)$/i.exec(String(layer.id || ''));
+    return m ? (m[1] || '') : null;
+  }
+
+  function ctaBgSuffix(layer) {
+    var m = /^ctaColor(\d*)$/i.exec(String(layer.field || ''));
+    if (m) return m[1] || '';
+    m = /^cta(?:Bg|Color)(\d*)$/i.exec(String(layer.id || ''));
+    return m ? (m[1] || '') : null;
+  }
+
+  function ctaTriangleSuffix(layer) {
+    var m = /^ctaTri(\d*)$/i.exec(String(layer.id || ''));
+    return m ? (m[1] || '') : null;
+  }
+
+  /* 原始版配中本來就是兩行的欄位（案型／文案／代言人字／簽名小字等），
+     若工單只填第一行，畫布仍使用同一個欄位範圍，但把實際已有的內容垂直置中。
+     MSBN D 的表格列與品名有自己的列高／排版規則，明確排除。 */
+  function isTwoLineCenterTextLayer(layer, schemaId) {
+    if (!layer || layer.type !== 'text' || !layer.field) return false;
+    if (/^msbn_D_/i.test(String(schemaId || ''))) return false;
+    var field = String(layer.field || '').replace(/[0-9]+$/, '').toLowerCase();
+    if (field === 'name') return false;
+    var label = String(layer.fieldLabel || '');
+    var design = String(layer.designText == null ? '' : layer.designText);
+    var def = String(layer.default == null ? '' : layer.default);
+    return /案型|文案|代言人字|代言人小字|簽名小字/.test(label) ||
+      design.indexOf('\n') !== -1 || def.indexOf('\n') !== -1;
+  }
+
+  function layerCenterDistance(a, b) {
+    var ax = (Number(a.left) || 0) + (Number(a.width) || 0) / 2;
+    var ay = (Number(a.top) || 0) + (Number(a.height) || 0) / 2;
+    var bx = (Number(b.left) || 0) + (Number(b.width) || 0) / 2;
+    var by = (Number(b.top) || 0) + (Number(b.height) || 0) / 2;
+    return Math.abs(ax - bx) + Math.abs(ay - by) * 2;
+  }
+
+  function nearestUnusedLayer(target, candidates, used) {
+    var best = null, bestDistance = Infinity;
+    candidates.forEach(function (candidate) {
+      if (used.indexOf(candidate) !== -1) return;
+      var d = layerCenterDistance(target, candidate);
+      if (d < bestDistance) { best = candidate; bestDistance = d; }
+    });
+    return best;
+  }
+
+  function normalizeTextCtaVerticalAlignment(layers) {
+    if (!layers || !layers.length) return;
+
+    var texts = layers.filter(function (layer) {
+      return layer.type === 'text' && ctaTextSuffix(layer) != null;
+    });
+    var backgrounds = layers.filter(isCtaBgLayer);
+    var triangles = layers.filter(isCtaTriangle);
+    if (!texts.length || !backgrounds.length) return;
+
+    var usedBackgrounds = [], usedTriangles = [];
+    texts.forEach(function (text) {
+      var suffix = ctaTextSuffix(text);
+      var bg = null;
+
+      /* 先用欄位編號精準配對：cta2 ↔ ctaColor2。
+         舊版資料若沒有編號／id，再退回找距離最近的底色塊。 */
+      backgrounds.some(function (candidate) {
+        if (usedBackgrounds.indexOf(candidate) !== -1) return false;
+        if (ctaBgSuffix(candidate) !== suffix) return false;
+        bg = candidate;
+        return true;
+      });
+      if (!bg) bg = nearestUnusedLayer(text, backgrounds, usedBackgrounds);
+      if (!bg || bg.top == null || bg.height == null) return;
+      usedBackgrounds.push(bg);
+
+      /* renderLayer 看到這組資料後，不再使用 PS 的文字 top/topExact，
+         而是把文字放進跟底色塊同高的容器中做真正的垂直置中。 */
+      text.ctaVerticalCenter = true;
+      text._ctaBoxTop = Number(bg.top);
+      text._ctaBoxHeight = Number(bg.height);
+
+      var tri = null;
+      /* 有明確編號的 ctaTri2 優先；多組但沒有 id 的舊資料，依位置就近配對。 */
+      triangles.some(function (candidate) {
+        if (usedTriangles.indexOf(candidate) !== -1) return false;
+        var triSuffix = ctaTriangleSuffix(candidate);
+        if (triSuffix == null || triSuffix !== suffix) return false;
+        /* 多組 CTA 若都沿用同一個未編號 id=ctaTri，不能只靠 id 配對，
+           否則第一個文字可能抓到遠處的三角形；改由下面的距離配對。 */
+        if (triangles.length > 1 && suffix === '') return false;
+        tri = candidate;
+        return true;
+      });
+      if (!tri) tri = nearestUnusedLayer(bg, triangles, usedTriangles);
+      if (tri && tri.height != null) {
+        tri.top = Number(bg.top) + (Number(bg.height) - Number(tri.height)) / 2;
+        /* 有字 CTA 以「文字＋三角」為一個整體置中。原本有些文字層沒有 width，
+           以三字示意文案估算原間距；有 width 的版位則直接沿用原始間距，
+           統一再增加 3px。三角形改由文字層的 pseudo element 畫出，文字縮短成
+           GO 或其他 1～3 字時，仍會保留同一間距並讓整組回到 CTA 底色中央。 */
+        var textWidth = Number(text.width);
+        if (!isFinite(textWidth) || textWidth <= 0) {
+          var sample = String(text.designText || text.default || '逛逛去').split(/\r?\n/)[0];
+          var sampleChars = Array.from(sample).length || 3;
+          textWidth = sampleChars * (Number(text.fontSize) || 42);
+        }
+        var originalGap = Number(tri.left) - (Number(text.left || 0) + textWidth);
+        if (!isFinite(originalGap)) originalGap = 0;
+        text._ctaInlineTriangle = true;
+        text._ctaGroupLeft = Number(bg.left || 0);
+        text._ctaGroupWidth = Number(bg.width || 0);
+        text._ctaTriangleWidth = Number(tri.width || 0);
+        text._ctaTriangleHeight = Number(tri.height || 0);
+        /* CTA 文字與三角形使用固定 8px 視覺間距；不要沿用 PS 文字框寬度，
+           否則改成 GO 或其他短字時三角形會被推到最右邊。 */
+        text._ctaTriangleGap = 8;
+        text._ctaTriangleLayer = tri;
+        tri.hidden = true;
+        usedTriangles.push(tri);
+      }
+    });
+  }
+  function subareaProductNameSurface(data, opts, fieldPrefix) {
+    /* 副區品名必須看「同一張卡片」的實際底色，而不是整個版位的 canvasBg。
+       這樣白卡與工單帶入的有色卡，都會選到正確的高對比品名字色。 */
+    var layers = (opts && opts._schemaLayers) || [];
+    var cardLayer = null;
+    layers.some(function (candidate) {
+      if (!candidate || candidate.type !== 'rect') return false;
+      if (themeRoleOf(candidate, opts && opts._schemaId) !== 'cardBg') return false;
+      cardLayer = candidate;
+      return true;
+    });
+    if (!cardLayer) return null;
+    var cardFieldKey = resolveFieldKey(cardLayer, fieldPrefix);
+    return (cardFieldKey && data && data[cardFieldKey]) || cardLayer.backgroundColor || null;
+  }
+
+  /* MSBN B 的「文案」也要跟品名使用同一個實際承接面判斷。
+     B-1-3 的文案位於右側卡片色上，不能只看全版背景；B-1-4 沒有獨立卡片色，
+     才回到它原本的白色內容面。 */
+  function msbnProductNameSurface(data, opts, fieldPrefix, themeSchemaId, theme, preferCardSurface) {
+    var usesExposureBg = /^msbn_(?:B_3_[12]|A_(?:3_1|2_[12]|1_[12]))$/i.test(themeSchemaId);
+    if (usesExposureBg) return (theme && (theme.canvasBg || theme.bg)) || '#ffffff';
+
+    /* 原本品名在 MSBN A／B（除指定的曝光背景版）以白底判斷；只有 B 系列「文案」
+       明確要求比照品名時，才優先讀同版位的卡片底色。 */
+    if (!preferCardSurface && /^msbn_[AB]_/.test(themeSchemaId) &&
+        !/^msbn_B_3_[34]$/i.test(themeSchemaId)) return '#ffffff';
+
+    var layers = (opts && opts._schemaLayers) || [];
+    var cardLayer = null;
+    layers.some(function (candidate) {
+      if (!candidate || candidate.type !== 'rect') return false;
+      if (themeRoleOf(candidate, opts && opts._schemaId) !== 'cardBg') return false;
+      cardLayer = candidate;
+      return true;
+    });
+    if (cardLayer) {
+      var cardFieldKey = resolveFieldKey(cardLayer, fieldPrefix);
+      return (cardFieldKey && data && data[cardFieldKey]) || cardLayer.backgroundColor || '#ffffff';
+    }
+
+    if (/^msbn_[CD]_/.test(themeSchemaId) || /^msbn_B_3_[34]$/i.test(themeSchemaId)) {
+      return (theme && (theme.cardBg || theme.bg)) || '#ffffff';
+    }
+    return '#ffffff';
+  }
+
+  /* 品名／指定的 B 系列文案不是一般 bodyText：它們實際使用哪一組字色，
+     取決於文字所在表面的明暗。把這個判定抽成一支共用函式，渲染結果與
+     活動頁左側工具列的「目前畫布實際用色」才不會各算各的。 */
+  function productNameThemeRoleOf(layer, opts, data, fieldPrefix) {
+    var schemaId = String((opts && opts._schemaId) || '');
+    var field = String((layer && layer.field) || '');
+    var isMsbnProductName = /^msbn_/i.test(schemaId) && layer && layer.type === 'text' &&
+      (/^name\d*$/i.test(field) || String(layer.fieldLabel || '') === '品名');
+    var isSubareaProductName = /^subarea_/i.test(schemaId) && layer && layer.type === 'text' &&
+      (/^name\d*$/i.test(field) || /^品名(?:\s*\d+)?$/.test(String(layer.fieldLabel || '')));
+    var isMsbnBCopy = /^msbn_B_/i.test(schemaId) && layer && layer.type === 'text' &&
+      (String(layer.fieldLabel || '').trim() === '文案' ||
+       (/^promo$/i.test(field) && String(layer.themeRole || '') === 'bodyText'));
+    if (!isMsbnProductName && !isSubareaProductName && !isMsbnBCopy) return '';
+
+    var theme = opts && opts.theme;
+    var surface = isSubareaProductName
+      ? (subareaProductNameSurface(data, opts, fieldPrefix) || (theme && (theme.canvasBg || theme.bg)) || '#ffffff')
+      : msbnProductNameSurface(data, opts, fieldPrefix, schemaId, theme, isMsbnBCopy);
+    var surfaceRgb = parseCssColor(surface);
+    var surfaceLuma = surfaceRgb
+      ? (0.2126 * surfaceRgb.r + 0.7152 * surfaceRgb.g + 0.0722 * surfaceRgb.b) / 255
+      : 1;
+    return surfaceLuma >= 0.52 ? 'nameOnLightBg' : 'nameOnDarkBg';
+  }
+
+  function effectiveThemeRoleOf(layer, opts, data, fieldPrefix) {
+    return productNameThemeRoleOf(layer, opts, data, fieldPrefix) ||
+      themeRoleOf(layer, opts && opts._schemaId);
+  }
+
+  function themeColorOf(layer, opts, data, fieldPrefix) {
+    var theme = opts && opts.theme;
+    if (!theme) return null;
+    var role = themeRoleOf(layer, opts && opts._schemaId);
+    if (!role) return null;
+
+    /* bg 維持舊有畫布／背景圖角色；一般 cardBg 只開放給 MSBN C／D。
+       副區與 MSBN A／B 的卡片背景固定白色；A-2-3 另有左右獨立角色。 */
+    if (role === 'bg' && theme.bgScope === 'msbn-d') {
+      var schemaId = String((opts && opts._schemaId) || '');
+      if (!/^msbn_D_/i.test(schemaId)) return null;
+    }
+
+    if (role === 'cardBgA23Left' || role === 'cardBgA23Right') {
+      var a23SchemaId = String((opts && opts._schemaId) || '');
+      if (!/^msbn_A_2_3$/i.test(a23SchemaId)) return '#ffffff';
+    }
+
+    if (role === 'cardBg') {
+      var cardSchemaId = String((opts && opts._schemaId) || '');
+      /* 副區卡片預設仍由 block.json 的白底決定；但若工單／畫布實際帶入有色卡，
+         不再強制覆寫為白色，讓品名可依真正底色選擇深／淺字。 */
+      if (/^subarea_/i.test(cardSchemaId)) return null;
+      if (!/^msbn_[CD]_/.test(cardSchemaId) && !/^msbn_B_3_[34]$/i.test(cardSchemaId)) return '#ffffff';
+    }
+    /* 代言人小字預設黑色；實際圖片明暗由匯入／維修畫布在圖片載入後再取樣，
+       若圖片偏深會把這個自動色切換成白色。使用者手動選色時不走自動切換。 */
+    if (role === 'endorserText') {
+      if (theme.endorserTextAuto) return '#111827';
+      var endorserTextColor = theme.endorserText;
+      return (endorserTextColor && String(endorserTextColor).trim()) ? String(endorserTextColor).trim() : '#111827';
+    }
+    if (role === 'itemText') {
+      /* D 系列表格的項目文字／內文：依卡片底色自動黑／白字；
+         統一顏色有手動選色時，只要在該底色上清楚可讀就照選的顏色。 */
+      var itemSurface = msbnCardSurfaceOf(opts, data, fieldPrefix, theme);
+      var itemTextColor = theme.itemText && String(theme.itemText).trim();
+      return itemTextColor ? readableTextColor(itemTextColor, itemSurface) : autoTextColorOn(itemSurface);
+    }
+    /* 警語預設深灰；深色卡片／畫布上改用淡灰，手動選色時保留使用者設定。 */
+    if (role === 'warnText' && theme.warnTextAuto) {
+      var warningSchemaId = String((opts && opts._schemaId) || '');
+      var warningSurface = (/^msbn_[CD]_/.test(warningSchemaId) || /^msbn_B_3_[34]$/i.test(warningSchemaId))
+        ? (theme.cardBg || theme.canvasBg || theme.bg || '#ffffff')
+        : (theme.canvasBg || theme.bg || '#ffffff');
+      var warningRgb = parseCssColor(warningSurface);
+      var warningLuma = warningRgb ? (0.2126 * warningRgb.r + 0.7152 * warningRgb.g + 0.0722 * warningRgb.b) / 255 : 1;
+      return warningLuma < 0.45 ? '#d1d5db' : '#4b5563';
+    }
+    /* MSBN 品名依實際承接底色的明暗選擇兩組字色：指定的 A／B 版型直接讀曝光背景；
+       其餘白卡讀白底，C／D 讀卡片底色。使用者未手動選色時，自動選黑／白高對比字。 */
+    var themeSchemaId = String((opts && opts._schemaId) || '');
+    var themeField = String((layer && layer.field) || '');
+    var nameThemeKey = productNameThemeRoleOf(layer, opts, data, fieldPrefix);
+    if (nameThemeKey) {
+      var linkedNameColor = theme[nameThemeKey];
+      if (linkedNameColor && String(linkedNameColor).trim()) return String(linkedNameColor).trim();
+      return nameThemeKey === 'nameOnLightBg' ? '#111827' : '#ffffff';
+    }
+    /* C 系列的 copy／copy2 是固定白底券內的文案，不管外層背景怎麼變，
+       都必須以白底檢查對比；白字一律會被攔下，確保券字永遠可讀。 */
+    if (role === 'bodyText' && /^msbn_C_/i.test(themeSchemaId) && /^copy\d*$/i.test(themeField)) {
+      var couponTextColor = (theme.bodyText && String(theme.bodyText).trim()) || layer.color || '';
+      return readableTextColor(couponTextColor, '#ffffff');
+    }
+
+    /* C／D 卡片會依背景色自動加亮，若仍沿用全站白色一般文字，會幾乎看不見。
+       因此一般文字最後一定依卡片實際底色驗證對比；使用者的自訂色夠清楚就保留，
+       不夠清楚則自動切換深色／白色，避免淡色背景出現白字。 */
+    if (role === 'bodyText' && /^msbn_[CD]_/.test(themeSchemaId)) {
+      var bodySurface = theme.cardBg || theme.canvasBg || theme.bg || '#ffffff';
+      var requestedBodyColor = (theme.bodyText && String(theme.bodyText).trim()) || layer.color || '';
+      return readableTextColor(requestedBodyColor, bodySurface);
+    }
+
+    /* MSBN C-1-4／C-1-5 的「文案」（欄位名 promo）直接壓在卡片底色上、沒有促標色帶，
+       不能跟促標底色連動；改依卡片底色自動黑／白字（手動選色且清楚可讀時保留）。 */
+    if (role === 'promoText' && /^msbn_C_1_[45]$/i.test(themeSchemaId)) {
+      var copySurface = msbnCardSurfaceOf(opts, data, fieldPrefix, theme);
+      var explicitPromo = !theme.promoTextAuto && theme.promoText && String(theme.promoText).trim();
+      return explicitPromo ? readableTextColor(explicitPromo, copySurface) : autoTextColorOn(copySurface);
+    }
+    /* 促標預設字色由目前促標底色的明暗連動決定；明確選色時沿用全域覆寫。 */
+    var v = theme[role];
+    var roleColor = (v && String(v).trim()) ? String(v).trim() : null;
+    /* 促標字／圓標字／CTA 字（含 CTA 三角形）壓在自己的色塊上：
+       底色改成淡色時字不能還是白色、底色改深時字不能還是深色。
+       原本的字色（設計稿或手動選色）在底色上夠清楚（≥3:1，大字標準）就保留，
+       不夠清楚才自動換成黑字／白字。 */
+    if (role === 'promoText' || role === 'badgeText' || role === 'ctaText') {
+      var surfaceRole = role === 'promoText' ? 'promoBg' : (role === 'badgeText' ? 'badgeBg' : 'ctaBg');
+      var shapeSurface = roleSurfaceForLayer(layer, surfaceRole, opts, data, fieldPrefix);
+      if (role === 'ctaText') {
+        /* CTA 字色與曝光資源／背景色工具共用同一個值（含自動色）時直接採用，
+           三處的 CTA 文字與三角形才會是同一個色；吃色防護由曝光資源那邊統一處理。 */
+        if (theme.ctaTextLinked && roleColor) return roleColor;
+        /* 同一版位的所有 CTA（左右兩組的字與三角形）必須得到同一個字色：
+           底色一律以統一的 CTA 底色為準（找不到壓在底下的色塊時也不例外），
+           基準色則統一取該版位第一個 CTA 文字層的設計色，不讓各圖層各自判斷。 */
+        if (!shapeSurface && theme.ctaBg && String(theme.ctaBg).trim() && schemaHasRoleLayer(opts, 'ctaBg')) {
+          shapeSurface = String(theme.ctaBg).trim();
+        }
+        var ctaBase = roleColor || canonicalCtaTextColor(opts) || layer.color ||
+          (layer.type !== 'text' ? layer.backgroundColor : null);
+        return shapeSurface ? readableLargeTextColor(ctaBase, shapeSurface) : ctaBase;
+      }
+      if (shapeSurface) {
+        var baseColor = roleColor || layer.color || (layer.type !== 'text' ? layer.backgroundColor : null);
+        return readableLargeTextColor(baseColor, shapeSurface);
+      }
+    }
+    return roleColor;
+  }
+
+  function schemaHasRoleLayer(opts, role) {
+    var layers = (opts && opts._schemaLayers) || [];
+    for (var i = 0; i < layers.length; i++) {
+      if (layers[i] && themeRoleOf(layers[i], opts && opts._schemaId) === role) return true;
+    }
+    return false;
+  }
+
+  /* 版位內第一個 CTA 文字層的設計字色；沒有文字 CTA 時用第一個三角形的顏色。 */
+  function canonicalCtaTextColor(opts) {
+    var layers = (opts && opts._schemaLayers) || [];
+    var fallback = null;
+    for (var i = 0; i < layers.length; i++) {
+      var candidate = layers[i];
+      if (!candidate || themeRoleOf(candidate, opts && opts._schemaId) !== 'ctaText') continue;
+      if (candidate.type === 'text') {
+        if (candidate.color && String(candidate.color).trim()) return String(candidate.color).trim();
+      } else if (!fallback && candidate.backgroundColor && String(candidate.backgroundColor).trim()) {
+        fallback = String(candidate.backgroundColor).trim();
+      }
+    }
+    return fallback;
+  }
+
+  function readableLargeTextColor(candidate, surface) {
+    if (!parseCssColor(surface)) return candidate || null;
+    if (candidate && contrastRatio(candidate, surface) >= 3) return candidate;
+    return autoTextColorOn(surface);
+  }
+
+  /* 找出文字（或 CTA 三角形）底下那塊指定角色的色塊，回傳它目前實際顯示的顏色。
+     先比對欄位編號（promo2 ↔ promoColor2），再退回「文字中心落在色塊範圍內」最近的那塊。 */
+  function roleSurfaceForLayer(textLayer, surfaceRole, opts, data, fieldPrefix) {
+    var layers = (opts && opts._schemaLayers) || [];
+    var candidates = layers.filter(function (candidate) {
+      return candidate && (candidate.type === 'rect' || candidate.type === 'circle' || candidate.type === 'image') &&
+        themeRoleOf(candidate, opts && opts._schemaId) === surfaceRole;
+    });
+    if (!candidates.length) return null;
+    var textField = String(textLayer && textLayer.field || '');
+    var suffix = (textField.match(/(\d+)$/) || [])[1] || '';
+    var bySuffix = candidates.filter(function (candidate) {
+      return (((String(candidate.field || '').match(/(\d+)$/) || [])[1]) || '') === suffix;
+    });
+    var tl = Number(textLayer.left || 0), tt = Number(textLayer.top || 0);
+    var tw = Number(textLayer.width || 0), th = Number(textLayer.height || textLayer.fontSize || 0);
+    var cx = tl + tw / 2, cy = tt + th / 2;
+    function nearestIn(pool) {
+      var found = null;
+      pool.forEach(function (candidate) {
+        var l = Number(candidate.left || 0), t = Number(candidate.top || 0);
+        var w = Number(candidate.width || 0), h = Number(candidate.height || 0);
+        var dx = Math.max(l - cx, 0, cx - (l + w));
+        var dy = Math.max(t - cy, 0, cy - (t + h));
+        var distance = dx * dx + dy * dy;
+        if (!found || distance < found.distance) found = { layer: candidate, distance: distance };
+      });
+      return found;
+    }
+    /* 先用同編號的色塊；沒有欄位編號的圖層（例如右邊那組 CTA 的三角形）
+       會被歸到「無編號」而配到左邊那組，距離太遠時改用全部候選就近配對。 */
+    var best = bySuffix.length ? nearestIn(bySuffix) : null;
+    if (!best || best.distance > 120 * 120) best = nearestIn(candidates);
+    if (!best) return null;
+    /* 文字離色塊太遠（不是壓在它上面），就不以它當底色判斷 */
+    if (best.distance > 120 * 120) return null;
+    var exact = best.layer;
+    var key = resolveFieldKey(exact, fieldPrefix);
+    var raw = key && data ? data[key] : null;
+    return themeColorOf(exact, opts, data, fieldPrefix) ||
+      derivedColorOf(exact, data, fieldPrefix, opts) || raw || exact.backgroundColor || null;
+  }
+
+  /* 算出這個圖層在資料物件裡對應的 key
+     - 不在 repeat 裡（fieldPrefix為null）→ 直接用 layer.field
+     - 在 repeat 裡、globalField:true（三品共用，如CTA顏色）→ 直接用 layer.field
+     - 在 repeat 裡、一般欄位 → instance.key + layer.field（例如 p1Name） */
+  function resolveFieldKey(layer, fieldPrefix) {
+    if (!layer.field) return null;
+    if (!fieldPrefix || layer.globalField) return layer.field;
+    return fieldPrefix + layer.field;
+  }
+
+  /* 圓角文字包邊：外圈 radius 處 16 個方向、內圈 radius/2 處 8 個方向的實心陰影疊起來，
+     等於把字往外均勻擴 radius px；內圈補滿細筆畫與外圈之間可能出現的縫。 */
+  function roundTextOutlineShadow(color, radius) {
+    var parts = [];
+    [[radius, 16], [radius / 2, 8]].forEach(function (ring) {
+      for (var i = 0; i < ring[1]; i++) {
+        var a = i / ring[1] * Math.PI * 2;
+        parts.push((ring[0] * Math.cos(a)).toFixed(2) + 'px ' + (ring[0] * Math.sin(a)).toFixed(2) + 'px 0 ' + color);
+      }
+    });
+    return parts.join(',');
+  }
+
+  function badgeBackgroundColorForText(textLayer, opts, data, fieldPrefix) {
+    var layers = (opts && opts._schemaLayers) || [];
+    var badgeBgs = layers.filter(function (candidate) {
+      return themeRoleOf(candidate, opts && opts._schemaId) === 'badgeBg';
+    });
+    if (!badgeBgs.length) return null;
+
+    var textField = String(textLayer && textLayer.field || '');
+    var textSuffix = (textField.match(/(\d+)$/) || [])[1] || '';
+    var desiredField = 'badgeColor' + textSuffix;
+    var exact = badgeBgs.filter(function (candidate) {
+      return String(candidate.field || '') === desiredField;
+    })[0];
+    if (!exact && textSuffix) {
+      exact = badgeBgs.filter(function (candidate) {
+        return String(candidate.field || '').replace(/\d+$/, '').toLowerCase() === 'badgecolor' &&
+          ((String(candidate.field || '').match(/(\d+)$/) || [])[1] || '') === textSuffix;
+      })[0];
+    }
+    if (!exact && badgeBgs.length === 1) exact = badgeBgs[0];
+    if (!exact) {
+      var textCx = Number(textLayer.left || 0) + Number(textLayer.width || 0) / 2;
+      var textCy = Number(textLayer.top || 0) + Number(textLayer.height || 0) / 2;
+      exact = badgeBgs.reduce(function (best, candidate) {
+        var dx = Number(candidate.left || 0) + Number(candidate.width || 0) / 2 - textCx;
+        var dy = Number(candidate.top || 0) + Number(candidate.height || 0) / 2 - textCy;
+        var distance = dx * dx + dy * dy;
+        return !best || distance < best.distance ? { layer: candidate, distance: distance } : best;
+      }, null);
+      exact = exact && exact.layer;
+    }
+    if (!exact) return null;
+    var key = resolveFieldKey(exact, fieldPrefix);
+    var raw = key && data ? data[key] : null;
+    return themeColorOf(exact, opts, data, fieldPrefix) ||
+      derivedColorOf(exact, data, fieldPrefix, opts) || raw || exact.backgroundColor || null;
+  }
+
+  /* A layer can derive its color from another editable color field.
+     D-series cards use this for two linked treatments:
+       - the solid accent is the card background darkened by 20 percentage points in HSL;
+       - translucent horizontal bands use the same derived shade and keep layer.opacity.
+     The source first follows the active global theme color, then the instance data, then fallback. */
+  function clamp01(n) { return Math.max(0, Math.min(1, Number(n))); }
+  function parseCssColor(value) {
+    var s = String(value == null ? '' : value).trim().toLowerCase();
+    if (!s) return null;
+    if (s === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
+
+    var m = /^#([0-9a-f]{3,8})$/i.exec(s);
+    if (m) {
+      var h = m[1];
+      if (h.length === 3 || h.length === 4) {
+        return {
+          r: parseInt(h.charAt(0) + h.charAt(0), 16),
+          g: parseInt(h.charAt(1) + h.charAt(1), 16),
+          b: parseInt(h.charAt(2) + h.charAt(2), 16),
+          a: h.length === 4 ? parseInt(h.charAt(3) + h.charAt(3), 16) / 255 : 1
+        };
+      }
+      if (h.length === 6 || h.length === 8) {
+        return {
+          r: parseInt(h.slice(0, 2), 16),
+          g: parseInt(h.slice(2, 4), 16),
+          b: parseInt(h.slice(4, 6), 16),
+          a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1
+        };
+      }
+    }
+
+    m = /^rgba?\((.*)\)$/i.exec(s);
+    if (!m) return null;
+    var body = m[1].trim();
+    var alphaPart = null;
+    if (body.indexOf('/') !== -1) {
+      var split = body.split('/');
+      body = split[0].trim();
+      alphaPart = split[1].trim();
+    }
+    var parts = body.split(/[\s,]+/).filter(Boolean);
+    if (parts.length < 3) return null;
+    function channel(v) {
+      return /%$/.test(v) ? Math.round(clamp01(parseFloat(v) / 100) * 255) :
+        Math.max(0, Math.min(255, Math.round(parseFloat(v))));
+    }
+    function alpha(v) {
+      if (v == null || v === '') return 1;
+      return /%$/.test(v) ? clamp01(parseFloat(v) / 100) : clamp01(parseFloat(v));
+    }
+    var a = alphaPart != null ? alpha(alphaPart) : alpha(parts[3]);
+    var out = { r: channel(parts[0]), g: channel(parts[1]), b: channel(parts[2]), a: a };
+    return [out.r, out.g, out.b, out.a].every(function (v) { return isFinite(v); }) ? out : null;
+  }
+  function relativeLuminance(color) {
+    if (!color) return null;
+    function channel(value) {
+      var c = Number(value) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+    return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
+  }
+  function contrastRatio(foreground, background) {
+    var fg = parseCssColor(foreground), bg = parseCssColor(background);
+    if (!fg || !bg) return null;
+    var fgLum = relativeLuminance(fg), bgLum = relativeLuminance(bg);
+    return (Math.max(fgLum, bgLum) + 0.05) / (Math.min(fgLum, bgLum) + 0.05);
+  }
+  function readableTextColor(candidate, surface) {
+    var surfaceRgb = parseCssColor(surface);
+    if (!surfaceRgb) return candidate || null;
+    /* 以 WCAG 一般文字 4.5:1 做最後防線；淡色卡不會再被白字吃掉。 */
+    if (candidate && contrastRatio(candidate, surface) >= 4.5) return candidate;
+    return autoTextColorOn(surface);
+  }
+  /* 依底色自動選字色：淡底用黑字、深底用白字。
+     以「黑字、白字哪一個對比比較高」決定，中間調的底色（例如天空藍）也不會誤選白字。 */
+  function autoTextColorOn(surface) {
+    var dark = '#121827', light = '#ffffff';
+    var cDark = contrastRatio(dark, surface), cLight = contrastRatio(light, surface);
+    if (cDark == null || cLight == null) return dark;
+    return cDark >= cLight ? dark : light;
+  }
+  /* MSBN C／D 卡片的實際底色：統一顏色有設卡片底色就用它，否則用該版位自己的卡片色。 */
+  function msbnCardSurfaceOf(opts, data, fieldPrefix, theme) {
+    if (theme && theme.cardBg && String(theme.cardBg).trim()) return String(theme.cardBg).trim();
+    var layers = (opts && opts._schemaLayers) || [];
+    var cardLayer = null;
+    layers.some(function (candidate) {
+      if (!candidate || candidate.type !== 'rect') return false;
+      if (themeRoleOf(candidate, opts && opts._schemaId) !== 'cardBg') return false;
+      cardLayer = candidate;
+      return true;
+    });
+    if (cardLayer) {
+      var key = resolveFieldKey(cardLayer, fieldPrefix);
+      return (key && data && data[key]) || cardLayer.backgroundColor || '#ffffff';
+    }
+    return (theme && (theme.canvasBg || theme.bg)) || '#ffffff';
+  }
+
+  function rgbToHsl(c) {
+    var r = c.r / 255, g = c.g / 255, b = c.b / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h = 0, s = 0, l = (max + min) / 2;
+    var d = max - min;
+    if (d) {
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+      else if (max === g) h = ((b - r) / d + 2) / 6;
+      else h = ((r - g) / d + 4) / 6;
+    }
+    return { h: h, s: s, l: l, a: c.a };
+  }
+  function hslToRgb(c) {
+    var r, g, b;
+    if (c.s === 0) {
+      r = g = b = c.l;
+    } else {
+      function hue2rgb(p, q, t) {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      }
+      var q = c.l < 0.5 ? c.l * (1 + c.s) : c.l + c.s - c.l * c.s;
+      var p = 2 * c.l - q;
+      r = hue2rgb(p, q, c.h + 1 / 3);
+      g = hue2rgb(p, q, c.h);
+      b = hue2rgb(p, q, c.h - 1 / 3);
+    }
+    return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a: c.a };
+  }
+  function colorToCss(c) {
+    if (!c) return null;
+    if (c.a != null && c.a < 0.999) {
+      return 'rgba(' + c.r + ', ' + c.g + ', ' + c.b + ', ' +
+        Math.round(c.a * 1000) / 1000 + ')';
+    }
+    return 'rgb(' + c.r + ', ' + c.g + ', ' + c.b + ')';
+  }
+  function transformDerivedColor(source, cfg) {
+    if (!source) return null;
+    var mode = String((cfg && cfg.mode) || 'copy').toLowerCase();
+    if (mode === 'copy' || mode === 'identity') return source;
+    var parsed = parseCssColor(source);
+    if (!parsed) return source;
+    var hsl = rgbToHsl(parsed);
+    var amount = clamp01(cfg && cfg.amount != null ? cfg.amount : 0.2);
+    if (mode === 'darken') hsl.l = clamp01(hsl.l - amount);
+    else if (mode === 'lighten') hsl.l = clamp01(hsl.l + amount);
+    else return source;
+    return colorToCss(hslToRgb(hsl));
+  }
+  function derivedColorOf(layer, data, fieldPrefix, opts) {
+    var cfg = layer && layer.derivedColor;
+    if (!cfg) return null;
+    var source = null;
+    var themeRole = cfg.fromThemeRole;
+    if (themeRole && opts && opts.theme) {
+      /* 舊版 D 系列設定用 fromThemeRole=bg；現在卡片背景有獨立的 cardBg
+         統一色，優先使用它，讓衍生深色區塊也跟著卡片背景同步。 */
+      var themeValue = themeRole === 'bg' && opts.theme.cardBg
+        ? opts.theme.cardBg : opts.theme[themeRole];
+      if (themeValue && String(themeValue).trim()) source = String(themeValue).trim();
+    }
+    if (!source && cfg.fromField) {
+      var sourceKey = resolveFieldKey({ field: cfg.fromField, globalField: !!cfg.globalField }, fieldPrefix);
+      if (sourceKey && data && data[sourceKey] && String(data[sourceKey]).trim()) source = String(data[sourceKey]).trim();
+    }
+    if (!source && cfg.fallback) source = cfg.fallback;
+    return transformDerivedColor(source, cfg);
+  }
+
+
+  /* 圖片依來源曝品的寬高比切換範圍時，把 box 轉成精簡的 data-* 字串。
+     實際寬高要等 <img> 載入後才知道，所以 renderer 只輸出規則，
+     JS/image-layout.js 再依 naturalWidth / naturalHeight 套用 wide 或 tall。 */
+  function aspectBoxAttrValue(box) {
+    if (!box) return null;
+    var values = [box.left, box.top, box.width, box.height].map(Number);
+    for (var i = 0; i < values.length; i++) {
+      if (!isFinite(values[i])) return null;
+    }
+    return values.join(',');
+  }
+
+  /* ── 文字行距：解析成「實際會套用到 CSS 的那個值」 ────────────────
+     行距的數字有兩種寫法：小數（1.15）＝倍數，大數（40）＝px。
+     4 以下當倍數，4 以上當 px──行距不可能只有 4px，倍數也幾乎不會超過 4。
+     另外 CONFIG.textLineHeight 會覆寫特定文字（簽名小字等），
+     圓標則固定用 CONFIG.badge.lineHeight。
+     垂直位置修正跟實際輸出的 line-height 必須用同一份計算，
+     不然兩邊會不一致，所以統一走這兩支函式。 */
+  function effectiveLineHeight(layer) {
+    if (layer.verticalCenter) return CONFIG.badge.lineHeight;
+    var lhKey = String(layer.field || layer.id || '').replace(/[0-9]+$/, '');
+    var lhOverride = CONFIG.textLineHeight ? CONFIG.textLineHeight[lhKey] : null;
+    return lhOverride != null ? lhOverride : layer.lineHeight;
+  }
+  function lineHeightCss(lh) {
+    if (lh == null) return null;
+    return (typeof lh === 'number' ? (lh <= 4 ? String(lh) : lh + 'px') : lh);
+  }
+  /* ShopeeNotoSans 一個字實際佔的高度（含上下伸部的預留空間）：
+     hhea ascent 1160 + descent 320 = 1480 / upem 1000 = 1.48 em。
+     三個字重（Regular/Medium/Bold）都一樣。
+     只要 line-height 小於這個數字，字就會超出行框；用來算要留多少
+     上下 padding 才不會被 overflow:hidden 裁掉。 */
+  var FONT_CONTENT_EM = 1.48;
+
+  /* 這個圓角是不是「只圓上面兩角」（例如 "15px 15px 0 0"）。
+     這種形狀代表它是貼齊卡片頂端的色帶，圓角要跟著卡片一起由設定檔控制；
+     四個角都圓的（例如 "10px"）是浮在卡片裡的獨立色塊，要照原本的值。 */
+  function isTopOnlyRadius(v) {
+    if (typeof v !== 'string') return false;
+    var p = v.trim().split(/\s+/);
+    if (p.length !== 4) return false;
+    var isZero = function (s) { return parseFloat(s) === 0; };
+    return !isZero(p[0]) && parseFloat(p[0]) === parseFloat(p[1]) && isZero(p[2]) && isZero(p[3]);
+  }
+
+  /* 把圓角的「形狀」保留、只換掉「大小」。
+       scaleRadiusPattern("15px 0px 0px 15px", 20) → "20px 0px 0px 20px"
+       scaleRadiusPattern("15px", 20)              → "20px"
+       scaleRadiusPattern(null, 20)                → "20px"（沒寫就四個角都圓）
+     PS 稿上哪幾個角要圓，是設計決定、不能改；圓幾 px 才是 render-config 統一控制的。
+     以前這裡直接寫成一個數字，把「只圓左邊兩角」的曝品範圍畫成四角全圓，右邊就會凸出卡片。 */
+  function scaleRadiusPattern(v, size) {
+    if (v == null || v === '') return size + 'px';
+    var parts = String(v).trim().split(/\s+/);
+    if (parts.length === 1) return size + 'px';
+    return parts.map(function (p) {
+      return parseFloat(p) === 0 ? '0px' : size + 'px';
+    }).join(' ');
+  }
+
+  /* 行距換算成「倍數」，用來算半行距（half-leading）。算不出來就回 1（等於沒有半行距）。 */
+  function lineHeightMultiplier(layer) {
+    var lh = effectiveLineHeight(layer);
+    if (lh == null || !layer.fontSize) return 1;
+    var n = parseFloat(lh);
+    if (isNaN(n) || n <= 0) return 1;
+    return n <= 4 ? n : (n / layer.fontSize);
+  }
+
+  /* MSBN C 系列的促標與「一排最多6字」文案，輸入範圍左右各放寬10px。
+     只放寬文字框，不改字數限制；左右各補10px可維持原本的文字中心。 */
+  function cSeriesTextWidthExtra(layer, opts) {
+    if (!layer || layer.type !== 'text') return 0;
+    var schemaId = String(opts && opts._schemaId || '');
+    if (!/^msbn_C_/i.test(schemaId)) return 0;
+    var field = String(layer.field || '');
+    var label = String(layer.fieldLabel || '');
+    var designText = String(layer.designText || '') + ' ' + String(layer.default || '');
+    if (/^promo\d*$/i.test(field) || /促標文字/.test(label)) return 20;
+    if (/^msbn_C_1_[123]$/i.test(schemaId) && /^copy\d*$/i.test(field) && /最多\$?6字/.test(designText)) return 20;
+    return 0;
+  }
+
+  /* MSBN D-1-1-2／D-2-1-2 的圓圈色不是固定靠左起算：每個左／中／右群組
+     都要依「目前有顏色的顆數」重新排在該群組幾何中心。原稿的欄位位置保留
+     作為群組中心與間距基準，因此 2、3、4 顆都不會因為只從第一顆開始畫而偏移。 */
+  function localCircleLayoutOf(schema, data) {
+    if (!/^msbn_D_(?:1_1_2|2_1_2)$/i.test(String(schema && schema.id || ''))) return null;
+    var groups = {};
+    (schema.layers || []).forEach(function (layer) {
+      if (layer.type !== 'circle' || !layer.optionalColor || !/^swatchColor\d*$/i.test(String(layer.field || ''))) return;
+      var m = /^(左|中|右)・/.exec(String(layer.fieldLabel || ''));
+      var groupName = m ? m[1] : '圓圈';
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(layer);
+    });
+    var overrides = {};
+    Object.keys(groups).forEach(function (groupName) {
+      var layers = groups[groupName].slice().sort(function (a, b) {
+        var am = /(\d+)\s*$/.exec(String(a.fieldLabel || a.field || ''));
+        var bm = /(\d+)\s*$/.exec(String(b.fieldLabel || b.field || ''));
+        return (am ? Number(am[1]) : 99) - (bm ? Number(bm[1]) : 99);
+      });
+      var active = layers.filter(function (layer) {
+        return String(data && data[layer.field] == null ? '' : data[layer.field]).trim() !== '';
+      });
+      if (!active.length) return;
+      var centers = layers.map(function (layer) { return Number(layer.left || 0) + Number(layer.width || 0) / 2; });
+      var center = centers.reduce(function (sum, value) { return sum + value; }, 0) / centers.length;
+      var gaps = [];
+      for (var i = 1; i < centers.length; i++) if (isFinite(centers[i] - centers[i - 1])) gaps.push(centers[i] - centers[i - 1]);
+      var spacing = gaps.length ? gaps.reduce(function (sum, value) { return sum + value; }, 0) / gaps.length : Number(layers[0].width || 25) + 8;
+      var start = center - spacing * (active.length - 1) / 2;
+      active.forEach(function (layer, index) {
+        overrides[layer.field] = start + spacing * index - Number(layer.width || 0) / 2;
+      });
+    });
+    return overrides;
+  }
+  /* 圖片圖層實際使用的 z-index（不含隱形邊界框的額外處理）。renderLayer 與「前後位置」
+     預設順序（defaultImageOrderOf）共用同一套規則，兩邊結果才會一致。 */
+  function imageLayerStackZ(layer, fieldKey, url, opts) {
+    /* 圖片框的空白預覽與實際圖片可以分開指定 z-index。
+       未設定新欄位的舊版位會完整沿用 layer.zIndex，不改變既有結果。 */
+    var stateZIndex = url ? layer.imageZIndex : layer.placeholderZIndex;
+    if (stateZIndex == null) stateZIndex = layer.zIndex;
+    var rangePlaceholderOpacity = rangePlaceholderOpacityOf(layer);
+    if (rangePlaceholderOpacity != null && url && layer.imageZIndex == null && stateZIndex === layer.zIndex) {
+      stateZIndex = Number(layer.zIndex || 0) + 1;
+    }
+    /* imageOrder 是匯入工單每一格自己的圖片欄位順序。
+       這裡把排序後的欄位對應到原 schema 的圖片 z-index 槽位，
+       所以商品圖與人物圖可以互換上下層，而文字／背景仍維持原本層級。 */
+    var isSignatureImage = /^signImg\d*$/i.test(String(layer.field || ''));
+    var isContentImage = isContentImageField(layer.field);
+    /* 簽名圖是設計稿指定的最上層物件，不能被右側工具列的圖片排序覆蓋。
+       一般圖片仍可依 imageOrder 互換前後；簽名圖則永遠使用註冊版位時
+       算出的頂層 z-index。 */
+    /* 副區的商品框本身就是可見的曝品上傳範圍；保留 schema 原始層級，
+       只在 MSBN 套用「曝品／贈品／代言人圖位於資訊下方」的排序，
+       避免副區圖片框被新的統一 z-index 計算壓到看不見。 */
+    var isSubareaSchema = /^subarea_/i.test(String(opts && opts._schemaId || ''));
+    /* 空白上傳框必須保留 schema 原始層級，否則像 A-2-3、D-1-1 這種
+       多商品版位會被卡片背景蓋住，看起來像欄位整個消失。只有真的已載入
+       商品／贈品／代言人圖片後，才把內容圖移到資訊圖層下方。fixedLayerOrder
+       則用於信用卡圖等必須完整覆蓋自己票券範圍的特殊圖片。 */
+    if (layer.fixedLayerOrder) {
+      stateZIndex = url && layer.imageZIndex != null ? layer.imageZIndex
+        : (!url && layer.placeholderZIndex != null ? layer.placeholderZIndex : layer.zIndex);
+    } else if (isContentImage && url && layer.imageZIndex == null && !isSubareaSchema && opts && opts._contentImageZIndex != null) {
+      stateZIndex = opts._contentImageZIndex;
+    } else if (isSignatureImage && opts && opts._signatureImageZByField &&
+        opts._signatureImageZByField[layer.field] != null) {
+      stateZIndex = opts._signatureImageZByField[layer.field];
+    } else if (!isSignatureImage && url && isSharedMovableImageField(fieldKey) &&
+        opts && Array.isArray(opts.imageOrder) &&
+        Array.isArray(opts._imageZSlots) && fieldKey) {
+      var normalImageOrder = opts.imageOrder.filter(function (key) {
+        return !/^signImg\d*$/i.test(String(key || ''));
+      });
+      var orderedImageIndex = normalImageOrder.indexOf(fieldKey);
+      if (orderedImageIndex >= 0 && orderedImageIndex < opts._imageZSlots.length) {
+        stateZIndex = opts._imageZSlots[orderedImageIndex];
+      }
+    }
+    return stateZIndex;
+  }
+  function imageLayerUrlOf(layer, fieldKey, data) {
+    var raw = layer.fixedImage ? null : (fieldKey && data ? data[fieldKey] : null);
+    var urls = splitImageList(raw).filter(isRenderableImageUrl);
+    if (!urls.length && layer.defaultSrc) urls = [layer.defaultSrc];
+    return urls.length ? urls.join(',') : null;
+  }
+  /* buildRender 與 defaultImageOrderOf 共用：圖片槽位、簽名圖頂層、內容圖統一層級。 */
+  function imageStackingContextOf(schema) {
+    var schemaLayers = (schema.layers || []).slice();
+    (schema.repeats || []).forEach(function (repeat) { schemaLayers = schemaLayers.concat(repeat.layers || []); });
+    var imageZSlots = [];
+    var signatureImageZByField = {};
+    var seenImageLayerFields = {};
+    schemaLayers.forEach(function (layer) {
+      if (layer.type !== 'image' || layer.fixedImage || layer.fixedLayerOrder || !layer.field ||
+          !isSharedMovableImageField(layer.field)) return;
+      if (seenImageLayerFields[layer.field]) return;
+      seenImageLayerFields[layer.field] = true;
+      if (/^signImg\d*$/i.test(String(layer.field))) {
+        signatureImageZByField[layer.field] = layer.zIndex != null ? Number(layer.zIndex) : 0;
+        return;
+      }
+      imageZSlots.push(layer.zIndex != null ? Number(layer.zIndex) : 0);
+    });
+    imageZSlots.sort(function (a, b) { return b - a; });
+    return {
+      _schemaId: schema.id,
+      _schemaLayers: schemaLayers,
+      _imageZSlots: imageZSlots,
+      _signatureImageZByField: signatureImageZByField,
+      _contentImageZIndex: contentImageZIndexOf(schema)
+    };
+  }
+  /* 「前後位置」的預設順序（第一個＝最前面）。使用者還沒調整過時，依「目前畫面實際的上下關係」
+     決定：z-index 不同就照 z-index；同一層時 HTML 越後面的越上面。只在同層的那幾個欄位之間
+     調換位置，各欄位分到的 z-index 槽位不變，所以預設畫面跟以前完全一樣。 */
+  function defaultImageOrderOf(schema, data, fieldOrder) {
+    var order = Array.isArray(fieldOrder) ? fieldOrder.slice() : [];
+    if (!schema || order.length < 2) return order;
+    var ctx = imageStackingContextOf(schema);
+    ctx.imageOrder = order.slice();
+    var info = {};
+    (schema.layers || []).forEach(function (layer, position) {
+      if (!layer || layer.type !== 'image' || !layer.field || info[layer.field]) return;
+      if (layer.fixedLayerOrder || !isSharedMovableImageField(layer.field) || /^signImg\d*$/i.test(String(layer.field))) return;
+      if (order.indexOf(layer.field) === -1) return;
+      /* 以「放了圖」的狀態計算：只有實際有圖時，前後關係才看得到。 */
+      info[layer.field] = { z: Number(imageLayerStackZ(layer, layer.field, 'x', ctx)), position: position };
+    });
+    var groups = {};
+    Object.keys(info).forEach(function (field) {
+      var key = String(info[field].z);
+      (groups[key] = groups[key] || []).push(field);
+    });
+    Object.keys(groups).forEach(function (key) {
+      var fields = groups[key];
+      if (fields.length < 2) return;
+      var slots = fields.map(function (field) { return order.indexOf(field); }).sort(function (a, b) { return a - b; });
+      fields.sort(function (a, b) { return info[b].position - info[a].position; });
+      slots.forEach(function (slot, i) { order[slot] = fields[i]; });
+    });
+    return order;
+  }
+
+  function renderLayer(layer, left, top, data, fieldPrefix, opts) {
+    /* hidden:true ＝這一層完全不畫（也不會出現在欄位面板）。
+       用來關掉 PS 稿上的示意圖層，例如 LOGO 框裡那個「LOGO」佔位字：
+       那個框現在是可以直接拖圖片進來的圖片欄位，字疊在上面反而礙眼。
+       保留資料不刪，之後想恢復把這個旗標拿掉就好。 */
+    if (layer.hidden) return '';
+
+    /* hideIfField：例如 LOGO 佔位文字，一旦 logoImg 欄位有值，這層文字就不畫出來 */
+    if (layer.hideIfField) {
+      var hideKey = fieldPrefix ? fieldPrefix + layer.hideIfField : layer.hideIfField;
+      if (data[hideKey]) return '';
+    }
+
+    /* requiresImageField：其他附屬文字可跟著圖片顯示；代言人小字例外，
+       它本身就是畫布上的可編輯欄位，沒有圖片時也要保留黑字預設文字。 */
+    if (layer.requiresImageField && !isEndorserNoteLayer(layer)) {
+      var requiredImageKey = fieldPrefix ? fieldPrefix + layer.requiresImageField : layer.requiresImageField;
+      if (!hasRenderableImageValue(data && data[requiredImageKey])) return '';
+    }
+
+    /* 有字 CTA 已在 schema 註冊時跟底色塊綁成同一個垂直範圍。
+       這種文字不再走 PS top/topExact 的字型補償，而是交給 flex 先把「行框」置中。
+
+       但行框置中不等於肉眼看到的字形置中：ShopeeNotoSans 的字型 ascent / descent
+       並非上下對稱，中文字的實際筆畫中心會比行框中心低約 2～3px（42px CTA 字級）。
+       所以再套用 textVerticalCorrection.ctaText 做光學修正；目前設定為 -3px，
+       只把 CTA 文字往上提，底色塊與三角形仍維持幾何中心不動。 */
+    var isCenteredCtaText = layer.type === 'text' && layer.ctaVerticalCenter &&
+      layer._ctaBoxTop != null && layer._ctaBoxHeight != null;
+    var isInlineCtaText = isCenteredCtaText && layer._ctaInlineTriangle &&
+      layer._ctaGroupLeft != null && layer._ctaGroupWidth != null;
+    var isDynamicRowCentered = layer.type === 'text' && layer._dynamicRowCentered &&
+      layer._dynamicRowTop != null && layer._dynamicRowHeight != null;
+    var isTwoLineCenterText = isTwoLineCenterTextLayer(layer, opts && opts._schemaId) &&
+      !isCenteredCtaText && !isDynamicRowCentered;
+    if (isDynamicRowCentered) top = Number(layer._dynamicRowTop);
+    if (isCenteredCtaText) {
+      var ctaOpticalY = Number(CONFIG.textVerticalCorrection.ctaText);
+      if (!isFinite(ctaOpticalY)) ctaOpticalY = 0;
+      top = Number(layer._ctaBoxTop) + ctaOpticalY;
+    }
+    /* 原稿兩行欄位仍以 topExact 為錨點；整體再往下 4px，讓單行／雙行都維持
+       使用者確認過的視覺位置，而不是被 flex 行框往上拉。 */
+    if (isTwoLineCenterText && layer.topExact != null) {
+      var twoLineTopExact = Number(layer.topExact);
+      var twoLineOpticalY = Number(CONFIG.textVerticalCorrection.twoLineText);
+      if (!isFinite(twoLineOpticalY)) twoLineOpticalY = 0;
+      if (isFinite(twoLineTopExact)) top = twoLineTopExact + twoLineOpticalY;
+    }
+    if (isInlineCtaText) left = Number(layer._ctaGroupLeft);
+
+    /* PS 文字圖層座標修正（垂直）：
+       PS 匯出「只給 left/top、沒有 transform 縮放」的文字圖層時，量測基準點跟瀏覽器
+       實際渲染文字的位置差了幾乎正好一個字體大小（用參考圖實測比對出來的規律）。
+
+       但光減一個字體大小還不夠：瀏覽器畫單行文字時，字會被放在「行框」的正中間，
+       行框高度＝line-height，所以字實際上又被推移了「半行距」
+         halfLeading = (行距倍數 − 1) × 字體大小 ÷ 2
+       行距大於 1 就往下推，小於 1 就往上拉。PS 的 top 是文字框頂端、跟行距無關，
+       所以這一份位移必須扣掉，否則行距不是 1 的文字就會跑版。
+
+       這件事很重要，因為 block.json 裡同一種元素的行距並不統一，例如：
+         促標 line-height 在各版位之間換算出來的半行距從 −5.99 到 +4.00（差 10px）
+         品名 0～+4、警語 −5～0、LOGO佔位字 +2～+7、圓標 +6.76～+9
+       以前是用 render-config 的一個固定數字硬補，只能補對其中一部分版位，
+       其他版位就會歪掉。改成逐圖層計算之後，這個誤差就整批消失了。
+
+       這裡只對「沒有縮放，或縮放接近1（可視為沒縮放）」的文字套用；
+       像 msbn3p 那種有明顯縮放 transform 的文字，是另一套已經驗證過的座標系統，不能套用。 */
+    if (layer.type === 'text' && layer.fontSize && !layer.verticalCenter &&
+        !isCenteredCtaText && !isDynamicRowCentered && !isTwoLineCenterText) {
+      if (layer.topExact != null) {
+        /* topExact ＝已經算好的「文字內容區上緣」，直接用，不再做任何推算。
+           （實際套用在下面「扣掉上下 padding」之後，因為那一段對 topExact 不適用，
+             topExact 本身就已經是最終位置了。）
+           這個值是由 tools/apply_css_ink_top.py 從新版 PS CSS 產生的：
+           新版 CSS 的文字 top 就是「筆畫上緣」（用 200 個圖層對過參考圖，
+           誤差中位數 1px、標準差 0.78px），再用字型檔算出該字串最高的筆畫
+           離內容區上緣幾個 em，兩者相減就得到精確的內容區上緣。
+           所以有 topExact 的圖層不需要下面那串「減一個字級、減半行距、
+           再加一個手調補償值」的估算 —— 那串估算會隨字級放大誤差
+           （實測 40px 差 0～2.4px、45px 差 2.5px、55px 差 7.1px）。 */
+        top = layer.topExact;
+      } else {
+        var noScale = !layer.transform ||
+          (Math.abs(layer.transform[0] - 1) < 0.05 && Math.abs(layer.transform[3] - 1) < 0.05);
+        if (noScale) {
+          var extra = CONFIG.textVerticalCorrection[layer.id] || 0;
+          var halfLeading = (lineHeightMultiplier(layer) - 1) * layer.fontSize / 2;
+          top = top - layer.fontSize - halfLeading + extra;
+        }
+      }
+    }
+
+    /* 圓標文字：寬度/行距改用設定檔的值即時計算（不是寫死在資料裡），
+       這樣使用者改 render-config.json 的 badge.maxWidth / badge.lineHeight 就能直接生效，
+       置中位置(left)也會跟著重新算，不會因為改了寬度就跑位 */
+    var badgeWidthOverride = null;
+    if (layer.verticalCenter && layer._boxLeft != null && layer._boxWidth != null) {
+      badgeWidthOverride = CONFIG.badge.maxWidth;
+      left = layer._boxLeft + (layer._boxWidth - badgeWidthOverride) / 2;
+    }
+
+    var cTextWidthExtra = cSeriesTextWidthExtra(layer, opts);
+    if (cTextWidthExtra && layer.width != null) left -= cTextWidthExtra / 2;
+    /* ── 文字不要被上下裁掉 ────────────────────────────────────────
+       所有文字圖層都有 overflow:hidden（避免字太多時橫向壓到隔壁圖層），
+       但這個裁切是四個方向都裁的，而「行框」常常比字本身還矮：
+         行框高度 = 行距 × 字級
+         字的內容高度 = 1.48 × 字級（ShopeeNotoSans 的 ascent 1160 + descent 320）
+       只要行距小於 1.48，字的上下就會超出行框、被裁掉一截。實際上幾乎每一種
+       文字都中：警語 40px 字配 0.75 行距（行框只有 30px，上下各被切掉 14.6px）、
+       簽名/代言人小字 24px 字被設定檔壓到 1.15 行距（上下各切掉 4px，就是
+       「小字下面有一點被裁切」的原因）。
+
+       解法：用上下 padding 把「裁切邊界」往外推到字的外面，同時把 top 往上
+       補回同樣的量。字的位置完全不變（padding 只影響裁切範圍，不影響行框中心），
+       左右也還是照原本的框裁，所以橫向不會壓到隔壁。 */
+    var textPadV = 0;
+    if (layer.type === 'text' && layer.fontSize && !isCenteredCtaText && !isDynamicRowCentered && !isTwoLineCenterText) {
+      var lineBox = lineHeightMultiplier(layer) * layer.fontSize;
+      textPadV = Math.max(0, (FONT_CONTENT_EM * layer.fontSize - lineBox) / 2);
+      /* 上面那串估算算出來的是「行框上緣」，要再往上退半個 padding 才是內容區上緣；
+         topExact 給的本來就已經是內容區上緣，不用再退。
+         （padding 本身兩種情況都要留著，那是為了不讓字被上下裁掉。） */
+      if (layer.topExact == null) top -= textPadV;
+    }
+
+    /* 副區的警語（小字）與品名之間再多留一點距離：原本 2px，再加 2px。 */
+    var warnNudge = opts && opts._subareaWarnNudge &&
+      layer.type === 'text' && /^warn\d*$/i.test(String(layer.field || '')) ? 4 : 0;
+    var movableTextFieldKey = isMovableCanvasTextLayer(layer) ? resolveFieldKey(layer, fieldPrefix) : null;
+    var savedCanvasTextPosition = movableTextFieldKey && data && data.__canvasTextPositions
+      ? data.__canvasTextPositions[movableTextFieldKey] : null;
+    if (savedCanvasTextPosition) {
+      var savedLeft = Number(savedCanvasTextPosition.left);
+      var savedTop = Number(savedCanvasTextPosition.top);
+      if (isFinite(savedLeft)) left = savedLeft;
+      if (isFinite(savedTop)) top = savedTop;
+    }
+    /* 副區品名只有一行時，警語往上移一行（判斷見 subareaWarnLiftOf）；warnLiftTop2＝品名兩行時（原稿）的位置。 */
+    var warnLiftInfo = opts && opts._subareaWarnLift && layer.type === 'text' && layer.field
+      ? opts._subareaWarnLift[layer.field] : null;
+    var warnLiftTop2 = top + warnNudge;
+    var style = ['position:absolute', 'left:' + px(left),
+      'top:' + px(top + warnNudge - (warnLiftInfo ? warnLiftInfo.lift : 0))];
+    if (textPadV > 0) {
+      style.push('padding-top:' + px(textPadV));
+      style.push('padding-bottom:' + px(textPadV));
+      /* width/height 都是照原本的框給的，加了 padding 不能讓框被撐大，
+         所以維持 content-box 的量測方式改成連 padding 一起算在內。 */
+      style.push('box-sizing:content-box');
+    }
+    /* 圖片圖層可依狀態使用不同層級：
+       - 尚未上傳時，預覽範圍與 icon 留在內容物件下方
+       - 上傳後，實際圖片可移到圓標上方、CTA 下方
+       圖片的 z-index 要等下面判斷出是否有可渲染圖片後再決定；
+       其他圖層仍直接使用原本的 zIndex。 */
+    if (layer.type !== 'image' && layer.zIndex != null) style.push('z-index:' + layer.zIndex);
+    if (isInlineCtaText) style.push('width:' + px(Number(layer._ctaGroupWidth)));
+    else if (badgeWidthOverride != null) style.push('width:' + px(badgeWidthOverride));
+    else if (layer.width != null) style.push('width:' + px(Number(layer.width) + cTextWidthExtra));
+    if (isCenteredCtaText) style.push('height:' + px(layer._ctaBoxHeight));
+    else if (isDynamicRowCentered) style.push('height:' + px(layer._dynamicRowHeight));
+    else if (isTwoLineCenterText && layer.height == null && layer.fontSize) {
+      /* 有些原始兩行欄位只記錄 top／width，沒有把文字框 height 寫進 JSON。
+         仍以原稿的兩行行框建立範圍；當工單只填第一行時，flex 才能把它置中，
+         而不會留下第二行的空白在下方。已有明確 height 的版位則完全沿用原稿。 */
+      /* 這裡要用 block.json 原始行距，不用 CONFIG 的壓縮行距。
+         例如簽名／代言人小字原稿是 1.667，但顯示字距可能另有 1.15 的美術微調；
+         垂直置中範圍仍必須落在原本兩行位置的中點。 */
+      var rawTwoLineLh = layer.lineHeight;
+      var rawTwoLineMultiplier = Number(rawTwoLineLh);
+      if (!isFinite(rawTwoLineMultiplier) || rawTwoLineMultiplier <= 0) {
+        rawTwoLineMultiplier = lineHeightMultiplier(layer);
+      } else if (rawTwoLineMultiplier > 4) {
+        rawTwoLineMultiplier = rawTwoLineMultiplier / Number(layer.fontSize);
+      }
+      var twoLineHeight = rawTwoLineMultiplier * Number(layer.fontSize) * 2;
+      if (isFinite(twoLineHeight) && twoLineHeight > 0) style.push('height:' + px(twoLineHeight));
+    }
+    else if (layer.height != null) style.push('height:' + px(layer.height));
+    if (layer.boxShadow) style.push('box-shadow:' + layer.boxShadow);
+    if (layer.clipPath) style.push('clip-path:' + layer.clipPath);
+    else if (layer.clipBottom) {
+      /* 人物圖只限制原範圍的下緣：上方與左右仍可拖曳／放大超出框外，
+         但超過 bottom 的部分會被裁掉。負 inset 是刻意放寬另外三邊。 */
+      style.push('clip-path:inset(-10000px -10000px 0 -10000px)');
+    }
+    /* ── 圓角 ────────────────────────────────────────────────
+       原則：「圓哪幾個角」照 block.json 走（那是 PS 稿的設計，不能改），
+             只有「圓幾 px」交給 render-config 統一控制。
+
+       所以這裡不是用 id 判斷，而是看資料裡的圓角形狀：
+         只圓上面兩角（例如 "15px 15px 0 0"）＝貼齊卡片頂端的色帶
+             → 用 promoBarTopCornerRadius，跟卡片圓角保持一致、接縫看不出來
+         四個角都圓（例如 MSBN 促標底的 "10px"）＝浮在卡片裡的獨立色塊
+             → 照它自己的值，四個角都要圓
+       一開始這裡是寫 id === 'promoBg' / 'promoBar'，結果把 MSBN 那種
+       四角都圓的促標底也一律改成「只圓上面兩角」，圓邊就不見了。 */
+    var baseId = String(layer.id || '').replace(/[0-9]+$/, '');
+    if (isCtaBgLayer(layer)) {
+      /* CTA 底色塊：不管原本是方角、圓角還是整顆圓形，一律統一成同一個圓角
+         （框比圓角小時瀏覽器會自己等比例收斂，原本是圓形的看起來還是圓形） */
+      style.push('border-radius:' + CONFIG.cardStyle.ctaBgCornerRadius + 'px');
+    } else if (layer.psRadius && layer.borderRadius) {
+      /* psRadius:true ＝「這個圓角就照 PS 稿的數字畫，不要被 render-config 統一覆寫」。
+         用在跟卡片圓角刻意不同的地方，例如 MSBN A-2-4 的背景是 R20（卡片統一值是 R15）。 */
+      style.push('border-radius:' + (typeof layer.borderRadius === 'number' ? layer.borderRadius + 'px' : layer.borderRadius));
+    } else if (baseId === 'bg') {
+      /* 卡片背景：圓角大小交給 render-config 統一控制，但「圓哪幾個角」要照 block.json 的形狀走
+         （例如 "15px 15px 0 0" 這種只圓上面兩角的背景，不能被畫成四角全圓）。 */
+      style.push('border-radius:' + scaleRadiusPattern(layer.borderRadius, CONFIG.cardStyle.cardCornerRadius));
+    } else if (isTopOnlyRadius(layer.borderRadius)) {
+      var r = CONFIG.cardStyle.promoBarTopCornerRadius;
+      style.push('border-radius:' + r + 'px ' + r + 'px 0 0');
+    } else if (layer.borderRadius && layer.type !== 'circle') {
+      style.push('border-radius:' + (typeof layer.borderRadius === 'number' ? layer.borderRadius + 'px' : layer.borderRadius));
+    }
+
+    var content = '';
+    var editableTextInner = null;
+    /* fixedImage：版型內建且不允許替換的圖（例如 C 系列蝦皮購物 LOGO、
+       C-1-4 中間的 3C 家電圖）。這種圖不建立欄位、不接受拖放，也不提供
+       滾輪縮放或滑鼠拖曳；永遠只畫 block.json 的 defaultSrc。 */
+    var fieldKey = layer.fixedImage ? null : resolveFieldKey(layer, fieldPrefix);
+    /* 匯入工單畫布可直接點顏色圖層叫出色盤。
+       圓形色塊預設可點；其他形狀只有明確標 canvasColorEditable:true 才開啟，
+       避免一般底色矩形擋住底下的圖片拖放區。 */
+    var directColorRole = themeRoleOf(layer, opts && opts._schemaId);
+    var forceBadgeCenter = layer.type === 'text' && directColorRole === 'badgeText';
+    var forcePromoHitPassthrough = layer.type === 'text' && directColorRole === 'promoText';
+    var colorFieldKey = fieldKey;
+    if (!colorFieldKey && layer.type === 'rect') {
+      var fallbackColorFields = {
+        bg: 'bgColor', cardBg: 'bgColor', cardBgA23Left: 'bgColor', cardBgA23Right: 'bgColor2',
+        promoBg: 'promoColor', badgeBg: 'badgeColor', ctaBg: 'ctaColor'
+      };
+      colorFieldKey = fallbackColorFields[directColorRole] || null;
+    }
+    var directColorEditable = !!(opts && opts.editable && colorFieldKey &&
+      (layer.type === 'circle' || layer.canvasColorEditable ||
+       (layer.type === 'rect' && ['bg', 'cardBg', 'cardBgA23Left', 'cardBgA23Right',
+        'promoBg', 'badgeBg', 'ctaBg'].indexOf(directColorRole) !== -1)));
+    var renderedColorValue = null;
+
+    if (layer.type === 'image') {
+      var rawUrl = layer.fixedImage ? null : (fieldKey ? data[fieldKey] : null);
+      /* 只留真的載得到的圖片來源；純檔名（還沒上傳對應素材）不算，走下面的佔位卡 */
+      var urls = splitImageList(rawUrl).filter(isRenderableImageUrl);
+      /* defaultSrc：這個框有一張「內建的圖」，例如 C 系列券上的蝦皮 LOGO。
+         沒有人上傳東西時就顯示它（不是顯示空白佔位卡），
+         上傳／拖曳圖片進來則會蓋過去，所以既保留原本的設計，又能換成別的品牌 LOGO。 */
+      if (!urls.length && layer.defaultSrc) urls = [layer.defaultSrc];
+      var url = urls.length ? urls.join(',') : null;
+
+      var stateZIndex = imageLayerStackZ(layer, fieldKey, url, opts);
+      var rangePlaceholderOpacity = rangePlaceholderOpacityOf(layer);
+      var isSubareaSchema = /^subarea_/i.test(String(opts && opts._schemaId || ''));
+      if (layer.boundaryOnly) {
+        /* 隱形邊界框壓在內容圖之下（但仍在卡片背景之上，拖放才接得到）：
+           對方的圖拖進這塊時，滑鼠事件要落在圖片上才能繼續拖曳。 */
+        /* 內容圖的 z-index 可能來自統一值、圖片排序槽（右側工具列上下移）或 schema 原值，
+           隱形框一定要比「所有」可能的值都低，否則晚畫的隱形框會蓋住同層的圖片，
+           圖片就點不到、拖不動（msbn_A_2_2 右半邊的商品圖就曾這樣失效）。 */
+        var boundaryCandidates = [Number(layer.zIndex)];
+        if (!isSubareaSchema && opts && opts._contentImageZIndex != null) boundaryCandidates.push(Number(opts._contentImageZIndex));
+        if (opts && Array.isArray(opts._imageZSlots)) {
+          opts._imageZSlots.forEach(function (z) { boundaryCandidates.push(Number(z)); });
+        }
+        (opts && opts._schemaLayers || []).forEach(function (l) {
+          if (l && l.type === 'image' && isContentImageField(l.field) && l.zIndex != null) boundaryCandidates.push(Number(l.zIndex));
+        });
+        boundaryCandidates = boundaryCandidates.filter(function (z) { return isFinite(z); });
+        stateZIndex = boundaryCandidates.length ? Math.min.apply(null, boundaryCandidates) - 1 : 0;
+      }
+      if (stateZIndex != null) style.push('z-index:' + stateZIndex);
+      /* LOGO 圖是內縮70%，周圍留白要看得到白色底色，所以底色要一直鋪著（keepBgWithImage:true）；
+         商品圖是滿版contain顯示，一旦有圖片，原本的灰色佔位底色就該完全消失，不能透出來。
+
+         bgField：這個圖片框「同時也是一塊可以換色的底色」。
+         曝品範圍就是這種：它本來在 block.json 裡是一個有顏色欄位的 rect，
+         現在改成圖片框讓人可以把圖拖進去，但那個顏色欄位要留著
+         （不然使用者在匯入頁改卡片顏色時，這一塊會變成改不到的死白）。 */
+      var bgFieldKey = layer.bgField ? resolveFieldKey({ field: layer.bgField }, fieldPrefix) : null;
+      /* LOGO 底板（id=logoBg 那塊圓角白底）：匯入頁會依放進去的 LOGO 吸色／手動換色，
+         顏色存在資料的 <欄位key>BgColor（例如 logoImgBgColor）；沒有就用 block.json 的白底。 */
+      var logoPlateKey = isLogoPlateLayer(layer) && fieldKey ? fieldKey + 'BgColor' : null;
+      var imgBgColor = derivedColorOf(layer, data, fieldPrefix, opts)
+        || themeColorOf(layer, opts, data, fieldPrefix)
+        || (bgFieldKey && data[bgFieldKey])
+        || (logoPlateKey && data[logoPlateKey])
+        || layer.backgroundColor;
+      /* 有 bgField 的圖片框，本身就是設計稿上一塊看得到的色塊（曝品範圍就是這種），
+         圖片是疊在它上面，所以放了圖之後底色還是要留著；
+         一般商品圖框的底色只是佔位用的灰底，一放圖就該完全消失。 */
+      var keepBg = layer.keepBgWithImage || !!layer.bgField;
+      if (layer.boundaryOnly) {
+        /* 隱形邊界框：同編號的曝品／贈品其中一格已有圖時，空的那格不畫佔位卡，
+           但仍以透明框留在畫布上並帶 data-img-field。image-layout 會把同編號的框
+           聯集成共同可移動範圍，圖片才能拖到對方的預設空間；框本身也仍可接受拖放。 */
+        style.push('background:transparent');
+        style.push('pointer-events:auto');
+        content = '';
+      } else {
+      if (imgBgColor && (!url || keepBg)) style.push('background-color:' + imgBgColor);
+      if (!url && rangePlaceholderOpacity != null) {
+        style.push('opacity:' + rangePlaceholderOpacity);
+      } else if (!url && layer.opacity != null) {
+        style.push('opacity:' + layer.opacity); /* 半透明佔位色只在「還沒放圖片」時套用 */
+      }
+      }
+      if (!url && !layer.boundaryOnly) {
+        /* 尚未上傳圖片：不畫 <img>（不會出現破圖跟滾輪提示文字），改放柔和的佔位卡 */
+        style.push('display:flex');
+        style.push('align-items:center');
+        style.push('justify-content:center');
+        style.push('overflow:hidden');
+        content = imagePlaceholderHtml(layer, rawUrl);
+      }
+      /* 有圖片時預設「不裁切」：滾輪放大、拖曳移動都可以超出這個範圍，
+         不會被自己的框切掉（框只是預設的擺放位置，不是牢籠）。
+         真的超出整個版位邊界時才會被版位／卡片圓角裁掉。
+
+         例外是標了 clipImage:true 的框（LOGO 框、曝品範圍、做圖範圍這類
+         「範圍即色塊」的區域）：那些框本身就是設計稿上畫出來的一塊底色，
+         圖片溢出去會直接蓋到卡片其他內容，所以一律裁切在框內，
+         而且連框的圓角一起吃（上面已經算好 border-radius）。 */
+      if (url) {
+        /* 改用真正的 <img> + object-fit:contain：
+           - 商品圖類：imageScale 預設100，等於整張圖完整顯示、依寬或高哪個先頂到邊自動縮小、置中，不裁切
+           - LOGO圖：imageScale設70，讓圖片內縮在框內只佔70%大小，四周留白置中
+           支援同一欄位用逗號分隔多張圖片網址（例如 "a.jpg,b.jpg"），
+           每張圖高度=範圍高、等間距5px、整組置中、超寬整組等比縮小、
+           滑鼠滾輪縮放──這些排版/互動邏輯都交給獨立的 image-layout.js 處理，
+           這裡只需要把每張圖片的<img>標籤跟一個「群組容器」準備好。 */
+        style.push('display:flex');
+        style.push('align-items:center');
+        style.push('justify-content:center');
+        var forceOwnImageClip = isMsbnB1WhiteProductBoundary(opts && opts._schemaId, fieldKey) ||
+          isMsbnC15ProductBoundary(opts && opts._schemaId, fieldKey) ||
+          isMsbnB34ProductBoundary(opts && opts._schemaId, fieldKey);
+        var clipImage = forceOwnImageClip || (((opts && opts.imageClipToBounds) || layer.clipImage) &&
+          !(opts && opts.imageClipToBounds && isSharedMovableImageField(fieldKey)));
+        style.push('overflow:' + (clipImage ? 'hidden' : 'visible'));
+        var ownImageClipPath = msbnB1WhiteProductClipPath(opts && opts._schemaId, layer);
+        if (ownImageClipPath) {
+          /* overflow:hidden 在圖片使用 transform 放大時，部分瀏覽器／縮放容器
+             仍可能讓子層視覺溢出；再加同形狀的 clip-path，確保只露出白底圓角框。 */
+          style.push('clip-path:' + ownImageClipPath);
+        }
+        var scalePct;
+        if (layer.id === 'logoBg') scalePct = CONFIG.image.logoInsetScalePercent;
+        else if (layer.id === 'productArea' || layer.id === 'productArea1' || layer.id === 'productArea2' || layer.id === 'bg') scalePct = CONFIG.image.productImageInsetScalePercent;
+        else scalePct = layer.imageScale != null ? layer.imageScale : 100;
+
+        if (layer.fixedImage) {
+          /* 固定圖直接畫成一般 img，不建立 .bn-imggroup，因此 image-layout.js
+             不會替它綁定縮放、拖曳、雙擊復原等互動。 */
+          style.push('pointer-events:none');
+          content = '<img src="' + esc(urls[0]) + '" onerror="this.style.display=\'none\'" ' +
+            'style="width:' + scalePct + '%;height:' + scalePct + '%;object-fit:contain;display:block;pointer-events:none;">';
+        } else {
+          var imgsHtml = urls.map(function (u, imageIndex) {
+            /* 多圖欄位：圖片來源與拖曳位置仍固定用原本的 imageIndex；
+               上下鍵只變更 imagePartLayerOrder 的 z-index，不交換圖或座標。 */
+            var partOrder = opts && opts.imagePartLayerOrder && fieldKey &&
+              Array.isArray(opts.imagePartLayerOrder[fieldKey]) ? opts.imagePartLayerOrder[fieldKey] : [];
+            var layerRank = partOrder.indexOf(imageIndex);
+            var imageZIndex = layerRank >= 0 ? (partOrder.length - layerRank) : (urls.length - imageIndex);
+            return '<img src="' + esc(u) + '" class="bn-imggroup-img" onerror="this.style.display=\'none\'" ' +
+              'style="height:100%;width:auto;object-fit:contain;display:block;flex-shrink:0;position:relative;z-index:' +
+              imageZIndex + '">';
+          }).join('');
+          content = '<div class="bn-imggroup" data-field-key="' + esc(fieldKey || '') + '" ' +
+            'style="width:' + scalePct + '%;height:' + scalePct + '%;display:flex;align-items:center;justify-content:center;overflow:visible;">' +
+            imgsHtml + '</div>';
+        }
+      }
+    } else if (layer.type === 'rect') {
+      var rectColor = derivedColorOf(layer, data, fieldPrefix, opts)
+        || ((fieldKey && data[fieldKey]) ? data[fieldKey] : layer.backgroundColor);
+      rectColor = themeColorOf(layer, opts, data, fieldPrefix) || rectColor; /* 全站統一顏色（促標底／CTA底…）優先 */
+      renderedColorValue = rectColor || '';
+      if (rectColor) style.push('background-color:' + rectColor);
+      if (layer.backgroundImage) style.push('background-image:' + layer.backgroundImage); /* 漸層等裝飾底 */
+      if (layer.border) style.push('border:' + layer.border);
+      if (layer.opacity != null) style.push('opacity:' + layer.opacity);
+      /* 一般色塊不擋滑鼠；明確開啟直接換色的色塊才接收點擊。 */
+      style.push('pointer-events:' + (directColorEditable ? 'auto' : 'none'));
+      if (directColorEditable) style.push('cursor:pointer');
+    } else if (layer.type === 'circle') {
+      style.push('pointer-events:' + (directColorEditable ? 'auto' : 'none'));
+      if (directColorEditable) style.push('cursor:pointer');
+      if (!isCtaBgLayer(layer)) style.push('border-radius:50%'); /* CTA 底色塊上面已經套過統一圓角了 */
+      var rawCircleColor = fieldKey ? data[fieldKey] : null;
+      var color = derivedColorOf(layer, data, fieldPrefix, opts)
+        || ((fieldKey && rawCircleColor) ? rawCircleColor : layer.backgroundColor);
+      /* D-1-1-2／D-2-1-2 的小圓圈可各自增減。這類圖層若欄位被設成空白，
+         空白代表「隱藏這一顆」，不能再自動回退成 block.json 的原始底色。 */
+      if (layer.optionalColor && fieldKey && String(rawCircleColor == null ? '' : rawCircleColor).trim() === '') {
+        color = '';
+        style.push('display:none');
+      }
+      color = themeColorOf(layer, opts, data, fieldPrefix) || color; /* 全站統一顏色（圓標底／CTA底…）優先 */
+      renderedColorValue = color || '';
+      if (color) style.push('background-color:' + color);
+      if (layer.border) style.push('border:' + layer.border);
+      /* 圓圈色選白色時仍要看得到輪廓；若模板本身沒有邊框，補一條細灰線。 */
+      if (color && !layer.border && /^(?:#fff(?:fff)?|white|rgba?\(\s*255\s*,\s*255\s*,\s*255(?:\s*,\s*(?:1|1\.0))?\s*\))$/i.test(String(color).replace(/\s+/g, ' '))) {
+        style.push('border:1px solid #c9c9c9');
+      }
+    } else if (layer.type === 'text') {
+      if (layer.fontSize != null) style.push('font-size:' + layer.fontSize + 'px');
+      if (layer.fontFamily) style.push('font-family:' + JSON.stringify(layer.fontFamily));
+      var textColor = themeColorOf(layer, opts, data, fieldPrefix) || layer.color; /* 全站統一顏色（促標字色／圓標字色／CTA字色）優先 */
+      if (textColor) style.push('color:' + textColor);
+      if (directColorRole === 'badgeText') {
+        var badgeStrokeColor = badgeBackgroundColorForText(layer, opts, data, fieldPrefix) || '#ffffff';
+        /* 圓標字的包邊要圓角。-webkit-text-stroke 的轉角固定是尖角（瀏覽器不吃 stroke-linejoin），
+           改用一圈 text-shadow 往外擴 4px（＝原本 8px 置中描邊露在字外的寬度），轉角自然是圓的。
+           下載是 html-to-image 交給瀏覽器自己畫，成品圖也會一樣是圓角。 */
+        style.push('text-shadow:' + roundTextOutlineShadow(badgeStrokeColor, 4));
+      }
+      var textWeight = semanticTextWeight(layer);
+      if (textWeight) style.push('font-weight:' + textWeight);
+      /* PS 有些文字層有自己的 tracking（例如有字 CTA 是 -0.025em，
+         42px 時等於 -1.05px）。圖層自己的值優先，沒有才使用全站設定。 */
+      var ls = layer.letterSpacing != null ? Number(layer.letterSpacing) : CONFIG.letterSpacing[layer.id];
+      if (ls != null && isFinite(Number(ls)) && Number(ls) !== 0) style.push('letter-spacing:' + Number(ls) + 'px');
+      /* 代言人／簽名小字這類多行小字，行距用設定檔壓緊（兩行之間靠近一點）。
+         用跟上面垂直修正同一支函式解析，兩邊保證一致。 */
+      var lhOut = lineHeightCss(effectiveLineHeight(layer));
+      if (lhOut != null) style.push('line-height:' + lhOut);
+      var centeredMsbnB22Text = /^msbn_B_2_2$/i.test(String(opts && opts._schemaId || '')) &&
+        /^(?:name|name2|warn|warn2)$/i.test(String(layer.field || ''));
+      if (layer.textAlign || centeredMsbnB22Text) style.push('text-align:' + (centeredMsbnB22Text ? 'center' : layer.textAlign));
+      if (layer.textDecoration) style.push('text-decoration:' + layer.textDecoration);
+      /* 可編輯文字保留使用者手動輸入的換行，但禁止瀏覽器依寬度自動折行。
+         這樣字數限制才真的能阻止超出範圍，而不是把多出的字偷偷折到下一行。 */
+      var editableTextNoWrap = !!(fieldKey && opts && opts.editable && layer.type === 'text');
+      var dynamicWhiteSpace = (editableTextNoWrap || isTwoLineCenterText) ? 'pre'
+        : (isDynamicRowCentered ? 'pre-line' : (layer.whiteSpace || 'nowrap'));
+      style.push('white-space:' + (isCenteredCtaText ? 'nowrap' : dynamicWhiteSpace));
+      if (isTwoLineCenterText) {
+        style.push('word-break:normal');
+        style.push('overflow-wrap:normal');
+      }
+      if (layer.transform) style.push('transform:matrix(' + layer.transform.join(',') + ')');
+      /* 一般文字仍裁在自己的框內；CTA 的框是定位參考，文字必須保持單行，
+         所以允許極小的字型量測差異溢出，不會因此換行。 */
+      /* 兩行文字的行框含字型 fallback 時，內容可能比框高幾 px；裁切會把第二排下緣切掉。
+         兩行欄位改為不裁切，超出的部分由下方 safe center 處理。 */
+      style.push('overflow:' + (isCenteredCtaText || layer.verticalCenter || forceBadgeCenter || isTwoLineCenterText ? 'visible' : 'hidden'));
+      if (isCenteredCtaText) {
+        /* 高度與 CTA 底色塊完全相同；align-items:center 讓文字行框中心
+           永遠落在底色塊中心，不再依賴不同電腦的字型 top/baseline。 */
+        style.push('display:flex');
+        style.push('align-items:center');
+        style.push('box-sizing:border-box');
+        if (isInlineCtaText) {
+          style.push('flex-direction:row');
+          style.push('justify-content:center');
+          style.push('gap:' + px(Number(layer._ctaTriangleGap) || 3));
+          var ctaTriangleLayer = layer._ctaTriangleLayer;
+          var ctaTriangleColor = ctaTriangleLayer
+            ? (themeColorOf(ctaTriangleLayer, opts, data, fieldPrefix) || ctaTriangleLayer.backgroundColor || '#fff')
+            : '#fff';
+          style.push('--bn-cta-triangle-color:' + ctaTriangleColor);
+          style.push('--bn-cta-triangle-width:' + px(Number(layer._ctaTriangleWidth) || 0));
+          style.push('--bn-cta-triangle-height:' + px(Number(layer._ctaTriangleHeight) || 0));
+        }
+      }
+      if (isDynamicRowCentered) {
+        /* D 系列可增減列：每個文字層使用目前列高作為容器，
+           讓單行與多行文案都在該列內水平、垂直置中。 */
+        style.push('display:flex');
+        style.push('flex-direction:column');
+        style.push('align-items:center');
+        style.push('justify-content:center');
+        style.push('box-sizing:border-box');
+      }
+      if (isTwoLineCenterText) {
+        style.push('display:flex');
+        style.push('flex-direction:column');
+        /* 只有一排時置中；兩排（內容高於框）時改為從上緣開始，第一排維持原稿兩排的位置，
+           不會被往上推出框外。safe 不被支援的瀏覽器會沿用上一行的 center。 */
+        style.push('justify-content:center');
+        style.push('justify-content:safe center');
+        style.push('align-items:' + (layer.textAlign === 'center' ? 'center' : 'flex-start'));
+        style.push('box-sizing:border-box');
+      }
+      if (layer.verticalCenter || forceBadgeCenter) {
+        /* 圓標這種可能斷成兩行的文字，用 flex 置中：不管一行還是兩行，
+           整塊文字永遠垂直+水平置中在圓標色塊範圍內，而且height已經限制成
+           跟圓標一樣大，兩行加起來太高也會被裁掉，不會超出圓標範圍 */
+        style.push('display:flex');
+        style.push('flex-direction:column');
+        style.push('align-items:center');
+        style.push('justify-content:center');
+      }
+      if (forcePromoHitPassthrough) {
+        /* 促標底色要能在整條色帶上點擊；文字字面仍由內層 span 接收編輯。 */
+        style.push('pointer-events:none');
+      }
+      /* 沒有綁欄位的文字＝純裝飾/示意字，不能編輯，也就不該擋住滑鼠。
+         這件事很重要：這種字常常整片蓋在圖片框上面（例如 LOGO 框裡的「LOGO」佔位字），
+         沒關掉的話，圖片拖到那個位置會落在文字圖層上，圖片框的 drop 事件根本收不到，
+         看起來就是「這個框拖不進去」。 */
+      if (!fieldKey) style.push('pointer-events:none');
+      var dataText = fieldKey ? data[fieldKey] : null;
+      var designDefaultText = opts && opts.designTextDefaults && layer.designText != null &&
+        String(layer.designText).trim() ? layer.designText : layer.default;
+      var useDesignDefault = opts && opts.designTextDefaults && layer.designText != null &&
+        (dataText == null || String(dataText).trim() === '' ||
+         (layer.default != null && String(dataText).trim() === String(layer.default).trim()));
+      var text = fieldKey
+        ? (useDesignDefault
+          ? designDefaultText
+          : dataText)
+        : designDefaultText;
+      if (isTwoLineCenterText) {
+        text = String(text == null ? '' : text).replace(/\r\n?/g, '\n').split('\n').slice(0, 2).join('\n');
+      }
+      if (fieldKey && themeRoleOf(layer, opts && opts._schemaId) === 'ctaText') {
+        text = Array.from(String(text == null ? '' : text)).slice(0, 3).join('');
+      }
+      content = esc(text || '');
+    }
+
+    var isEmptyEditableText = !!(fieldKey && opts && opts.editable && layer.type === 'text' &&
+      String(data[fieldKey] == null ? '' : data[fieldKey]).trim() === '');
+    var isDesignDefaultEditableText = !!(fieldKey && opts && opts.editable && opts.designTextDefaults &&
+      layer.type === 'text' && layer.designText != null && useDesignDefault);
+    if (isDesignDefaultEditableText) style.push('opacity:0.1');
+    var attrs = '';
+    var renderClassNames = [];
+    if (isInlineCtaText) renderClassNames.push('bn-cta-inline-group');
+    if (isEmptyEditableText) renderClassNames.push('bn-empty-text-placeholder');
+    if (opts && opts.editable && layer.type === 'text' && fieldKey) {
+      /* 可以直接在畫布上點擊編輯：contenteditable + 記住對應的欄位key，
+         外部（例如匯入工單頁面）監聽 input/blur 事件時可以用 data-field 取值寫回資料。
+
+         圓標文字另外處理：它的外層為了把一行／兩行文字置中，會使用 flex。
+         某些瀏覽器對「contenteditable 本身就是 flex 容器」的游標命中不穩定，
+         點得到但沒有焦點，表面上就像圓標文字不能編輯。把可編輯元素移到
+         內層，外層只負責排版，既保留置中也讓文字本身回到一般 block 游標模型。 */
+      style.push('outline:none');
+      style.push('cursor:text');
+      /* 文字命中範圍收在真正字面附近；空白處要讓底色仍可顯示手形並開色盤。 */
+      var fullTextHitbox = layer.verticalCenter || forceBadgeCenter || isCenteredCtaText || isDynamicRowCentered || isEmptyEditableText;
+      editableTextInner = {
+          attrs: ' contenteditable="true" spellcheck="false" data-field="' + esc(fieldKey) + '"',
+          style: [
+            'display:' + (fullTextHitbox ? 'block' : 'inline-block'),
+            (isInlineCtaText ? 'width:auto' : (fullTextHitbox ? 'width:100%' : 'width:auto')),
+            /* 圓標文字比框寬時（例如一行 3.5～4 字），內層跟著字面長寬、由外層 flex 置中，
+               左右對稱溢出；否則 text-align:center 只能在框內置中，多出的部分全往右邊跑。 */
+            (forceBadgeCenter ? 'max-width:none' : 'max-width:100%'),
+            (forceBadgeCenter ? 'min-width:max-content' : ''),
+            /* 空白文字欄位只需要底部虛線提示；不能把可編輯內層撐滿圓標，
+               否則 flex 會把圓標文字的行框推到錯誤位置。 */
+            '',
+            'box-sizing:border-box',
+            'text-align:' + (forceBadgeCenter ? 'center' : 'inherit'),
+            'white-space:' + (forceBadgeCenter ? 'pre' : 'inherit'),
+            (forceBadgeCenter ? 'word-break:normal' : ''),
+            /* CTA 文字與三角形由外層 flex 整組置中；內層若保留 auto margin，
+               flex 剩餘寬度會被邊距吃掉，造成三角形再次被推到最右側。 */
+            'margin:' + ((forceBadgeCenter || isInlineCtaText) ? '0' : '0 auto'),
+            (forceBadgeCenter ? 'align-self:center' : ''),
+            ((forceBadgeCenter || isInlineCtaText) ? 'flex:0 0 auto' : ''),
+            'outline:none',
+            'cursor:' + (isEndorserNoteLayer(layer) ? 'move' : 'text'),
+            'pointer-events:auto'
+          ]
+      };
+      /* 外層不接收滑鼠，避免點擊空白處時把焦點落在不可編輯的容器上；
+         內層寬度覆蓋真正文字所需的範圍，實際字面仍由它接收輸入。 */
+      style.push('pointer-events:none');
+      attrs = '';
+    }
+    /* 讓外層工具列直接讀渲染後的 computedStyle，而不是再猜一次 schema 預設色。
+       品名會標成 nameOnLightBg／nameOnDarkBg；CTA 三角形則標成背景色類型，
+       因此工具列能知道這批畫布真正用了哪些顏色、目前實際顯示什麼色號。 */
+    var effectiveColorRole = effectiveThemeRoleOf(layer, opts, data, fieldPrefix);
+    if (effectiveColorRole) {
+      attrs += ' data-theme-color-role="' + esc(effectiveColorRole) + '"' +
+        ' data-theme-color-kind="' + (layer.type === 'text' ? 'text' : 'background') + '"';
+    }
+    if (renderClassNames.length) attrs += ' class="' + renderClassNames.join(' ') + '"';
+    if (isEmptyEditableText) attrs += ' data-bn-empty-text="1"';
+    /* 警語跟著品名行數上下移：畫布直接編輯品名時由 syncSubareaWarnLift 即時調整。 */
+    if (warnLiftInfo) {
+      attrs += ' data-bn-warn-follow="' + esc(warnLiftInfo.nameField) + '"' +
+        ' data-bn-warn-top2="' + warnLiftTop2 + '"' +
+        ' data-bn-warn-step="' + warnLiftInfo.step + '"' +
+        ' data-bn-warn-max="' + warnLiftInfo.maxLines + '"';
+    }
+    if (layer.type === 'text' && fieldKey && opts && opts.theme && opts.theme.endorserTextAuto &&
+        themeRoleOf(layer, opts && opts._schemaId) === 'endorserText') {
+      attrs += ' data-auto-text-role="endorserText"';
+    }
+    if (layer.type === 'text' && fieldKey && opts && opts.editable && isMovableCanvasTextLayer(layer)) {
+      /* 沿用同一套拖曳邏輯（index.html 的 bindEndorserTextDrag），位置存在 data.__canvasTextPositions */
+      attrs += ' data-movable-canvas-text="endorser" data-text-field="' + esc(fieldKey) + '"' +
+        ' title="按住滑鼠左鍵拖曳可移動' + (isSignNoteLayer(layer) ? '簽名小字' : '代言人小字') + '"';
+    }
+    if (directColorEditable) {
+      attrs += ' data-color-field="' + esc(colorFieldKey) + '"' +
+        ' data-color-label="' + esc(layer.fieldLabel || '色塊') + '"' +
+        ' data-color-value="' + esc(renderedColorValue || '') + '"' +
+        ' title="點一下直接換色"';
+    }
+
+    /* 圖片範圍一律標上自己的欄位 key，不管裡面現在有沒有圖。
+       裡面那層 .bn-imggroup 只有「已經有圖」時才存在，所以外面沒有標記的話，
+       空的圖片框從 DOM 上認不出自己是哪個欄位 —— 匯入頁要做「拖曳圖片進畫布」
+       就需要空框也認得出來（拖進去的通常正是還沒有圖的框）。
+       同時附上中文欄位名，拖放時的提示文字可以直接用。 */
+    if (layer.type === 'image' && fieldKey && !layer.fixedImage) {
+      attrs += ' data-img-field="' + esc(fieldKey) + '"' +
+        ' data-img-label="' + esc(layer.fieldLabel || '圖片') + '"';
+      if (isMsbnB1WhiteProductBoundary(opts && opts._schemaId, fieldKey) ||
+          isMsbnB34ProductBoundary(opts && opts._schemaId, fieldKey)) {
+        attrs += ' data-image-boundary="own"';
+      }
+      if (rangePlaceholderOpacityOf(layer) != null && !url && !layer.boundaryOnly) attrs += ' data-bn-range-placeholder="1"';
+      if (layer.boundaryOnly) attrs += ' data-bn-boundary-only="1"';
+      if (shouldSampleLogoBackground(layer, urls.length)) attrs += ' data-logo-bg-sample="adaptive"';
+
+      /* aspectSource + aspectBoxes：同一組曝品／贈品範圍會依曝品原圖方向一起切換。
+         預設 block.json 的 left/top/width/height 就是 wide 版；圖片載入後，
+         image-layout.js 讀這三個 data-* 屬性，若 naturalWidth < naturalHeight
+         就改套 tall 版。source key 也支援 repeat 的欄位前綴。 */
+      if (layer.aspectSource && layer.aspectBoxes) {
+        var aspectSourceKey = resolveFieldKey({ field: layer.aspectSource }, fieldPrefix);
+        var wideBox = aspectBoxAttrValue(layer.aspectBoxes.wide);
+        var tallBox = aspectBoxAttrValue(layer.aspectBoxes.tall);
+        if (aspectSourceKey && wideBox && tallBox) {
+          attrs += ' data-aspect-source-field="' + esc(aspectSourceKey) + '"' +
+            ' data-aspect-wide-box="' + wideBox + '"' +
+            ' data-aspect-tall-box="' + tallBox + '"';
+        }
+      }
+    }
+
+    if (editableTextInner) {
+      content = '<span' + editableTextInner.attrs + ' style="' + editableTextInner.style.join(';') + ';">' + content + '</span>';
+    }
+    var addLineBtn = '';
+    /* 圓標是試算表裡的一行資訊，只靠字數規則自動斷行，畫布不提供「+」加回第二行。 */
+    if (isTwoLineCenterText && !forceBadgeCenter && opts && opts.editable && fieldKey) {
+      attrs += ' data-twoline-text="' + esc(fieldKey) + '"';
+      if (!hasSecondLineText(data[fieldKey])) addLineBtn = addLineButtonHtml(fieldKey);
+    }
+    return "<div" + attrs + " style='" + style.join(';') + ";'>" + content + addLineBtn + '</div>';
+  }
+
+  /* ── 沒填的欄位，空間讓給商品圖 ──────────────────────────────
+     工單上「簽名小字＋代言人圖」整組都沒填，就代表這張 MSBN 不放代言人那一塊，
+     那商品圖就可以把代言人的位置一起用掉（範圍變大、圖能放大一點）；
+     「贈品圖」沒填也一樣，商品圖的範圍可以含進贈品圖原本的位置。
+     判斷「沒填」＝欄位是空的，或還是原本的預設內容（例如簽名小字還是「簽名小字」）。
+     被讓出來的圖層不會畫出來（不然會留下佔位卡或預設文字在那邊）。
+     有編號的欄位各自成一組：productImg 配 endorserImg/signImg/signNote，
+     productImg2 配 endorserImg2/signImg2/signNote2，以此類推。
+     贈品圖不走這條：曝品／贈品的原始框只是各自的預設擺放位置，
+     可移動範圍永遠是兩框的聯集（不論贈品圖有沒有給、反過來也一樣），
+     由下方 hide 規則改畫成隱形邊界框交給 image-layout 聯集處理，不放大任何一方的預設框。 */
+  var ABSORB_GROUPS = [
+    /* 每一種可選圖片各自歸還空間，不綁成同一大組：
+       只補簽名圖時只還簽名範圍；代言人仍空白時，那一塊仍可由曝品使用。 */
+    { target: 'productImg', donors: ['endorserImg'] },
+    { target: 'productImg', donors: ['signImg', 'signNote'] }
+  ];
+
+  function isFieldUnfilled(layer, data, key) {
+    /* 文字有圖片依賴、但圖片尚未真正上傳時，視為空白。
+       這讓代言人小字不會單獨佔住圖片空間。 */
+    if (layer.requiresImageField && !hasRenderableImageValue(data && data[layer.requiresImageField])) return true;
+    /* 圖片欄位只有真的載得進來的圖（data:／http／blob）才算有填。
+       只有檔名（例如工單寫了贈品圖檔名但還沒上傳）會顯示成佔位卡、仍佔住版面，
+       所以這裡視為空白，讓曝品可以共用它的空間。 */
+    if (layer.type === 'image') return !hasRenderableImageValue(data ? data[key] : null);
+    var v = data ? data[key] : null;
+    if (v == null) return true;
+    v = String(v).trim();
+    if (v === '') return true;
+    var def = layer.default != null ? String(layer.default).trim() : '';
+    return def !== '' && v === def; /* 還是原本的預設內容＝沒填 */
+  }
+
+  function computeAbsorb(schema, data, opts) {
+    var res = { skip: [], hide: [], targets: [], boxes: [] };
+    /* 維修頁／全部版位預覽要看得到每個原始框，所以可以明確關掉。
+       匯入編輯模式則 forceImageAbsorb=true：即使 A-2-2 / A-3-1 為了設計稿預覽
+       設了 disableImageAbsorb，也會依實際有沒有上傳圖片動態歸還空間。 */
+    if (opts && opts.imageAbsorb === false) return res;
+    if (schema.disableImageAbsorb && !(opts && opts.forceImageAbsorb)) return res;
+    var layers = schema.layers || [];
+    /* 一個圖片組合只要有任一張實際圖片，就不再顯示同組其他空白的淡色範圍。
+       這和「空間吸底」是兩件事：有圖時只隱藏提示框，不改動其餘圖片與文字的
+       原始座標；全部沒圖時才由下方原本的吸底規則合併可用範圍。 */
+    var imageGroups = {};
+    layers.forEach(function (layer) {
+      if (!layer || layer.type !== 'image') return;
+      var match = /^(productImg|endorserImg|signImg|giftImg)(\d*)$/i.exec(String(layer.field || ''));
+      if (!match) return;
+      var groupKey = match[2] || '';
+      (imageGroups[groupKey] = imageGroups[groupKey] || []).push(layer);
+    });
+    Object.keys(imageGroups).forEach(function (groupKey) {
+      var members = imageGroups[groupKey];
+      if (!members.some(function (layer) { return hasRenderableImageValue(data && data[layer.field]); })) return;
+      members.forEach(function (layer) {
+        if (!hasRenderableImageValue(data && data[layer.field]) && res.hide.indexOf(layer) === -1) {
+          res.hide.push(layer);
+        }
+      });
+    });
+    ABSORB_GROUPS.forEach(function (group) {
+      layers.forEach(function (target) {
+        if (target.type !== 'image' || !target.field) return;
+        if (target.width == null || target.height == null) return;
+        var m = new RegExp('^' + group.target + '(\\d*)$').exec(target.field);
+        if (!m) return;
+        /* 只有曝品真的已上傳時才接收其他空白圖片範圍。
+           尚未上傳任何圖的預設狀態仍要把曝品／贈品／代言人／簽名各自的
+           範圍與 icon 全部畫出來，方便使用者知道有哪些欄位可以新增。 */
+        if (!hasRenderableImageValue(data && data[target.field])) return;
+        var suffix = m[1] || '';
+
+        var donors = [];
+        var allEmpty = true;
+        group.donors.forEach(function (donorName) {
+          var key = donorName + suffix;
+          layers.forEach(function (l) {
+            if (l.field !== key) return;
+            donors.push(l);
+            if (!isFieldUnfilled(l, data, key)) allEmpty = false;
+          });
+        });
+        if (!donors.length || !allEmpty) return;
+
+        var left = target.left, top = target.top;
+        var right = target.left + target.width, bottom = target.top + target.height;
+        donors.forEach(function (l) {
+          if (res.skip.indexOf(l) === -1) res.skip.push(l);
+          if (l.width == null || l.height == null) return; /* 文字類沒有尺寸，只參與判斷、不參與範圍 */
+          left = Math.min(left, l.left); top = Math.min(top, l.top);
+          right = Math.max(right, l.left + l.width); bottom = Math.max(bottom, l.top + l.height);
+        });
+
+        var box = { left: left, top: top, width: right - left, height: bottom - top };
+        var i = res.targets.indexOf(target);
+        if (i === -1) { res.targets.push(target); res.boxes.push(box); return; }
+        /* 兩組都讓出來（代言人＋贈品）→ 再取一次聯集 */
+        var b = res.boxes[i];
+        var l2 = Math.min(b.left, box.left), t2 = Math.min(b.top, box.top);
+        res.boxes[i] = {
+          left: l2, top: t2,
+          width: Math.max(b.left + b.width, box.left + box.width) - l2,
+          height: Math.max(b.top + b.height, box.top + box.height) - t2
+        };
+      });
+    });
+    return res;
+  }
+
+  /* 兩個圖層原始框的聯集 */
+  function unionBoxOfLayers(a, b) {
+    var al = Number(a.left || 0), at = Number(a.top || 0);
+    var ar = al + Number(a.width || 0), ab = at + Number(a.height || 0);
+    var bl = Number(b.left || 0), bt = Number(b.top || 0);
+    var br = bl + Number(b.width || 0), bb = bt + Number(b.height || 0);
+    var l = Math.min(al, bl), t = Math.min(at, bt);
+    return { left: l, top: t, width: Math.max(ar, br) - l, height: Math.max(ab, bb) - t };
+  }
+
+  /* 曝品／贈品只有一張時的預設空間要避開同編號的圓標：
+     在 box 裡找「不壓到圓標底圓」的最大矩形（上／下／左／右四個候選取面積最大）。
+     版位沒有圓標、圓標被隱藏、或圓標根本沒壓到 box 時，原樣回傳 box。 */
+  function boxAvoidingBadge(schema, data, suffix, box) {
+    var badgeField = 'badgeColor' + (suffix || '');
+    var badge = null;
+    (schema.layers || []).some(function (l) {
+      if (l && l.type === 'circle' && l.field === badgeField && l.width != null && l.height != null) { badge = l; return true; }
+      return false;
+    });
+    if (!badge) return box;
+    if (badge.optionalColor && String(data && data[badgeField] == null ? '' : data[badgeField]).trim() === '') return box;
+    var bl = Number(badge.left || 0), bt = Number(badge.top || 0);
+    var br = bl + Number(badge.width || 0), bb = bt + Number(badge.height || 0);
+    var xl = box.left, xt = box.top, xr = box.left + box.width, xb = box.top + box.height;
+    if (br <= xl || bl >= xr || bb <= xt || bt >= xb) return box; /* 沒有重疊 */
+    var candidates = [
+      { left: xl, top: xt, width: xr - xl, height: bt - xt },  /* 圓標上方 */
+      { left: xl, top: bb, width: xr - xl, height: xb - bb },  /* 圓標下方 */
+      { left: xl, top: xt, width: bl - xl, height: xb - xt },  /* 圓標左側 */
+      { left: br, top: xt, width: xr - br, height: xb - xt }   /* 圓標右側 */
+    ];
+    var best = null;
+    candidates.forEach(function (c) {
+      if (c.width <= 0 || c.height <= 0) return;
+      if (!best || c.width * c.height > best.width * best.height) best = c;
+    });
+    return best || box;
+  }
+
+  /* 淺複製圖層並換掉範圍（不動到原始 schema，schema 是全部實例共用的） */
+  function layerWithBox(layer, box) {
+    var copy = {};
+    Object.keys(layer).forEach(function (k) { copy[k] = layer[k]; });
+    copy.left = box.left; copy.top = box.top;
+    copy.width = box.width; copy.height = box.height;
+    return copy;
+  }
+
+  function dynamicRowLayoutOf(schema, data, opts) {
+    var cfg = schema && schema.dynamicRowLayout;
+    if (!cfg || !Array.isArray(cfg.rows) || !cfg.rows.length) return null;
+    var layers = schema.layers || [];
+    var byField = {};
+    var forcedRows = [];
+    var protectedBottomRow = cfg.protectBottomRow ? cfg.rows.length - 1 : -1;
+    (Array.isArray(opts && opts.dynamicRowRows) ? opts.dynamicRowRows : []).forEach(function (value) {
+      var rowIndex = Number(value);
+      if (isFinite(rowIndex) && rowIndex >= 0 && rowIndex < cfg.rows.length && forcedRows.indexOf(rowIndex) === -1) {
+        forcedRows.push(rowIndex);
+      }
+    });
+    layers.forEach(function (layer) {
+      if (layer.field && !byField[layer.field]) byField[layer.field] = layer;
+    });
+    var activeRows = [];
+    var fieldRows = {};
+    cfg.rows.forEach(function (fields, rowIndex) {
+      (fields || []).forEach(function (key) { fieldRows[key] = rowIndex; });
+      /* protectBottomRow 是 D-1-3／D-2-3 的固定底列：它永遠存在，
+         不參與一般「有內容才顯示」的判斷，避免刪光後圓角底消失。 */
+      if (rowIndex === protectedBottomRow) return;
+      var active = (fields || []).some(function (key) {
+        var value = data && data[key];
+        if (value == null || String(value).trim() === '') return false;
+        var layer = byField[key];
+        var def = layer && layer.default;
+        return def == null || String(value).trim() !== String(def).trim();
+      });
+      if (active) activeRows.push(rowIndex);
+    });
+    if (protectedBottomRow >= 0) activeRows.push(protectedBottomRow);
+    forcedRows.forEach(function (rowIndex) {
+      if (activeRows.indexOf(rowIndex) === -1) activeRows.push(rowIndex);
+    });
+    activeRows.sort(function (a, b) { return a - b; });
+    var originalHeight = Number(cfg.height) / cfg.rows.length;
+    var fixedRowHeight = !!cfg.fixedRowHeight;
+    var activeCount = activeRows.length;
+    var renderRowCount = Math.max(1, activeCount);
+    var rowHeight = fixedRowHeight ? originalHeight : Number(cfg.height) / Math.max(1, activeCount);
+    var dynamicHeight = fixedRowHeight ? originalHeight * renderRowCount : Number(cfg.height);
+    var cfgTop = Number(cfg.top || 0);
+    var trailingHeight = Math.max(0, Number(schema.height) - (cfgTop + Number(cfg.height)));
+    var totalHeight = fixedRowHeight ? cfgTop + dynamicHeight + trailingHeight : Number(schema.height);
+    var shadeLayers = layers.filter(function (layer) {
+      return layer.type === 'rect' && layer.opacity != null &&
+        layer.width != null && Math.abs(Number(layer.width) - (Number(schema.width) - 40)) < 0.5 &&
+        layer.height != null && Math.abs(Number(layer.height) - originalHeight) < 2;
+    });
+    return {
+      cfg: cfg,
+      fieldRows: fieldRows,
+      activeRows: activeRows,
+      forcedRows: forcedRows,
+      activeCount: activeCount,
+      editableCount: activeRows.filter(function (rowIndex) { return rowIndex !== protectedBottomRow; }).length,
+      protectedBottomRow: protectedBottomRow >= 0 ? protectedBottomRow : null,
+      originalHeight: originalHeight,
+      rowHeight: rowHeight,
+      dynamicHeight: dynamicHeight,
+      totalHeight: totalHeight,
+      fixedRowHeight: fixedRowHeight,
+      shadeLayers: shadeLayers
+    };
+  }
+  function dynamicRowSignatureOf(schema, data) {
+    var layout = dynamicRowLayoutOf(schema, data);
+    return layout ? layout.activeRows.join(',') : null;
+  }
+
+  function dynamicRowLayerOf(layer, layout) {
+    if (!layout) return layer;
+    var cfg = layout.cfg;
+    /* fixedRowHeight 版位的滿版背景、分隔線也要跟著動態總高度縮短。 */
+    var fullHeightLayer = layout.fixedRowHeight && layer.height != null &&
+      Math.abs(Number(layer.height) - Number(cfg.height)) < 2 &&
+      layer.top != null && Math.abs(Number(layer.top) - Number(cfg.top || 0)) < 2;
+    if (fullHeightLayer) {
+      var resized = {};
+      Object.keys(layer).forEach(function (key) { resized[key] = layer[key]; });
+      resized.height = layout.dynamicHeight;
+      return resized;
+    }
+    var rowIndex = layout.fieldRows[layer.field];
+    if (layer.type === 'text' && rowIndex != null) {
+      var activeIndex = layout.activeRows.indexOf(rowIndex);
+      if (activeIndex === -1) return null;
+      var rowTop = Number(cfg.top) + activeIndex * layout.rowHeight;
+      var originalTop = Number(cfg.top) + rowIndex * layout.originalHeight;
+      var delta = rowTop - originalTop + (layout.rowHeight - layout.originalHeight) / 2;
+      var copy = {};
+      Object.keys(layer).forEach(function (key) { copy[key] = layer[key]; });
+      copy.top = Number(layer.top) + delta;
+      if (layer.topExact != null) copy.topExact = Number(layer.topExact) + delta;
+      if (cfg.centerText) {
+        copy._dynamicRowCentered = true;
+        copy._dynamicRowTop = rowTop;
+        copy._dynamicRowHeight = layout.rowHeight;
+        copy.top = rowTop;
+      }
+      return copy;
+    }
+
+    var shadeIndex = layout.shadeLayers.indexOf(layer);
+    if (shadeIndex !== -1) {
+      var shadeRow = Number(cfg.shadeStart || 0) + shadeIndex * 2;
+      if (shadeRow >= layout.activeCount) return null;
+      var shade = {};
+      Object.keys(layer).forEach(function (key) { shade[key] = layer[key]; });
+      shade.top = Number(cfg.top) + shadeRow * layout.rowHeight;
+      shade.height = layout.rowHeight;
+      var topRadius = shadeRow === 0 ? Number(cfg.topRadius || 0) : 0;
+      var bottomRadius = shadeRow === layout.activeCount - 1 ? Number(cfg.bottomRadius || 0) : 0;
+      if (topRadius && bottomRadius) shade.borderRadius = topRadius + 'px';
+      else if (topRadius) shade.borderRadius = topRadius + 'px ' + topRadius + 'px 0px 0px';
+      else if (bottomRadius) shade.borderRadius = '0px 0px ' + bottomRadius + 'px ' + bottomRadius + 'px';
+      else if (shade.borderRadius) shade.borderRadius = '0px';
+      return shade;
+    }
+    return layer;
+  }
+
+  /* D 系列清單版位可指定「淺底＋色線」：不再用交錯深淺色塊，
+     而是保留卡片底色、以背景色衍生的線條切出每一格。動態增減列時，
+     線條與項目欄會一起重新計算位置，不會留下固定高度的空白格。 */
+  function dynamicRowGridHtml(layout, data, opts) {
+    if (!layout || !layout.cfg || !layout.cfg.gridLines) return '';
+    var cfg = layout.cfg;
+    var grid = cfg.gridLines;
+    var color = derivedColorOf({ derivedColor: grid.derivedColor || {} }, data, null, opts) ||
+      grid.color || 'rgba(0,0,0,.16)';
+    var lineWidth = Math.max(1, Number(grid.lineWidth || 2));
+    var left = Number(grid.left != null ? grid.left : 20);
+    var width = Number(grid.width != null ? grid.width : 1160);
+    var top = Number(cfg.top || 0);
+    var height = Number(layout.dynamicHeight || 0);
+    var html = '';
+    function line(x, y, w, h) {
+      html += '<div class="bn-dynamic-grid-line" aria-hidden="true" style="position:absolute;left:' + x +
+        'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;z-index:' +
+        Number(grid.zIndex != null ? grid.zIndex : 1) + ';background:' + color +
+        ';pointer-events:none;"></div>';
+    }
+    /* 外框讓第一列、最後一列也完整；再依實際可見列補水平分隔。 */
+    if (grid.outerBorder !== false) {
+      line(left, top, width, lineWidth);
+      line(left, top + Math.max(0, height - lineWidth), width, lineWidth);
+      line(left, top, lineWidth, height);
+      line(left + Math.max(0, width - lineWidth), top, lineWidth, height);
+    }
+    /* topBorder：沒有外框的表格，最上緣也畫一條跟列分隔同色同粗的橫線（例如 MSBN D-2-3）。 */
+    if (grid.outerBorder === false && grid.topBorder) {
+      line(left, top, width, lineWidth);
+    }
+    var verticalDividers = Array.isArray(grid.verticalDividers)
+      ? grid.verticalDividers
+      : [grid.itemDivider, grid.contentDivider];
+    verticalDividers.forEach(function (divider) {
+      if (divider == null) return;
+      line(Number(divider) - lineWidth / 2, top, lineWidth, height);
+    });
+    for (var i = 1; i < layout.activeCount; i++) {
+      line(left, top + i * layout.rowHeight - lineWidth / 2, width, lineWidth);
+    }
+    return html;
+  }
+
+  /* ── 副區：品名只有一行時，警語往上移 ──
+     有些副區（A／B-4、A／B-5、C-4、D-4 系列）在品名下方預留了第二行的空間，
+     警語排在第二行之後；品名只填一行時中間會空出一整行。
+     判斷條件（依 block.json 的幾何，不寫死版位）：
+       1. 品名是可換行的文字（white-space: pre-line），警語跟它同一欄（左右重疊 ≥ 60%）。
+       2. 警語上緣到品名第一行之間剛好預留一行品名行高（0.8～1.6 倍）。
+          警語緊貼品名的版型（A-1～3 等）或中間隔著商品圖的版型（E、F）都不符合，不會動。
+     品名有兩行（手動換行，或字多自動折行）時警語回到原位。 */
+  var _textMeasureCtx = null;
+  function textWidthMeasurer(layer) {
+    var fontSize = Number(layer && layer.fontSize) || 0;
+    var spacing = layer && layer.letterSpacing != null ? Number(layer.letterSpacing) : Number(CONFIG.letterSpacing[layer && layer.id]);
+    if (!isFinite(spacing)) spacing = 0;
+    try {
+      if (!_textMeasureCtx && typeof document !== 'undefined') _textMeasureCtx = document.createElement('canvas').getContext('2d');
+    } catch (_) { _textMeasureCtx = null; }
+    if (_textMeasureCtx) {
+      var family = layer && layer.fontFamily ? JSON.stringify(String(layer.fontFamily)) + ', sans-serif' : 'sans-serif';
+      var font = (semanticTextWeight(layer) || 400) + ' ' + fontSize + 'px ' + family;
+      return function (line) {
+        _textMeasureCtx.font = font;
+        var s = String(line || '');
+        return _textMeasureCtx.measureText(s).width + spacing * Array.from(s).length;
+      };
+    }
+    /* 沒有 canvas 時的估算：中文 1 個字寬、半形約 0.55 個字寬 */
+    return function (line) {
+      return Array.from(String(line || '')).reduce(function (sum, ch) {
+        return sum + (/^[\x00-\x7f]$/.test(ch) ? 0.55 : 1) * fontSize + spacing;
+      }, 0);
+    };
+  }
+  /* 文字在這個圖層寬度裡會排成幾行（手動換行＋太長自動折行）；空白時畫面顯示預設字，算一行。 */
+  function estimatedTextLines(value, layer) {
+    var text = String(value == null ? '' : value).replace(/\r\n?/g, '\n');
+    if (!text.trim()) return 1;
+    var width = Number(layer && layer.width) || 0;
+    if (!(width > 0)) return text.split('\n').length;
+    var measure = textWidthMeasurer(layer);
+    return text.split('\n').reduce(function (sum, line) {
+      var w = measure(line.trim());
+      return sum + Math.max(1, Math.ceil((w - 0.5) / width));
+    }, 0);
+  }
+  function subareaWarnLiftOf(schema, data) {
+    if (!/^subarea_/i.test(String(schema && schema.id || ''))) return null;
+    var layers = schema.layers || [];
+    var out = null;
+    layers.forEach(function (warn) {
+      if (!warn || warn.type !== 'text' || warn.hidden || !/^warn\d*$/i.test(String(warn.field || ''))) return;
+      var suffix = String(warn.field).replace(/^warn/i, '').toLowerCase();
+      var name = layers.find(function (l) {
+        return l && l.type === 'text' && !l.hidden && String(l.field || '').toLowerCase() === 'name' + suffix;
+      });
+      if (!name || !name.fontSize || !warn.fontSize || String(name.whiteSpace || '') !== 'pre-line') return;
+      /* topExact 是另一套座標（內容區上緣），這類圖層不套用 */
+      if (name.topExact != null || warn.topExact != null) return;
+      var step = Number(name.fontSize) * lineHeightMultiplier(name);
+      if (!(step > 0)) return;
+      var nl = Number(name.left) || 0, nw = Number(name.width) || 0;
+      var wl = Number(warn.left) || 0, ww = Number(warn.width) || 0;
+      if (!(nw > 0 && ww > 0) || Math.min(nl + nw, wl + ww) - Math.max(nl, wl) < Math.min(nw, ww) * 0.6) return;
+      /* PS 座標的文字 top 在第一行基線附近；警語上緣約等於 warn.top − 字級 */
+      var gap = (Number(warn.top) - Number(warn.fontSize)) - Number(name.top);
+      if (!(gap >= step * 0.8 && gap <= step * 1.6)) return;
+      var maxLines = 2;
+      var lines = Math.max(1, Math.min(maxLines, estimatedTextLines(data && data[name.field], name)));
+      out = out || {};
+      out[warn.field] = { nameField: name.field, step: step, maxLines: maxLines, lines: lines, lift: (maxLines - lines) * step };
+    });
+    return out;
+  }
+  /* 畫布上直接編輯品名時（不重畫），依品名實際排成幾行即時調整警語位置。
+     警語圖層帶 data-bn-warn-*（見 renderLayer）；只處理可編輯畫布，下載／預覽由渲染時的估算決定。 */
+  function syncSubareaWarnLift(root) {
+    if (!root || !root.querySelectorAll) return;
+    Array.prototype.forEach.call(root.querySelectorAll('[data-bn-warn-follow]'), function (warnEl) {
+      var block = (warnEl.closest && warnEl.closest('[data-bn-schema-id]')) || root;
+      var key = warnEl.getAttribute('data-bn-warn-follow');
+      var nameEl = block.querySelector('[contenteditable="true"][data-field="' + key + '"]');
+      if (!nameEl) return;
+      var step = Number(warnEl.getAttribute('data-bn-warn-step'));
+      var top2 = Number(warnEl.getAttribute('data-bn-warn-top2'));
+      var max = Number(warnEl.getAttribute('data-bn-warn-max')) || 2;
+      if (!(step > 0) || !isFinite(top2)) return;
+      /* 可編輯的內層沒有 padding：高度＝行數 × 行高（不受畫布縮放影響） */
+      var lines = Math.round(nameEl.offsetHeight / step) || 1;
+      lines = Math.max(1, Math.min(max, lines));
+      warnEl.style.top = (top2 - (max - lines) * step) + 'px';
+    });
+  }
+
+  function buildRender(schema) {
+    return function (data, opts) {
+      /* 每次渲染都把目前 schema id 帶進 opts，讓顏色覆寫能判斷「這是不是 MSBN D」。
+         淺複製避免修改呼叫端共用的 options 物件。 */
+      var renderOpts = {};
+      Object.keys(opts || {}).forEach(function (k) { renderOpts[k] = opts[k]; });
+      renderOpts._schemaId = schema.id;
+      renderOpts._schemaLayers = (schema.layers || []).slice();
+      (schema.repeats || []).forEach(function (repeat) {
+        renderOpts._schemaLayers = renderOpts._schemaLayers.concat(repeat.layers || []);
+      });
+      var layerFields = (schema.layers || []).map(function (l) {
+        return String(l.field || '');
+      });
+      var stackingContext = imageStackingContextOf(schema);
+      renderOpts._imageZSlots = stackingContext._imageZSlots;
+      renderOpts._signatureImageZByField = stackingContext._signatureImageZByField;
+      renderOpts._contentImageZIndex = stackingContext._contentImageZIndex;
+      var nameValue = data && data.name != null ? String(data.name).trim() : '';
+      var warnValue = data && data.warn != null ? String(data.warn).trim() : '';
+      renderOpts._subareaWarnNudge = /^subarea_/i.test(String(schema.id || '')) &&
+        !!nameValue && !!warnValue &&
+        layerFields.indexOf('name') !== -1 && layerFields.indexOf('warn') !== -1;
+      /* 品名只有一行時警語往上移一行（只限品名下方預留第二行空間的副區） */
+      renderOpts._subareaWarnLift = subareaWarnLiftOf(schema, data);
+
+      /* 外層容器本身是「整個版位的畫布邊界」，不是卡片，不需要圓角，維持直角矩形；
+         真正看起來像卡片的圓角，是靠版位自己的「背景」「促標底」這些圖層各自的border-radius做出來的 */
+      var dynamicRows = dynamicRowLayoutOf(schema, data, renderOpts);
+      var overflow = schema.cornerRadius ? 'hidden' : 'visible';
+      /* 整個版位的底色（卡片與卡片之間、四周留白露出來的那個顏色）。
+         canvasBg 專門控制畫布；舊呼叫端只有 theme.bg 時仍相容。 */
+      var canvasBg = (renderOpts.theme && renderOpts.theme.canvasBg && String(renderOpts.theme.canvasBg).trim())
+        || (renderOpts.theme && renderOpts.theme.bg && String(renderOpts.theme.bg).trim())
+        || '#eee2cf';
+      var html = '<div class="blk-' + schema.id + '" data-bn-schema-id="' + esc(schema.id) +
+        '" style="position:relative;width:' + schema.width + 'px;height:' + (dynamicRows ? dynamicRows.totalHeight : schema.height) +
+        'px;overflow:' + overflow + ';background:' + canvasBg + ';font-family:sans-serif;">';
+
+      /* 沒填的代言人／贈品空間讓給商品圖（範圍變大，被讓出來的圖層不畫） */
+      var absorb = computeAbsorb(schema, data, renderOpts);
+      var circleLayout = localCircleLayoutOf(schema, data);
+      /* 右側工具列的「前後位置」（imageOrder，第一個＝最前面）。z-index 只能用整數，
+         MSBN 的曝品／贈品／代言人圖常常被排到同一層（例如 A-2-2 的曝品、贈品都是 279），
+         同層時由 HTML 先後決定誰蓋在上面；所以這些圖層先收集起來，最後依 imageOrder
+         「最後面的先輸出、最前面的最後輸出」放回原本的位置，前後位置才真的會生效。 */
+      var orderedImageKeys = Array.isArray(renderOpts.imageOrder)
+        ? renderOpts.imageOrder.filter(function (key) { return !/^signImg\d*$/i.test(String(key || '')); }) : [];
+      var layerChunks = [];
+      function imageOrderRankOf(layer) {
+        if (!layer || layer.type !== 'image' || layer.boundaryOnly || layer.fixedLayerOrder || !layer.field) return -1;
+        if (!isSharedMovableImageField(layer.field) || /^signImg\d*$/i.test(String(layer.field))) return -1;
+        return orderedImageKeys.indexOf(layer.field);
+      }
+      function pushLayerHtml(layer, chunk) {
+        var rank = imageOrderRankOf(layer);
+        var z = rank >= 0 ? String(imageLayerStackZ(layer, layer.field, imageLayerUrlOf(layer, layer.field, data), renderOpts)) : '';
+        layerChunks.push({ html: chunk, rank: rank, z: z });
+      }
+      (schema.layers || []).forEach(function (layer) {
+        var dynamicLayer = dynamicRowLayerOf(layer, dynamicRows);
+        if (!dynamicLayer) return;
+        if (absorb.skip.indexOf(layer) !== -1) return;
+        var pairMatch = layer.type === 'image' && /^(productImg|giftImg)(\d*)$/.exec(String(layer.field || ''));
+        if (pairMatch) {
+          /* 曝品／贈品同編號為一對：原始框只是各自的預設擺放位置，可移動範圍永遠是兩框聯集。
+             - 對方已有圖而自己是空的 → 不畫佔位卡（不然圖片拖過去會被佔位卡擋住），
+               改畫隱形邊界框，讓 image-layout 聯集時仍算進這塊空間。
+             - 自己有圖而對方是空的 → 匯入時就直接用兩框的聯集當預設擺放空間與圖片大小，
+               不必再手動拖大。兩張都有圖時才各自回到原本的框。 */
+          var partnerField = (pairMatch[1] === 'productImg' ? 'giftImg' : 'productImg') + pairMatch[2];
+          var partnerLayer = null;
+          (schema.layers || []).some(function (l) {
+            if (l && l.type === 'image' && l.field === partnerField) { partnerLayer = l; return true; }
+            return false;
+          });
+          var selfFilled = hasRenderableImageValue(data && data[layer.field]);
+          var partnerFilled = !!partnerLayer && hasRenderableImageValue(data && data[partnerField]);
+          if (partnerLayer && !selfFilled && partnerFilled) {
+            /* 隱形邊界框直接畫成兩框聯集：對方的預設框可能為了避開圓標而縮小，
+               但可拖曳範圍仍要是完整聯集，所以由這個隱形框把空間補齊。 */
+            var pairBoundary = layerWithBox(layer, unionBoxOfLayers(layer, partnerLayer));
+            pairBoundary.boundaryOnly = true;
+            delete pairBoundary.aspectSource;
+            delete pairBoundary.aspectBoxes;
+            pushLayerHtml(pairBoundary, renderLayer(pairBoundary, pairBoundary.left, pairBoundary.top, data, null, renderOpts));
+            return;
+          }
+          if (partnerLayer && selfFilled && !partnerFilled) {
+            var unionBox = unionBoxOfLayers(layer, partnerLayer);
+            /* 預設擺放位置要避開圓標：在聯集裡取不壓到圓標的最大矩形。 */
+            var grownPair = layerWithBox(layer, boxAvoidingBadge(schema, data, pairMatch[2], unionBox));
+            /* 放大後的框就是預設空間本身，不能再被方／橫向切換用原本的小框蓋回去 */
+            delete grownPair.aspectSource;
+            delete grownPair.aspectBoxes;
+            pushLayerHtml(grownPair, renderLayer(grownPair, grownPair.left, grownPair.top, data, null, renderOpts));
+            return;
+          }
+        }
+        if (absorb.hide.indexOf(layer) !== -1 && !hasRenderableImageValue(data && layer.field && data[layer.field])) {
+          /* 同編號的曝品／贈品／代言人已有其中一張圖：空的那格不畫佔位卡，
+             但要以隱形邊界框留在畫布上，image-layout 才會把兩框聯集成共同可移動範圍。
+             雙向都成立：沒給贈品圖時曝品可移到贈品空間，沒給曝品時贈品也可移到曝品空間。 */
+          var boundary = Object.assign({}, layer, { boundaryOnly: true });
+          pushLayerHtml(boundary, renderLayer(boundary, boundary.left, boundary.top, data, null, renderOpts));
+          return;
+        }
+        var ti = absorb.targets.indexOf(layer);
+        if (ti !== -1) {
+          var grown = layerWithBox(layer, absorb.boxes[ti]);
+          pushLayerHtml(grown, renderLayer(grown, grown.left, grown.top, data, null, renderOpts));
+          return;
+        }
+        var circleLeft = circleLayout && circleLayout[dynamicLayer.field];
+        if (circleLeft != null) {
+          dynamicLayer = Object.assign({}, dynamicLayer, { left: circleLeft });
+        }
+        pushLayerHtml(dynamicLayer, renderLayer(dynamicLayer, dynamicLayer.left, dynamicLayer.top, data, null, renderOpts));
+      });
+      /* 只有「同一層 z-index」的排序圖層才需要靠 HTML 先後分上下：保留它們原本佔的位置，
+         在這幾個位置之間依 imageOrder 重排（越後面的越早輸出、最前面的最後輸出）。
+         z-index 不同的圖層與其餘圖層的 HTML 順序完全不動。 */
+      var tieGroups = {};
+      layerChunks.forEach(function (chunk, position) {
+        if (chunk.rank < 0) return;
+        (tieGroups[chunk.z] = tieGroups[chunk.z] || []).push(position);
+      });
+      Object.keys(tieGroups).forEach(function (z) {
+        var positions = tieGroups[z];
+        if (positions.length < 2) return;
+        var chunks = positions.map(function (position) { return layerChunks[position]; })
+          .sort(function (a, b) { return b.rank - a.rank; });
+        positions.forEach(function (position, i) { layerChunks[position] = chunks[i]; });
+      });
+      html += layerChunks.map(function (chunk) { return chunk.html; }).join('');
+      html += dynamicRowGridHtml(dynamicRows, data, renderOpts);
+
+      (schema.repeats || []).forEach(function (repeat) {
+        repeat.instances.forEach(function (inst) {
+          (repeat.layers || []).forEach(function (layer) {
+            var relLeft = layer.left - repeat.templateBaseLeft;
+            var left = inst.baseLeft + relLeft;
+            html += renderLayer(layer, left, layer.top, data, inst.key, renderOpts);
+          });
+        });
+      });
+
+      html += '</div>';
+      return html;
+    };
+  }
+
+  function fieldType(layer) {
+    if (layer.type === 'image') return 'image';
+    if ((layer.type === 'circle' || layer.type === 'rect') && layer.field) return 'color';
+    return 'text';
+  }
+
+  function buildFields(schema) {
+    var seen = {};
+    var fields = [];
+    function addField(key, label, type, def, maxLength, designText) {
+      if (seen[key]) return;
+      seen[key] = true;
+      var lineMaxLength = null;
+      if (type === 'text' && /圓標/.test(String(label || ''))) {
+        maxLength = 7;
+        designText = String(designText == null ? '' : designText).replace(/5字內/g, '7字內');
+      }
+      /* 副區 C／D 系列的字數契約由版位編號決定：一般版位與 C4／D4
+         的兩排品名、警語限制不同。這裡是匯入畫布與 renderer 的共同入口，
+         讓畫布編輯器不會只吃到 block.json 的舊 maxLength。 */
+      var subareaCD = /^subarea_([CD])_(\d+)(?:_(\d+))?$/i.exec(String(schema && schema.id || ''));
+      if (type === 'text' && subareaCD) {
+        var cdFamily = String(subareaCD[1]).toUpperCase();
+        var cdVariant = parseInt(subareaCD[2], 10);
+        var cdCombo = subareaCD[3] ? parseInt(subareaCD[3], 10) : 0;
+        var fieldName = String(key || '').toLowerCase();
+        if (/^promo\d*$/.test(fieldName) || /促標/.test(String(label || ''))) {
+          maxLength = cdFamily === 'C' ? 8 : 12;
+        } else if (/^name\d*$/.test(fieldName) || /品名/.test(String(label || ''))) {
+          maxLength = 12;
+          lineMaxLength = cdVariant === 4 ? 6 : null;
+        } else if (/^warn\d*$/.test(fieldName) || /警語|警告/.test(String(label || ''))) {
+          maxLength = cdVariant === 4 ? 8 : 16;
+        } else if (/^cta\d*$/.test(fieldName) && cdVariant === 4 && cdCombo === 4) {
+          maxLength = 3;
+        }
+      }
+      /* 副區 A 系列的促標統一限制 5 字；只鎖定 promo 欄位，其他系列不連動。 */
+      if (type === 'text' && /^subarea_A(?:_|$)/i.test(String(schema && schema.id || '')) &&
+          (/^promo\d*$/i.test(String(key || '')) || /促標/.test(String(label || '')))) {
+        maxLength = 5;
+        designText = String(designText == null ? '' : designText).replace(/(?:8|7|6|5)字內/g, '5字內');
+      }
+      /* 其餘可編輯文字欄位的規則也集中在這裡，避免只修到促標／品名／警語／圓標，
+         卻漏掉簽名小字、券文案、CTA、MSBN D 內文等欄位。
+         lineMaxLength 代表每一排上限；maxLength 代表整個欄位上限。
+         這份規則由 buildFields 產生，維修與匯入畫布會拿到完全相同的欄位契約。 */
+      if (type === 'text') {
+        var schemaId = String(schema && schema.id || '');
+        var keyText = String(key || '').toLowerCase();
+        var labelText = String(label || '');
+        var ruleSource = labelText + ' ' + String(designText == null ? '' : designText);
+        var isMsbn = /^msbn_/i.test(schemaId);
+        var isSubareaAB = /^subarea_([AB])_(\d+)(?:_(\d+))?$/i.exec(schemaId);
+
+        function setTextRule(total, perLine) {
+          if (total != null) maxLength = total;
+          if (perLine != null) lineMaxLength = perLine;
+        }
+
+        /* 所有副區／MSBN CTA 都是三字；部分舊 block.json 曾遺漏或誤寫成 6 字。 */
+        if ((/^cta\d*$/i.test(keyText) || /CTA/.test(labelText)) &&
+            (/^subarea_/i.test(schemaId) || isMsbn)) {
+          setTextRule(3, null);
+        }
+
+        /* MSBN A-1 的簽名小字：兩排，每排 5 字。 */
+        if (/^msbn_A_1_[12]$/i.test(schemaId) && /^signnote\d*$/i.test(keyText)) {
+          setTextRule(10, 5);
+        }
+
+        /* MSBN B-1 的代言人小字：兩排，每排 8 字。 */
+        if (/^msbn_B_1_[1-4]$/i.test(schemaId) && /^endorsernote\d*$/i.test(keyText)) {
+          setTextRule(16, 8);
+        }
+
+        /* MSBN C-1-1～3：兩側券文案各兩排、每排 6 字；警語 10 字。 */
+        if (/^msbn_C_1_[1-3]$/i.test(schemaId)) {
+          if (/^copy\d*$/i.test(keyText)) setTextRule(12, 6);
+          if (/^warn\d*$/i.test(keyText) || /警語/.test(labelText)) setTextRule(10, null);
+        }
+
+        /* MSBN C-1-4／5：促標兩排每排 6 字、券文案兩排每排 4 字。 */
+        if (/^msbn_C_1_[45]$/i.test(schemaId)) {
+          if (/^promo\d*$/i.test(keyText) || /促標/.test(labelText)) setTextRule(12, 6);
+          if (/^copy\d*$/i.test(keyText) || /文案/.test(labelText)) setTextRule(8, 4);
+        }
+
+        /* MSBN D 清單版：項目文字 4 字；內文依版型為 9 或 6 字。 */
+        if (/^msbn_D_1_[23]$/i.test(schemaId) || /^msbn_D_3_1$/i.test(schemaId)) {
+          if (/^itemtext\d*$/i.test(keyText) || /項目文字/.test(labelText)) setTextRule(4, null);
+          if (/^content\d*$/i.test(keyText) || /內文/.test(labelText)) setTextRule(9, null);
+        }
+        if (/^msbn_D_2_[23]$/i.test(schemaId)) {
+          if (/^itemtext\d*$/i.test(keyText) || /項目文字/.test(labelText)) setTextRule(4, null);
+          if (/^content\d*$/i.test(keyText) || /內文/.test(labelText)) setTextRule(6, null);
+        }
+
+        /* 副區 A/B-4、A/B-5 的品名是兩排，每排 4 字；單排版本仍限 8 字。
+           兩排版本不能再以「block.json 沒寫 maxLength」為前提：A/B-5 的 block.json 寫了舊的 maxLength 8，
+           以前這條就被跳過，品名被當成單行——工單／暫存檔裡兩排的品名，在第二排一打字就整排接到第一排後面。 */
+        if (isSubareaAB && /^name\d*$/i.test(keyText)) {
+          var abVariant = parseInt(isSubareaAB[2], 10);
+          var abCombo = isSubareaAB[3] ? parseInt(isSubareaAB[3], 10) : 0;
+          if (abVariant === 5 || (abVariant === 4 && (abCombo === 0 || abCombo === 1))) setTextRule(8, 4);
+          else if (abVariant === 4 && abCombo === 2 && maxLength == null) setTextRule(8, null);
+        }
+
+        /* 三品比對的品名標示本身已寫明一排 7 字。 */
+        if (/^msbn3p$/i.test(schemaId) && /品名/.test(labelText) && maxLength == null) {
+          setTextRule(7, 7);
+        }
+        if (/^msbn3p$/i.test(schemaId) && /活動價文字/.test(labelText) && maxLength == null) {
+          setTextRule(3, null);
+        }
+
+        /* 對帶有明確「N字」設計註記的欄位做最後補漏。
+           設計註記優先於 block.json 舊 maxLength，因為舊值常只代表其中一排；
+           但副區 C/D、A 促標與圓標已有更高優先的共通契約，不能被舊註記覆蓋。 */
+        /* MSBN C-1-1～5 的促標／券文案已有「每排」與「總字數」的明確規則；
+           designText 只寫「促標最多6字」這種單排字數，若再解析會把整個欄位的總字數
+           錯蓋成 6，使第二排只剩第一排用掉之後的額度。 */
+        var hasProtectedContract = /圓標/.test(labelText) || /^subarea_[CD]/i.test(schemaId) ||
+          /^msbn_C_1_[1-5]$/i.test(schemaId) ||
+          (/^subarea_A(?:_|$)/i.test(schemaId) && (/^promo\d*$/i.test(keyText) || /促標/.test(labelText)));
+        if (!hasProtectedContract && String(designText == null ? '' : designText).trim() !== '') {
+          function ruleNumber(value) {
+            value = String(value == null ? '' : value).trim();
+            if (/^\d+$/.test(value)) return parseInt(value, 10);
+            var digits = { '零': 0, '〇': 0, '一': 1, '二': 2, '三': 3, '四': 4,
+              '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '百': 100 };
+            if (digits[value] != null) return digits[value];
+            if (/^十[一二三四五六七八九]$/.test(value)) return 10 + digits[value.charAt(1)];
+            if (/^[一二三四五六七八九]十$/.test(value)) return digits[value.charAt(0)] * 10;
+            if (/^[一二三四五六七八九]十[一二三四五六七八九]$/.test(value)) {
+              return digits[value.charAt(0)] * 10 + digits[value.charAt(2)];
+            }
+            return null;
+          }
+          var numberPattern = '([0-9零〇一二三四五六七八九十百]+)';
+          var perLineMatch = ruleSource.match(new RegExp('一排(?:最多)?\\$?' + numberPattern + '字'));
+          var totalMatch = ruleSource.match(new RegExp('(?:最多(?:可|可以)?(?:放)?|限)\\$?' + numberPattern + '(?:個)?字'));
+          var itemMatch = ruleSource.match(new RegExp('項目(?:文字)?\\$?' + numberPattern + '字'));
+          var noteMatch = ruleSource.match(new RegExp('(?:簽名|代言人)\\$?' + numberPattern + '小字'));
+          var simpleMatch = ruleSource.match(new RegExp('(?:促標|品名|警語|文案|特色)\\$?' + numberPattern + '(?:個)?字'));
+          var parsedRule = null;
+          if (perLineMatch) {
+            var perLine = ruleNumber(perLineMatch[1]);
+            var lineCount = Math.max(1, String(designText || '').split('\n').length);
+            if (perLine != null) parsedRule = { total: perLine * lineCount, perLine: perLine };
+          } else if (itemMatch) {
+            var itemLimit = ruleNumber(itemMatch[1]);
+            if (itemLimit != null) parsedRule = { total: itemLimit, perLine: null };
+          } else if (noteMatch) {
+            var noteLine = ruleNumber(noteMatch[1]);
+            var noteLines = Math.max(1, String(designText || '').split('\n').length);
+            if (noteLine != null) parsedRule = { total: noteLine * noteLines, perLine: noteLine };
+          } else if (totalMatch) {
+            var totalLimit = ruleNumber(totalMatch[1]);
+            if (totalLimit != null) parsedRule = { total: totalLimit, perLine: null };
+          } else if (simpleMatch) {
+            var simpleLimit = ruleNumber(simpleMatch[1]);
+            if (simpleLimit != null) parsedRule = { total: simpleLimit, perLine: null };
+          }
+          if (parsedRule) setTextRule(parsedRule.total, parsedRule.perLine);
+        }
+      }
+      var f = { key: key, label: label, type: type, default: def != null ? def : '' };
+      if (maxLength != null) f.maxLength = maxLength;
+      if (lineMaxLength != null) f.lineMaxLength = lineMaxLength;
+      /* designText＝PS 設計稿上原本寫的示意字（「品名一排最多8字」「逛逛去」…）。
+         維修頁拿它當預覽文字，一眼就看得出這一欄是什麼、限幾個字。
+         跟 default 分開放，所以匯入工單頁「沒填欄位時顯示什麼」完全不受影響。 */
+      if (designText != null) f.designText = designText;
+      fields.push(f);
+    }
+
+    (schema.layers || []).forEach(function (layer) {
+      if (layer.hidden) return; /* 不畫出來的圖層，欄位面板也不要列 */
+      if (layer.fixedImage) return; /* 版型內建固定圖不提供替換／縮放欄位 */
+      if (layer.field) {
+        var directType = fieldType(layer);
+        var directDefault = directType === 'color' && layer.default == null ? layer.backgroundColor : layer.default;
+        addField(layer.field, layer.fieldLabel || layer.field, directType, directDefault, layer.maxLength, layer.designText);
+      }
+      /* 圖片框如果同時兼任一塊底色（曝品範圍），那個顏色欄位也要列出來可以改 */
+      if (layer.bgField) addField(layer.bgField, layer.bgFieldLabel || '底色', 'color', layer.backgroundColor);
+    });
+
+    (schema.repeats || []).forEach(function (repeat) {
+      repeat.instances.forEach(function (inst) {
+        (repeat.layers || []).forEach(function (layer) {
+          if (!layer.field) return;
+          var repeatType = fieldType(layer);
+          var repeatDefault = repeatType === 'color' && layer.default == null ? layer.backgroundColor : layer.default;
+          if (layer.globalField) {
+            addField(layer.field, layer.fieldLabel || layer.field, repeatType, repeatDefault, layer.maxLength, layer.designText);
+          } else {
+            addField(inst.key + layer.field, (inst.label || inst.key) + '・' + (layer.fieldLabel || layer.field),
+              repeatType, repeatDefault, layer.maxLength, layer.designText);
+          }
+        });
+      });
+    });
+
+    return fields;
+  }
+
+  /* ── 圖層前後順序（z-index）的統一規則 ─────────────────────────
+     PS 匯出的順序有些不是我們要的，這裡在「積木註冊時」統一調整一次
+     （只做一次，不用每次渲染都算）：
+       1. CTA 那一組（底色塊、三角形、文字）永遠壓在所有物件的最上面
+       2. 簽名檔圖片要蓋在代言人圖片上面
+     調整時保留各自原本的相對順序，只是整組往上搬。 */
+  var CTA_Z_BASE = 100000;
+  function normalizeSchemaZOrder(schema) {
+    /* 先把所有「有字 CTA」的文字與三角形鎖到同一條水平中心線。
+       一般 layers 與 repeats 的樣板都處理，之後新增版位也會自動套用。 */
+    normalizeTextCtaVerticalAlignment(schema.layers || []);
+    (schema.repeats || []).forEach(function (repeat) {
+      normalizeTextCtaVerticalAlignment(repeat.layers || []);
+    });
+
+    var layers = schema.layers || [];
+    var allLayers = layers.slice();
+    (schema.repeats || []).forEach(function (repeat) {
+      allLayers = allLayers.concat(repeat.layers || []);
+    });
+    layers.forEach(function (l) {
+      var role = themeRoleOf(l);
+      var isCta = isCtaTriangle(l) || isCtaBgLayer(l) ||
+        (l.type === 'text' && role === 'ctaText');
+      if (isCta) l.zIndex = CTA_Z_BASE + (l.zIndex || 0);
+    });
+    /* 簽名圖是 MSBN 設計稿的最上層圖片：不只要高於人物，也必須高於
+       商品、贈品、LOGO 等所有一般圖片。這裡一次調整 schema 與重複區塊，
+       後續 render 的 imageOrder 不會再把它壓回去。 */
+    var maxOtherImageZ = -Infinity;
+    allLayers.forEach(function (layer) {
+      if (layer.type !== 'image' || /^signImg\d*$/i.test(String(layer.field || ''))) return;
+      maxOtherImageZ = Math.max(maxOtherImageZ, Number(layer.zIndex || 0));
+    });
+    var signatureOffset = 1;
+    allLayers.forEach(function (sign) {
+      if (sign.type !== 'image' || !/^signImg\d*$/.test(String(sign.field || ''))) return;
+      sign.zIndex = Math.max(Number(sign.zIndex || 0), maxOtherImageZ + signatureOffset);
+      signatureOffset++;
+    });
+    /* 簽名小字壓在簽名圖範圍上：若文字層級低於簽名圖，簽名圖（或它的空白佔位框）
+       會蓋住文字，滑鼠點不到、也拖曳不了。這裡把簽名小字一律放到所有簽名圖之上。 */
+    var maxSignImageZ = -Infinity;
+    allLayers.forEach(function (layer) {
+      if (layer.type === 'image' && /^signImg\d*$/i.test(String(layer.field || ''))) {
+        maxSignImageZ = Math.max(maxSignImageZ, Number(layer.zIndex || 0));
+      }
+    });
+    if (maxSignImageZ > -Infinity) {
+      allLayers.forEach(function (layer) {
+        if (!isSignNoteLayer(layer)) return;
+        layer.zIndex = Math.max(Number(layer.zIndex || 0), maxSignImageZ + 1);
+      });
+    }
+  }
+
+  /* 抓出這個版位目前「實際用的顏色」，給左側『統一顏色』區把色號吸進來用。
+     回傳例如 { promoBg:'rgb(79, 159, 162)', ctaText:'rgb(254, 254, 254)' , … } */
+  function roleColorsOf(schema, data) {
+    var out = {}, pri = {};
+    var layers = (schema.layers || []).concat(
+      (schema.repeats || []).reduce(function (a, r) { return a.concat(r.layers || []); }, [])
+    );
+    /* 「一般文字」可能有好幾種（品名、內文、簽名小字、LOGO 佔位字…），
+       吸色號時優先拿品名，最不要拿 LOGO 佔位字（那是半透明的灰，不代表文字顏色） */
+    function priorityOf(layer, role) {
+      if (role !== 'bodyText') return 1;
+      var k = String(layer.field || layer.id || '').replace(/[0-9]+$/, '');
+      if (k === 'name') return 3;
+      if (k === 'logoText') return 0;
+      return 2;
+    }
+    layers.forEach(function (l) {
+      var role = themeRoleOf(l, schema && schema.id);
+      if (!role) return;
+      var p = priorityOf(l, role);
+      if (out[role] && pri[role] >= p) return;
+      var color = null;
+      if (l.type === 'text') {
+        color = l.color;
+      } else if (l.type === 'image') {
+        /* image 欄位的 data 是圖片網址，不能拿來當色號；有 bgField 時取它，
+           否則取圖片框本身正在顯示的 backgroundColor。 */
+        if (l.bgField && data && data[l.bgField]) color = data[l.bgField];
+        else color = l.backgroundColor;
+      } else if (l.field && data && data[l.field]) {
+        color = data[l.field];
+      } else {
+        color = l.backgroundColor;
+      }
+      if (color) { out[role] = color; pri[role] = p; }
+    });
+    return out;
+  }
+
+  /* 代言人小字不再依賴圖片欄位；沒有圖片時也要顯示，圖片上傳後只更新它的明暗配色。 */
+  function assignImageTextDependencies(schema) {
+    function apply(layers) {
+      var fields = {};
+      (layers || []).forEach(function (l) { if (l.field) fields[l.field] = true; });
+      (layers || []).forEach(function (l) {
+        if (l.type !== 'text' || l.requiresImageField || isEndorserNoteLayer(l)) return;
+        var m = /^endorserNote(\d*)$/.exec(String(l.field || ''));
+        if (!m) return;
+        var suffix = m[1] || '';
+        if (fields['endorserImg' + suffix]) l.requiresImageField = 'endorserImg' + suffix;
+        else if (fields['productImg' + suffix]) l.requiresImageField = 'productImg' + suffix;
+      });
+    }
+    apply(schema.layers || []);
+    (schema.repeats || []).forEach(function (repeat) { apply(repeat.layers || []); });
+  }
+
+  function registerFromSchema(schema) {
+    if (!schema || !schema.id) { console.error('[BNSchemaRenderer] schema 缺少 id'); return; }
+    assignImageTextDependencies(schema);
+    normalizeSchemaZOrder(schema);
+    global.BNCore.registerBlock({
+      id: schema.id,
+      name: schema.name || schema.id,
+      width: schema.width,
+      height: schema.height,
+      fields: buildFields(schema),
+      schema: schema, /* 留著原始圖層資料，外面要吸色號、判斷欄位角色時用得到 */
+      style: '', /* 全部用 inline style，不需要額外注入 <style> */
+      render: buildRender(schema)
+    });
+  }
+
+  global.BNSchemaRenderer = {
+    registerFromSchema: registerFromSchema,
+    setConfig: setConfig,
+    themeRoleOf: themeRoleOf,
+    effectiveThemeRoleOf: effectiveThemeRoleOf,
+    roleColorsOf: roleColorsOf,
+    defaultImageOrderOf: defaultImageOrderOf,
+    dynamicRowLayoutOf: dynamicRowLayoutOf,
+    dynamicRowSignatureOf: dynamicRowSignatureOf,
+    syncSubareaWarnLift: syncSubareaWarnLift,
+    hasSecondLineText: hasSecondLineText,
+    addLineButtonHtml: addLineButtonHtml
+  };
+})(window);

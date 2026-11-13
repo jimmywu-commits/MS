@@ -1,0 +1,918 @@
+/*
+ * 工單（.xlsx / .csv）匯入器。
+ *
+ * ── 為什麼不能寫死座標 ──
+ * 工單範例裡吸底圖那一區，五格的起始欄是 2, 6, 10, 15, 19——寬度是 4, 4, 5, 4, 5，
+ * 不固定（合併儲存格造成的）。任何「固定欄距」的寫法從第 3 格就會錯位。
+ * 列號同理，工單一改版就位移。所以位置全部是「算出來」的，不是查表來的。
+ *
+ * ── 定位策略：多重訊號 ──
+ * 主結構錨點是「同一列出現 2 個以上的 Icon：」——這是結構特徵，工單內容再怎麼換都在。
+ * 找到之後再用其他訊號互相佐證並提高信心分數：
+ *   A 欄含「吸底」、同列含 Nav.bar（純 ASCII，不受編碼/繁簡影響）、
+ *   下方有 LOGO： 列、有磁碟路徑列。
+ * 任一訊號單獨失效都不會致命。
+ *
+ * ── 欄位怎麼切 ──
+ * 每一格的欄位範圍由 Icon： 的實際欄號推導：
+ *   第 k 格 = [iconCols[k] - 1, iconCols[k+1] - 2]
+ * （Icon： 左邊那一欄是 TRUE/FALSE 勾選欄，也是文案欄）。
+ * 用範例工單驗證：iconCols = [3,7,11,16,20] → 格子範圍 [2-5][6-9][10-14][15-18][19-]，完全吻合。
+ *
+ * ── 文案列為什麼不能靠內容比對 ──
+ * 範例工單裡是「文案05字內」，但真實工單裡那格是實際文案。
+ * 所以文案列的定位方式是「區塊內排除掉 Icon 列、LOGO 列、路徑列之後剩下的那一列」。
+ */
+(function () {
+  var SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+
+  var MIN_GROUPS = 2;
+  var MAX_GROUPS = 5;
+  var BLOCK_SCAN_ROWS = 8; // 從 Icon 列往下最多看幾列
+
+  var RE_ICON = /^icon\s*[：:]/i;
+  var RE_LOGO = /^logo\s*[：:]/i;
+  /* BODA 新版 MS Layout 的吸底區把標籤與輸入格分開（Icon／Logo 各自一格），
+     舊工單則是「Icon：名稱」寫在同一格。兩種格式都保留支援。 */
+  var RE_ICON_LABEL = /^icon\s*$/i;
+  var RE_LOGO_LABEL = /^logo\s*$/i;
+  var RE_TEMPLATE_PLACEHOLDER = /^[（(].*(?:需要再填|輸入).*[)）]$/;
+  var RE_PATH = /^(?:[a-z]:[\\/]|\\\\)/i;
+  var RE_NAVBAR = /nav\.?\s*bar/i;
+  var RE_STICKY = /吸底/;
+  var RE_NUMERIC = /^-?\d+(\.\d+)?$/;
+
+  var loadingPromise = null;
+
+  function loadSheetJs() {
+    if (window.XLSX) return Promise.resolve();
+    if (loadingPromise) return loadingPromise;
+
+    loadingPromise = new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = SHEETJS_URL;
+      script.onload = function () { resolve(); };
+      script.onerror = function () {
+        loadingPromise = null;
+        reject(new Error("無法載入試算表元件 SheetJS，請確認網路連線"));
+      };
+      document.head.appendChild(script);
+    });
+    return loadingPromise;
+  }
+
+  /* ---------------- 小工具 ---------------- */
+
+  function str(v) {
+    if (v === null || v === undefined) return "";
+    var s = String(v).trim();
+    // 上游工具偶爾會把 undefined/null 寫成字面字串進儲存格，那不是內容
+    if (s === "undefined" || s === "null") return "";
+    return s;
+  }
+
+  function cell(rows, r, c) {
+    return rows[r] ? str(rows[r][c]) : "";
+  }
+
+  function colsMatching(row, re) {
+    var out = [];
+    if (!row) return out;
+    for (var c = 0; c < row.length; c++) {
+      if (re.test(str(row[c]))) out.push(c);
+    }
+    return out;
+  }
+
+  function rowHasAny(row, re) {
+    if (!row) return false;
+    for (var c = 0; c < row.length; c++) {
+      if (re.test(str(row[c]))) return true;
+    }
+    return false;
+  }
+
+  function toBool(v) {
+    var s = str(v).toLowerCase();
+    if (s === "true" || s === "yes" || s === "1" || s === "v" || s === "✓" || s === "是") return true;
+    if (s === "false" || s === "no" || s === "0" || s === "否" || s === "") return false;
+    return null; // 不是布林值
+  }
+
+  function stripLabel(v, re) {
+    return str(v).replace(re, "").replace(/^\s*[：:]\s*/, "").trim();
+  }
+
+  function cleanTemplateValue(v) {
+    var s = str(v);
+    if (!s) return '';
+    if (RE_TEMPLATE_PLACEHOLDER.test(s)) return '';
+    if (s === '文案5字內' || s === '文案05字內') return '';
+    return s;
+  }
+
+  function sheetCellValue(sheet, address) {
+    if (!sheet || !address) return '';
+    var c = sheet[String(address)];
+    if (!c) return '';
+    return cleanTemplateValue(c.w !== undefined ? c.w : c.v);
+  }
+
+  /* BODA 自己匯出的試算表會附 veryHidden「_BODA_BOTTOM」：
+     只記錄可見 MS Layout 裡五顆吸底欄位的地址。這是最精準的路徑，
+     使用者怎麼調整欄寬或合併儲存格，都不會讓匯入對錯欄。 */
+  function analyseBodaBottomMeta(workbook) {
+    if (!workbook || !workbook.Sheets || !workbook.Sheets._BODA_BOTTOM) return null;
+    var meta = workbook.Sheets._BODA_BOTTOM;
+    var marker = str(meta.A1 && (meta.A1.w !== undefined ? meta.A1.w : meta.A1.v));
+    if (marker !== 'BODA_BOTTOM_V1' && marker !== 'BODA_BOTTOM_V2') return null;
+    var sheetName = str(meta.B1 && (meta.B1.w !== undefined ? meta.B1.w : meta.B1.v)) || 'MS Layout';
+    var target = workbook.Sheets[sheetName];
+    if (!target) return null;
+
+    /* 0918V3 參考表可能仍帶著舊版 V1 隱藏對照表；若可見 MS Layout 已是
+       「一顆一行」，不要誤讀舊地址，直接依可見欄位建立吸底資料。 */
+    if (marker === 'BODA_BOTTOM_V1') {
+      var visibleRows = window.XLSX.utils.sheet_to_json(target, { header: 1, defval: '', blankrows: true, raw: false });
+      var visibleGroups = [];
+      visibleRows.forEach(function (visibleRow) {
+        var titleIndex = -1, assetLabelIndex = -1;
+        for (var vi = 0; vi < visibleRow.length; vi++) {
+          var vv = str(visibleRow[vi]);
+          if (/^第[1-5]顆$/.test(vv)) titleIndex = vi;
+          if (/icon圖或品牌logo圖/i.test(vv)) assetLabelIndex = vi;
+        }
+        if (titleIndex < 0 || assetLabelIndex < 0) return;
+        var ai = assetLabelIndex + 1, ti = -1;
+        for (var tj = ai + 1; tj < visibleRow.length; tj++) {
+          if (/文案|案型/i.test(str(visibleRow[tj]))) { ti = tj + 1; break; }
+        }
+        /* 「案型」是合併儲存格時，右邊那格讀出來仍是「案型」；跳過重複的欄位名稱與檢核結果，
+           取真正的文案。 */
+        while (ti >= 0 && ti < visibleRow.length &&
+          (/^(?:案型|文案)$/.test(str(visibleRow[ti])) || /^(?:OK|待填)$/i.test(str(visibleRow[ti])))) ti++;
+        var assetValue = cleanTemplateValue(visibleRow[ai]);
+        var textValue = ti >= 0 && ti < visibleRow.length ? cleanTemplateValue(visibleRow[ti]) : '';
+        visibleGroups.push({ index: parseInt(str(visibleRow[titleIndex]).replace(/\D/g, ''), 10) - 1, columns: [], type: /logo/i.test(assetValue) ? 'logo' : 'icon', iconName: /logo/i.test(assetValue) ? '' : assetValue, logoName: /logo/i.test(assetValue) ? assetValue : '', name: assetValue, iconChecked: assetValue ? true : null, logoChecked: /logo/i.test(assetValue) ? true : null, text: textValue, assetPath: '', bothProvided: false });
+      });
+      if (visibleGroups.length >= MIN_GROUPS) {
+        return { sheetName: sheetName, iconRow: null, logoRow: null, pathRow: null, textRow: null, score: 110, signals: ['0918V3 可見吸底一行一顆'], groups: visibleGroups };
+      }
+    }
+
+    var metaRows = window.XLSX.utils.sheet_to_json(meta, {
+      header: 1, defval: '', blankrows: true, raw: false
+    });
+    var groups = [];
+    var headers = (metaRows[1] || []).map(function (v) { return str(v); });
+    var assetIndex = headers.indexOf('assetAddress');
+    var textIndex = headers.indexOf('textAddress');
+    var iconIndex = headers.indexOf('iconAddress');
+    var logoIndex = headers.indexOf('logoAddress');
+    for (var r = 2; r < metaRows.length; r++) {
+      var row = metaRows[r] || [];
+      var index = parseInt(str(row[0]), 10);
+      if (!index) continue;
+      var assetName = assetIndex >= 0 ? sheetCellValue(target, row[assetIndex]) : '';
+      var iconName = iconIndex >= 0 ? sheetCellValue(target, row[iconIndex]) : assetName;
+      var logoName = logoIndex >= 0 ? sheetCellValue(target, row[logoIndex]) : '';
+      var text = textIndex >= 0 ? sheetCellValue(target, row[textIndex]) : sheetCellValue(target, row[4]);
+      if (!logoName && assetName && /logo/i.test(assetName)) logoName = assetName;
+      if (logoName) iconName = '';
+      groups.push({
+        index: index - 1,
+        columns: [],
+        type: logoName ? 'logo' : 'icon',
+        iconName: iconName,
+        logoName: logoName,
+        name: logoName || iconName,
+        iconChecked: iconName ? true : null,
+        logoChecked: logoName ? true : null,
+        text: text,
+        assetPath: '',
+        bothProvided: !!(iconName && logoName)
+      });
+    }
+    if (groups.length < MIN_GROUPS) return null;
+    groups.sort(function (a, b) { return a.index - b.index; });
+    while (groups.length > MIN_GROUPS) {
+      var last = groups[groups.length - 1];
+      if (last.text || last.iconName || last.logoName) break;
+      groups.pop();
+    }
+    return {
+      sheetName: sheetName,
+      iconRow: null,
+      logoRow: null,
+      pathRow: null,
+      textRow: null,
+      score: 100,
+      signals: ['BODA_BOTTOM_V1 精準欄位對照'],
+      groups: groups
+    };
+  }
+
+  /* 相容使用者提供的「吸底圖demo.xlsx」：
+     A/B 欄是吸底圖說明，同列重複出現獨立的 Icon 標籤，下一列是 Logo，
+     再下一列是文案與計數。標籤和輸入值分開，因此不能沿用舊版的 Icon：名稱解析。 */
+  function buildTemplateSpans(iconCols, rowLength) {
+    var spans = [];
+    for (var i = 0; i < iconCols.length; i++) {
+      var start = Math.max(0, iconCols[i] - 1);
+      var end = i < iconCols.length - 1
+        ? Math.max(start, iconCols[i + 1] - 2)
+        : Math.min(Math.max(rowLength - 1, start + 4), start + 7);
+      spans.push({ start: start, end: end, labelCol: iconCols[i] });
+    }
+    return spans;
+  }
+
+  function firstTemplateValue(rows, rowIndex, fromCol, toCol) {
+    var row = rows[rowIndex] || [];
+    for (var c = fromCol; c <= toCol; c++) {
+      var v = cleanTemplateValue(row[c]);
+      if (!v) continue;
+      if (RE_ICON_LABEL.test(v) || RE_LOGO_LABEL.test(v) || RE_NUMERIC.test(v)) continue;
+      return v;
+    }
+    return '';
+  }
+
+  function detectTemplateBlocks(rows, sheetName) {
+    var blocks = [];
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r] || [];
+      if (!(RE_STICKY.test(cell(rows, r, 0)) || RE_STICKY.test(cell(rows, r, 1)))) continue;
+      var iconCols = colsMatching(row, RE_ICON_LABEL);
+      if (iconCols.length < MIN_GROUPS) continue;
+
+      var logoRow = null;
+      for (var lr = r + 1; lr <= Math.min(rows.length - 1, r + 3); lr++) {
+        if (colsMatching(rows[lr], RE_LOGO_LABEL).length >= MIN_GROUPS) { logoRow = lr; break; }
+      }
+      if (logoRow === null) {
+        /* Layout_Output「一顆一行」格式：沒有獨立 logo row，
+           嘗試往上找第N顆 pattern 的連續區段。 */
+        var inlineResult = detectLayoutOutputInlineBlocks(rows, r, sheetName);
+        if (inlineResult) { blocks.push(inlineResult); }
+        continue;
+      }
+      var textRow = logoRow + 1;
+      if (textRow >= rows.length) continue;
+
+      var spans = buildTemplateSpans(iconCols, row.length);
+      var groups = spans.map(function (span, k) {
+        var iconName = firstTemplateValue(rows, r, span.labelCol + 1, span.end);
+        var logoName = firstTemplateValue(rows, logoRow, span.labelCol + 1, span.end);
+        var text = firstTemplateValue(rows, textRow, span.start, Math.max(span.start, span.end - 1));
+        return {
+          index: k,
+          columns: [span.start, span.end],
+          type: logoName ? 'logo' : 'icon',
+          iconName: iconName,
+          logoName: logoName,
+          name: logoName || iconName,
+          iconChecked: iconName ? true : null,
+          logoChecked: logoName ? true : null,
+          text: text,
+          assetPath: '',
+          bothProvided: !!(iconName && logoName)
+        };
+      });
+      while (groups.length > MIN_GROUPS) {
+        var last = groups[groups.length - 1];
+        if (last.text || last.iconName || last.logoName) break;
+        groups.pop();
+      }
+      blocks.push({
+        sheetName: sheetName,
+        iconRow: r,
+        logoRow: logoRow,
+        pathRow: null,
+        textRow: textRow,
+        score: 90,
+        signals: ['吸底圖 demo 格式', iconCols.length + ' 顆'],
+        groups: groups
+      });
+    }
+    return blocks;
+  }
+
+  /* Layout_Output「一顆一行」格式偵測：
+     每一行是一顆吸底按鈕，同一列包含 icon/logo 類型、素材名稱、案型、文案。
+     從已找到 icon label 的行開始，向下掃描同屬「吸底」的連續行。
+     格式範例：
+       Row header: [吸底, 吸底_01, 吸底_三格, ...]
+       Row 1: [吸底, 吸底_01, 第1顆, icon, icon, icon, 房子, 房子, OK, 案型, 案型, 主會場, 主會場, OK]
+       Row 2: [吸底, 吸底_01, 第2顆, icon, icon, icon, SAMPO..., SAMPO..., OK, ...] */
+  function detectLayoutOutputInlineBlocks(rows, startRow, sheetName) {
+    var groups = [];
+    for (var r = startRow; r < rows.length && r <= startRow + MAX_GROUPS + 1; r++) {
+      var row = rows[r] || [];
+      if (r > startRow && !RE_STICKY.test(cell(rows, r, 0)) && !RE_STICKY.test(cell(rows, r, 1))) break;
+      var m = null;
+      for (var c = 0; c < Math.min(row.length, 6); c++) {
+        m = /^第([1-5])顆$/.exec(str(row[c]));
+        if (m) break;
+      }
+      if (!m) continue;
+      var btnIndex = parseInt(m[1], 10) - 1;
+      var iconLabels = colsMatching(row, RE_ICON_LABEL);
+      var logoLabels = colsMatching(row, RE_LOGO_LABEL);
+      var isLogo = logoLabels.length > iconLabels.length;
+      var labelCols = isLogo ? logoLabels : iconLabels;
+      if (!labelCols.length) continue;
+      var lastLabel = labelCols[labelCols.length - 1];
+      var assetName = '';
+      var textValue = '';
+      for (var ac = lastLabel + 1; ac < row.length; ac++) {
+        var av = cleanTemplateValue(row[ac]);
+        if (!av || /^OK$/i.test(av) || RE_ICON_LABEL.test(av) || RE_LOGO_LABEL.test(av)) continue;
+        if (!assetName) { assetName = av; continue; }
+        if (/^案型$/i.test(av)) continue;
+        if (!textValue) { textValue = av; break; }
+      }
+      groups.push({
+        index: btnIndex,
+        columns: [],
+        type: isLogo ? 'logo' : 'icon',
+        iconName: isLogo ? '' : assetName,
+        logoName: isLogo ? assetName : '',
+        name: assetName,
+        iconChecked: !isLogo && assetName ? true : null,
+        logoChecked: isLogo && assetName ? true : null,
+        text: textValue,
+        assetPath: '',
+        bothProvided: false
+      });
+    }
+    if (groups.length < MIN_GROUPS) return null;
+    return {
+      sheetName: sheetName,
+      iconRow: null,
+      logoRow: null,
+      pathRow: null,
+      textRow: null,
+      score: 85,
+      signals: ['Layout_Output 一顆一行格式', groups.length + ' 顆'],
+      groups: groups
+    };
+  }
+
+  /* ---------------- Layout_Output／Layout_Template 2.0「吸底_N格」格式 ----------------
+     區塊標記是「吸底_兩格／三格／四格／五格」（在 A、B 或 C 欄），下面每一列是一顆：
+       C=第1顆 | D=icon／logo（或提示字「icon圖或品牌logo圖」）| G=素材名稱 | I=檢核
+       J=案型 | L=案型文字 | N=檢核 | O=備註
+     欄位不寫死：素材＝類型欄之後、「案型」之前第一個有內容的格子；
+     文案＝「案型」之後第一個有內容的格子（略過 OK／待填 等檢核結果與備註）。 */
+  var RE_LAYOUT_STICKY_MARK = /^吸底[_-]([兩二三四五])格$/;
+  var LAYOUT_STICKY_COUNT = { "兩": 2, "二": 2, "三": 3, "四": 4, "五": 5 };
+  var RE_CHECK_RESULT = /^(?:OK|待填|超過|鎖定)$/i;
+  var RE_ASSET_TYPE_HINT = /icon.*logo|logo.*icon/i;
+  var RE_CASE_LABEL = /^(?:案型|文案)$/;
+
+  function isLayoutFiller(v) {
+    return !v || RE_CHECK_RESULT.test(v) || /^備註/.test(v);
+  }
+
+  function parseLayoutStickyRow(row) {
+    var titleCol = -1, index = -1;
+    for (var c = 0; c < Math.min(row.length, 6); c++) {
+      var m = /^第([1-5])顆$/.exec(str(row[c]));
+      if (m) { titleCol = c; index = parseInt(m[1], 10) - 1; break; }
+    }
+    if (titleCol < 0) return null;
+    var typeCol = -1, typeValue = "";
+    for (var tc = titleCol + 1; tc < row.length; tc++) {
+      var tv = str(row[tc]);
+      if (!tv) continue;
+      typeCol = tc; typeValue = tv; break;
+    }
+    var caseCol = -1;
+    for (var cc = Math.max(typeCol, titleCol) + 1; cc < row.length; cc++) {
+      if (RE_CASE_LABEL.test(str(row[cc]))) { caseCol = cc; break; }
+    }
+    /* 「icon圖或品牌logo圖」「案型」在工單裡是合併儲存格，讀出來每一格都是同樣的欄位名稱
+       （D、E、F 都是 icon圖或品牌logo圖；J、K 都是案型）。要跳過這些重複的欄位名稱，
+       否則素材會讀成「icon圖或品牌logo圖」、文案會讀成「案型」，吸底一匯入就是錯的。 */
+    var assetName = "";
+    for (var ac = typeCol + 1; ac < (caseCol >= 0 ? caseCol : row.length); ac++) {
+      var av = cleanTemplateValue(row[ac]);
+      if (isLayoutFiller(av) || av === typeValue || RE_ASSET_TYPE_HINT.test(av) ||
+          RE_ICON_LABEL.test(av) || RE_LOGO_LABEL.test(av)) continue;
+      assetName = av; break;
+    }
+    var text = "";
+    if (caseCol >= 0) {
+      for (var xc = caseCol + 1; xc < row.length; xc++) {
+        var xv = cleanTemplateValue(row[xc]);
+        if (isLayoutFiller(xv) || RE_CASE_LABEL.test(xv)) continue;
+        text = xv; break;
+      }
+    }
+    /* D 欄明寫 logo／icon 就照填的；若仍是「icon圖或品牌logo圖」提示字，再看素材名稱有沒有 logo。 */
+    var type;
+    if (/logo/i.test(typeValue) && !RE_ASSET_TYPE_HINT.test(typeValue)) type = "logo";
+    else if (/icon/i.test(typeValue) && !RE_ASSET_TYPE_HINT.test(typeValue)) type = "icon";
+    else type = /logo/i.test(assetName) ? "logo" : "icon";
+    return {
+      index: index,
+      columns: [],
+      type: type,
+      iconName: type === "icon" ? assetName : "",
+      logoName: type === "logo" ? assetName : "",
+      name: assetName,
+      iconChecked: type === "icon" && assetName ? true : null,
+      logoChecked: type === "logo" && assetName ? true : null,
+      text: text,
+      assetPath: "",
+      bothProvided: false
+    };
+  }
+
+  function detectLayoutStickyBlocks(rows, sheetName) {
+    var blocks = [];
+    for (var r = 0; r < rows.length; r++) {
+      var count = 0;
+      for (var c = 0; c <= 2; c++) {
+        var m = RE_LAYOUT_STICKY_MARK.exec(cell(rows, r, c));
+        if (m) { count = LAYOUT_STICKY_COUNT[m[1]]; break; }
+      }
+      if (!count) continue;
+      var groups = [];
+      for (var k = 1; k <= count; k++) {
+        var g = parseLayoutStickyRow(rows[r + k] || []);
+        if (g) groups.push(g);
+      }
+      if (groups.length < MIN_GROUPS) continue;
+      groups.sort(function (a, b) { return a.index - b.index; });
+      var filled = groups.reduce(function (sum, g) { return sum + (g.name ? 1 : 0) + (g.text ? 1 : 0); }, 0);
+      blocks.push({
+        sheetName: sheetName,
+        iconRow: r,
+        logoRow: null,
+        pathRow: null,
+        textRow: null,
+        score: 95,
+        filled: filled,
+        signals: [cell(rows, r, 0) + " " + count + " 格"],
+        groups: groups
+      });
+    }
+    return blocks;
+  }
+
+  /* 匯入工單以 Layout_Output 為準；沒有才看正式的 Layout_Template（略過 Backup）。
+     Layout_Output 可能有多條同格式的吸底（多分頁）→ 全部回傳；
+     母版把兩格～五格全部列出，只取「填了最多內容」的那一段，同分取格數多的。 */
+  function analyseLayoutSticky(workbook) {
+    var names = workbook.SheetNames || [];
+    /* 頁簽名稱可能被加上括號或引號（例：「Layout_Output」），比對前先拿掉。 */
+    function stripQuotes(n) { return String(n || "").replace(/[「」『』【】《》〈〉"'“”‘’()（）\[\]]/g, "").trim(); }
+    function norm(n) { return stripQuotes(n).toLowerCase().replace(/[\s_-]+/g, "_"); }
+    var outputSheets = names.filter(function (n) { return norm(n) === "layout_output"; });
+    var templateSheets = names.filter(function (n) { return /^layout[\s_-]*template/i.test(stripQuotes(n)) && !/backup/i.test(n); });
+    for (var i = 0; i < outputSheets.length; i++) {
+      var blocks = detectLayoutStickyBlocks(sheetToRows(workbook, outputSheets[i]), outputSheets[i]);
+      if (blocks.length) return blocks;
+    }
+    for (var j = 0; j < templateSheets.length; j++) {
+      var tblocks = detectLayoutStickyBlocks(sheetToRows(workbook, templateSheets[j]), templateSheets[j]);
+      if (!tblocks.length) continue;
+      tblocks.sort(function (a, b) {
+        if (b.filled !== a.filled) return b.filled - a.filled;
+        return b.groups.length - a.groups.length;
+      });
+      return [tblocks[0]];
+    }
+    return null;
+  }
+
+  /* ---------------- 區塊分析 ---------------- */
+
+  /*
+   * 把 Icon： 的欄號換算成每一格的欄位範圍。
+   * 最後一格刻意不吃到列尾——工單右側常有「視覺參考 / 指定」之類的無關欄位，
+   * 全吃進來會把那些內容誤判成文案。改成用前面幾格的最大寬度當上限。
+   */
+  function buildSpans(iconCols, rowLength) {
+    var starts = iconCols.map(function (c) {
+      return Math.max(0, c - 1);
+    });
+
+    var spans = [];
+    var maxWidth = 0;
+    for (var i = 0; i < starts.length - 1; i++) {
+      var w = starts[i + 1] - starts[i];
+      if (w > maxWidth) maxWidth = w;
+    }
+    if (!maxWidth) maxWidth = 4;
+
+    for (var k = 0; k < starts.length; k++) {
+      var end =
+        k < starts.length - 1
+          ? starts[k + 1] - 1
+          : Math.min(rowLength - 1, starts[k] + maxWidth - 1);
+      spans.push({ start: starts[k], end: Math.max(starts[k], end) });
+    }
+    return spans;
+  }
+
+  function findInSpan(rows, r, span, predicate) {
+    var row = rows[r];
+    if (!row) return null;
+    for (var c = span.start; c <= span.end; c++) {
+      var v = str(row[c]);
+      if (predicate(v, c)) return { col: c, value: v };
+    }
+    return null;
+  }
+
+  /*
+   * 從 Icon 列往下找同一區塊的其他列。
+   * 邊界：碰到「A 欄有值」就停——那是下一個素材區段的開頭。
+   */
+  function scanBlockRows(rows, iconRow) {
+    var out = [];
+    for (var r = iconRow + 1; r < rows.length && r <= iconRow + BLOCK_SCAN_ROWS; r++) {
+      if (cell(rows, r, 0)) break;
+      out.push(r);
+    }
+    return out;
+  }
+
+  function analyseBlock(rows, iconRow, iconCols, sheetName) {
+    var row = rows[iconRow] || [];
+    var spans = buildSpans(iconCols, row.length);
+    var below = scanBlockRows(rows, iconRow);
+
+    var signals = [];
+    var score = 3; // 有 2 個以上 Icon： 就先給基礎分
+    signals.push(iconCols.length + " 個 Icon：");
+
+    if (RE_STICKY.test(cell(rows, iconRow, 0)) || RE_STICKY.test(cell(rows, iconRow, 1))) {
+      score += 5;
+      signals.push("A/B 欄有「吸底」");
+    }
+    if (rowHasAny(row, RE_NAVBAR)) {
+      score += 4;
+      signals.push("Nav.bar");
+    }
+
+    var logoRow = null;
+    var pathRow = null;
+    below.forEach(function (r) {
+      if (logoRow === null && colsMatching(rows[r], RE_LOGO).length >= MIN_GROUPS) logoRow = r;
+      if (pathRow === null && colsMatching(rows[r], RE_PATH).length >= MIN_GROUPS) pathRow = r;
+    });
+    if (logoRow !== null) { score += 3; signals.push("LOGO： 列"); }
+    if (pathRow !== null) { score += 2; signals.push("素材路徑列"); }
+
+    /*
+     * 文案列：區塊內排除掉 LOGO 列、路徑列之後，第一列「在 2 格以上有非數字內容」的。
+     * 不能用內容比對——真實工單那格是實際文案，不是固定字樣。
+     */
+    var textRow = null;
+    for (var i = 0; i < below.length; i++) {
+      var r = below[i];
+      if (r === logoRow || r === pathRow) continue;
+      var filled = 0;
+      spans.forEach(function (span) {
+        var hit = findInSpan(rows, r, span, function (v) {
+          return v && !RE_NUMERIC.test(v) && !RE_PATH.test(v) && toBool(v) === null;
+        });
+        if (hit) filled++;
+      });
+      if (filled >= MIN_GROUPS) { textRow = r; break; }
+    }
+
+    /*
+     * 找不到文案列就直接放棄這個區塊。
+     * 硬吃下去只會匯入一整排空文案——那比「沒匯到」更糟，因為看起來像成功了。
+     */
+    if (textRow === null) return null;
+    score += 3;
+    signals.push("文案列");
+
+    /*
+     * 門檻 8 的意思是：光有「Icon： + 文案列」（3+3=6）不夠，
+     * 一定要再有至少一個獨立佐證（吸底 +5 / Nav.bar +4 / LOGO 列 +3 / 路徑列 +2）。
+     * 兩個以上互相獨立的結構訊號才算數，單一巧合不會通過。
+     */
+    if (score < 8) return null;
+
+    var groups = spans.map(function (span, k) {
+      var iconCol = iconCols[k];
+      var iconName = stripLabel(cell(rows, iconRow, iconCol), RE_ICON);
+
+      var logoHit = logoRow === null ? null : findInSpan(rows, logoRow, span, function (v) {
+        return RE_LOGO.test(v);
+      });
+      var logoName = logoHit ? stripLabel(logoHit.value, RE_LOGO) : "";
+
+      var iconFlag = findInSpan(rows, iconRow, span, function (v, c) {
+        return c !== iconCol && toBool(v) !== null && v !== "";
+      });
+      var logoFlag = logoRow === null ? null : findInSpan(rows, logoRow, span, function (v, c) {
+        return (!logoHit || c !== logoHit.col) && toBool(v) !== null && v !== "";
+      });
+
+      // 勾了 LOGO 就是廠商 LOGO（配色規則不同：不套橘/紅，只返灰）
+      var isLogo = logoFlag ? toBool(logoFlag.value) === true : false;
+
+      var textHit = textRow === null ? null : findInSpan(rows, textRow, span, function (v) {
+        return v && !RE_NUMERIC.test(v) && !RE_PATH.test(v) && toBool(v) === null;
+      });
+      var pathHit = pathRow === null ? null : findInSpan(rows, pathRow, span, function (v) {
+        return RE_PATH.test(v);
+      });
+
+      return {
+        index: k,
+        columns: [span.start, span.end],
+        type: isLogo ? "logo" : "icon",
+        iconName: iconName,
+        logoName: logoName,
+        name: isLogo ? logoName || iconName : iconName || logoName,
+        iconChecked: iconFlag ? toBool(iconFlag.value) : null,
+        logoChecked: logoFlag ? toBool(logoFlag.value) : null,
+        text: textHit ? textHit.value : "",
+        assetPath: pathHit ? pathHit.value : "",
+      };
+    });
+
+    // 尾端整格空白（沒文案、沒 icon 名、沒 LOGO 名）就砍掉——工單常留著沒用到的格子
+    while (groups.length > MIN_GROUPS) {
+      var last = groups[groups.length - 1];
+      if (last.text || last.iconName || last.logoName) break;
+      groups.pop();
+    }
+
+    return {
+      sheetName: sheetName,
+      iconRow: iconRow,
+      logoRow: logoRow,
+      pathRow: pathRow,
+      textRow: textRow,
+      score: score,
+      signals: signals,
+      groups: groups,
+    };
+  }
+
+  function detectBlocks(rows, sheetName) {
+    var blocks = [];
+    for (var r = 0; r < rows.length; r++) {
+      var iconCols = colsMatching(rows[r], RE_ICON);
+      if (iconCols.length < MIN_GROUPS) continue;
+      var block = analyseBlock(rows, r, iconCols, sheetName);
+      if (block) blocks.push(block);
+    }
+    return blocks;
+  }
+
+  function sheetToRows(workbook, name) {
+    return window.XLSX.utils.sheet_to_json(workbook.Sheets[name], {
+      header: 1,
+      defval: "",
+      blankrows: true,
+      raw: false, // 布林轉成 "TRUE"/"FALSE" 字串，數字轉成顯示值
+    });
+  }
+
+  function analyseWorkbook(workbook) {
+    /* BODA 匯出的精準欄位對照優先，避免同一段又被結構掃描重複匯入。 */
+    var exact = analyseBodaBottomMeta(workbook);
+    if (exact) return [exact];
+    /* Layout_Output 的「吸底_N格」一顆一列格式：Output 回傳所有條，Template 只取最佳。 */
+    var layoutSticky = analyseLayoutSticky(workbook);
+    if (layoutSticky) return layoutSticky;
+
+    var blocks = [];
+    workbook.SheetNames.forEach(function (name) {
+      var rows = sheetToRows(workbook, name);
+      detectTemplateBlocks(rows, name).forEach(function (b) { blocks.push(b); });
+      detectBlocks(rows, name).forEach(function (b) { blocks.push(b); });
+    });
+    return blocks;
+  }
+
+  /* ---------------- 對回素材庫 ---------------- */
+
+  function norm(s) {
+    return str(s).toLowerCase().replace(/\s+/g, "");
+  }
+
+  /*
+   * 名稱比對，由嚴到寬：同型別完全相同 → 完全相同 → 同型別包含 → 包含。
+   * 對不上就回 null，讓 UI 明講「這格要人工選」，不硬塞一個看起來像的。
+   */
+  function matchLibraryIcon(library, name, type) {
+    var n = norm(name);
+    if (!n) return null;
+
+    var passes = [
+      /* 母版裡也可能直接填素材 id（例如 bod-logo） */
+      function (i) { return norm(i.id) === n; },
+      function (i) { return i.type === type && norm(i.displayName) === n; },
+      function (i) { return norm(i.displayName) === n; },
+      function (i) { return i.type === type && (norm(i.displayName).indexOf(n) >= 0 || n.indexOf(norm(i.displayName)) >= 0); },
+      function (i) { return norm(i.displayName).indexOf(n) >= 0 || n.indexOf(norm(i.displayName)) >= 0; },
+    ];
+
+    for (var p = 0; p < passes.length; p++) {
+      for (var i = 0; i < library.length; i++) {
+        if (passes[p](library[i])) return library[i];
+      }
+    }
+    return null;
+  }
+
+  /* ---------------- 對回主工具「STEP 2」上傳的圖片 ----------------
+     試算表「icon圖或品牌logo圖」右邊填的是 LOGO 圖檔名（可不含副檔名）。
+     主工具會把 STEP 2 上傳的圖片（{ name, url }）交給吸底，存在 window.BottomHostAssets。
+     對得到檔名就建立一顆自訂 LOGO 素材（保持原色），對不到先記成待補，
+     之後主工具再上傳圖片時會自動補上。 */
+  function assetKey(name) {
+    return str(name).split(/[\\/]/).pop()
+      .replace(/\.(png|jpe?g|gif|webp|svg|bmp)$/i, "")
+      .trim().toLowerCase();
+  }
+
+  function findHostAsset(name) {
+    var key = assetKey(name);
+    if (!key) return null;
+    var assets = window.BottomHostAssets || [];
+    for (var i = 0; i < assets.length; i++) {
+      if (assets[i] && assets[i].url && assetKey(assets[i].name) === key) return assets[i];
+    }
+    return null;
+  }
+
+  function hostAssetIconId(asset) {
+    return "host-logo-" + assetKey(asset.name).replace(/[^a-z0-9\u4e00-\u9fff]+/gi, "-");
+  }
+
+  function iconFromHostAsset(asset) {
+    return {
+      id: hostAssetIconId(asset),
+      displayName: str(asset.name).replace(/\.(png|jpe?g|gif|webp|svg|bmp)$/i, ""),
+      type: "logo",
+      src: asset.url,
+      custom: true,
+    };
+  }
+
+  function exactLibraryIcon(library, name) {
+    var n = norm(name);
+    if (!n) return null;
+    for (var i = 0; i < library.length; i++) {
+      if (norm(library[i].id) === n || norm(library[i].displayName) === n) return library[i];
+    }
+    return null;
+  }
+
+  /* 一顆素材名稱的對應順序：素材庫完全同名 → 主工具上傳的同檔名圖片 → 素材庫近似名稱。 */
+  function resolveAsset(library, name, type) {
+    var exact = exactLibraryIcon(library, name);
+    if (exact) return { icon: exact, isNew: false };
+    var asset = findHostAsset(name);
+    if (asset) {
+      var id = hostAssetIconId(asset);
+      for (var i = 0; i < library.length; i++) {
+        if (library[i].id === id) return { icon: library[i], isNew: false };
+      }
+      return { icon: iconFromHostAsset(asset), isNew: true };
+    }
+    var fuzzy = matchLibraryIcon(library, name, type);
+    return fuzzy ? { icon: fuzzy, isNew: false } : null;
+  }
+
+  /*
+   * 把偵測結果變成 banner 陣列，同時產生一份「發生了什麼」的報告。
+   * 報告要夠具體（第幾條第幾格、原文是什麼），使用者才有辦法核對。
+   */
+  function toBanners(blocks, library) {
+    var notes = [];
+    var newIcons = [];
+    var pending = [];
+    library = (library || []).slice();
+    var banners = blocks.map(function (block, bi) {
+      var groups = block.groups.slice(0, MAX_GROUPS);
+      if (block.groups.length > MAX_GROUPS) {
+        notes.push(
+          "第 " + (bi + 1) + " 條偵測到 " + block.groups.length + " 格，超過上限 " +
+            MAX_GROUPS + "，只取前 " + MAX_GROUPS + " 格"
+        );
+      }
+
+      var banner = window.BannerFactory.create(Math.max(MIN_GROUPS, groups.length));
+
+      banner.slots = banner.slots.map(function (slot, i) {
+        var g = groups[i];
+        if (!g) return slot;
+
+        // 工單的文案原樣帶進來，不截斷；超過 5 字只提醒，欄位會轉成紅框
+        if (window.TextLimit.isOver(g.text)) {
+          notes.push(
+            "第 " + (bi + 1) + " 條第 " + (i + 1) + " 格文案「" + g.text + "」是 " +
+              window.TextLimit.format(window.TextLimit.countUnits(g.text)) + " 字，超過建議的 " +
+              window.TextLimit.MAX_UNITS + " 字"
+          );
+        }
+
+        if (g.bothProvided) {
+          notes.push(
+            '第 ' + (bi + 1) + ' 條第 ' + (i + 1) + ' 格同時填了 Icon 與 Logo，' +
+              '依工單二選一規則已優先使用 Logo「' + g.logoName + '」'
+          );
+        }
+
+        var resolved = g.name ? resolveAsset(library, g.name, g.type) : null;
+        var matched = resolved ? resolved.icon : null;
+        if (resolved && resolved.isNew) {
+          newIcons.push(matched);
+          library.push(matched);
+        }
+        if (g.name && !matched) {
+          pending.push({ bannerIndex: bi, slotIndex: i, name: g.name });
+          notes.push(
+            "第 " + (bi + 1) + " 條第 " + (i + 1) + " 格的" +
+              (g.type === "logo" ? "LOGO" : "Icon") + "「" + g.name + "」素材庫裡沒有，" +
+              "請在「STEP 2」上傳同檔名的圖片（會自動套用），或人工選／上傳"
+          );
+        }
+
+        return Object.assign({}, slot, {
+          text: g.text,
+          iconId: matched ? matched.id : null,
+          type: matched ? matched.type : g.type,
+        });
+      });
+
+      return banner;
+    });
+
+    return { banners: banners, notes: notes, newIcons: newIcons, pending: pending };
+  }
+
+  function summarise(blocks) {
+    return blocks.map(function (b, i) {
+      var location = b.iconRow === null || b.iconRow === undefined
+        ? "精準欄位對照"
+        : ("第 " + (b.iconRow + 1) + " 列");
+      return (
+        "第 " + (i + 1) + " 條：" + (b.sheetName ? b.sheetName + " " : "") +
+        location + "，" + b.groups.length + " 格（" +
+        b.groups.map(function (g) { return g.text || "（無文案）"; }).join(" / ") + "）"
+      );
+    });
+  }
+
+  /* ---------------- 進入點 ---------------- */
+
+  function parseFile(file, onDone, onError) {
+    var isCsv = /\.csv$/i.test(file.name);
+
+    loadSheetJs()
+      .then(function () {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            var wb = isCsv
+              ? window.XLSX.read(ev.target.result, { type: "string" })
+              : window.XLSX.read(new Uint8Array(ev.target.result), { type: "array" });
+            var blocks = analyseWorkbook(wb);
+            if (!blocks.length) {
+              throw new Error(
+                "在這份工單裡找不到吸底圖區塊。支援 BODA 匯出的精準欄位、" +
+                  "「吸底圖demo」格式，以及舊版同列 2 個以上 Icon：的格式；" +
+                  "請確認工單確實包含吸底欄位。"
+              );
+            }
+            onDone(blocks);
+          } catch (e) {
+            onError(e);
+          }
+        };
+        reader.onerror = function () {
+          onError(new Error("讀取檔案失敗。"));
+        };
+        // CSV 明確指定 UTF-8，避免中文變亂碼；xlsx 是二進位，沒有編碼問題
+        if (isCsv) reader.readAsText(file, "UTF-8");
+        else reader.readAsArrayBuffer(file);
+      })
+      .catch(onError);
+  }
+
+  window.WorkOrderImporter = {
+    parseFile: parseFile,
+    detectBlocks: detectBlocks,
+    analyseWorkbook: analyseWorkbook,
+    toBanners: toBanners,
+    summarise: summarise,
+    matchLibraryIcon: matchLibraryIcon,
+    resolveAsset: resolveAsset,
+    findHostAsset: findHostAsset,
+  };
+})();

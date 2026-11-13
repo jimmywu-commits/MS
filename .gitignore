@@ -1,0 +1,7 @@
+/shopee
+/shopee2
+__tmp_case123/
+.git.broken-*/
+.claude/worktrees/
+.claude/settings.local.json
+output/

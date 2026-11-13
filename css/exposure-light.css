@@ -1,0 +1,824 @@
+/* ============================================================
+   BODA/css/exposure-light.css
+   UI-003 曝光資源編輯器介面重整
+
+   由 BODA/index.html（ensureExposureLoaded 的 iframe load 事件 → injectExposureThemeStylesheet）
+   以 <link> 注入曝光資源 iframe（shopee/index.html）。shopee 原始檔零修改。
+
+   閘門：shopee/index.html 帶 ?host=boda 時會設 <html data-host="boda">，
+   本檔所有規則都以 html[data-host="boda"] 開頭，獨立開啟的 shopee 編輯器完全不受影響。
+
+   第一階段（2026-11-11）：只做結構
+     1. 隱藏頂部 #tab-bar（含「前台預覽」tab 與「曝光資源 ・ 版本更新說明」）；DOM、switchTab、#bn-wn-open 事件保留。
+     2. #frontend 改 row-reverse：工具列 #sidebar 到右側、#preview-area 留在左側；DOM 順序與外掛掛載點不動。
+     3. #sidebar 邊框由右側改左側。
+     4. #bn-loading-overlay／#bn-download-overlay 原本 inset:44px 0 0 260px（避開頂列與左側工具列），
+        改為 inset:0 260px 0 0（頂列已隱藏、工具列在右，寬 260px）。
+   不改配色、字體、畫布尺寸、縮放、transform、overflow、padding、iframe、匯出。
+
+   第二階段（尚未實作）：白底／淺灰配色（含 #preview-area 底色 #f4f6f5）。
+   ============================================================ */
+
+/* 1. 頂部橫列 */
+html[data-host="boda"] #tab-bar { display: none; }
+
+/* 2. 工具列右移、畫布靠左（只改 flex 方向，不動 DOM） */
+html[data-host="boda"] #frontend { flex-direction: row-reverse; }
+
+/* 3. 工具列邊框換邊 */
+html[data-host="boda"] #sidebar { border-right: 0; border-left: 1px solid var(--border); }
+
+/* 4. 載入／下載遮罩：覆蓋左側畫布區，避開右側 260px 工具列 */
+html[data-host="boda"] #bn-loading-overlay,
+html[data-host="boda"] #bn-download-overlay { inset: 0 260px 0 0; }
+
+
+/* ============================================================
+   第二階段 2A：基礎換色（2026-11-11）
+   目標：與 BODA 首頁一致的白底介面——工具列 #FFFFFF、工作區 #F4F6F5、主文字 #26342F、
+         次文字 #5B6A67、弱文字 #7A8A86、邊框 #DDE3E1、強調色 #357872。
+   原則：
+     - 所有規則以 html[data-host="boda"] 開頭；只套在曝光資源編輯器的 UI（父 document），不會進入版型 iframe。
+     - 只覆寫顏色／邊框／陰影；不動尺寸、位置、transform、overflow、padding、iframe 與匯出。
+     - 不覆寫 .color-dot／.cp-swatch 的 background（那是目前色值的顯示）。
+     - 不對既有錯誤／超字紅框（.over-limit／.fmt-over）同屬性加 !important，錯誤狀態維持原樣。
+     - 以鏡射原 selector＋前綴取得較高特異性，不依賴注入順序。
+   2B（工具列外掛元件）與 2C（彈出面板）尚未實作。
+   ============================================================ */
+
+/* 2A-1. 主題變數：shopee/index.html 的 :root 變數在 BODA 內改為淺色 token（約 100 處 var() 一併翻轉） */
+html[data-host="boda"] {
+  --bg0: #F4F6F5;
+  --bg1: #FFFFFF;
+  --bg2: #EEF3F2;
+  --bg3: #FFFFFF;
+  --border: #DDE3E1;
+  --accent: #357872;
+  --accent2: #357872;
+  --text: #26342F;
+  --text2: #5B6A67;
+  --text3: #7A8A86;
+  --green: #1F7A44;
+  --red: #D4392E;
+  --yellow: #B45309;
+}
+
+/* 2A-2. 工作區與版型卡片（只改底色／邊框／陰影，不動 .preview-block-body 與 iframe） */
+html[data-host="boda"] #preview-area { background: #F4F6F5; }
+html[data-host="boda"] .preview-block { background: #FFFFFF; border: 1px solid #DDE3E1; box-shadow: 0 1px 3px rgba(20,40,35,.08); }
+html[data-host="boda"] .preview-block-head { background: #EEF3F2; border-bottom: 1px solid #DDE3E1; color: #26342F; }
+html[data-host="boda"] .bn-layout-lock:hover { background: #E6F2F0; }
+
+/* 2A-3. 右側工具列 */
+html[data-host="boda"] #sidebar { background: #FFFFFF; }
+html[data-host="boda"] #sidebar-head { background: #EEF3F2; color: #357872; }
+html[data-host="boda"] #sidebar-scroll::-webkit-scrollbar-thumb { background: #C3CDC9; }
+
+/* 2A-4. 基本表單：白底、較深邊框；focus 由 --accent 變數帶動（不加 box-shadow，避免蓋過超字紅框） */
+html[data-host="boda"] .s-field input,
+html[data-host="boda"] .s-field-row input,
+html[data-host="boda"] .s-field-row textarea,
+html[data-host="boda"] #lv-wrap select,
+html[data-host="boda"] .field-group input,
+html[data-host="boda"] .field-group select { background: #FFFFFF; border-color: #C3CDC9; color: #26342F; }
+html[data-host="boda"] .s-field input::placeholder,
+html[data-host="boda"] .s-field-row input::placeholder,
+html[data-host="boda"] .s-field-row textarea::placeholder { color: #93A19D; }
+
+/* 2A-5. 色點：只改邊框與 hover 外圈（background 是目前色值，不碰） */
+html[data-host="boda"] .color-dot { border-color: rgba(0,0,0,.18); }
+html[data-host="boda"] .color-dot:hover { box-shadow: 0 0 0 3px rgba(53,120,114,.25); }
+
+/* 2A-6. 字數提示（只改顏色；warn／over 的 class 切換邏輯不變） */
+html[data-host="boda"] .char-count-badge { color: #7A8A86; }
+html[data-host="boda"] .char-count-badge.warn { color: #B45309; }
+html[data-host="boda"] .char-count-badge.over { color: #D4392E; }
+
+/* 2A-7. 內容警語（淺色版：淡黃底、深琥珀字；顯示／隱藏仍由 .show 控制） */
+html[data-host="boda"] .s-field-inline.content-warning .s-field-row input { border-color: #E0A200; box-shadow: 0 0 0 2px rgba(224,162,0,.18); }
+html[data-host="boda"] #bn-content-warning { border-color: #E0A200; color: #8A5A00; background: #FFF7E6; box-shadow: 0 3px 10px rgba(20,40,35,.08); }
+html[data-host="boda"] #bn-content-warning button { background: #B45309; color: #FFFFFF; }
+html[data-host="boda"] #bn-content-warning button:hover { background: #9A4408; }
+
+/* 2A-8. 取色面板（#cp-panel 由 JS 定位，不動位置；色票 background 不碰，只改邊框／active 環） */
+html[data-host="boda"] #cp-panel { background: #FFFFFF; border: 1px solid #DDE3E1; box-shadow: 0 8px 32px rgba(20,40,35,.18); }
+html[data-host="boda"] #cp-hex-label { color: #7A8A86; }
+html[data-host="boda"] #cp-hex-input { background: #FFFFFF; border-color: #C3CDC9; color: #26342F; }
+html[data-host="boda"] #cp-hex-input:focus { border-color: #357872; background: #FFFFFF; }
+html[data-host="boda"] #cp-native { border-color: rgba(0,0,0,.15); }
+html[data-host="boda"] .cp-swatch.active { border-color: #357872; box-shadow: 0 0 0 2px rgba(53,120,114,.2); }
+
+/* 2A-9. 載入／下載遮罩與卡片（inset 維持第一階段設定） */
+html[data-host="boda"] #bn-loading-overlay,
+html[data-host="boda"] #bn-download-overlay { background: rgba(244,246,245,.86); }
+html[data-host="boda"] .bn-loading-card { background: rgba(255,255,255,.94); border: 1px solid #DDE3E1; box-shadow: 0 22px 70px rgba(20,40,35,.16), 0 2px 9px rgba(20,40,35,.08); }
+html[data-host="boda"] .bn-loading-spinner { border-color: rgba(53,120,114,.18); border-top-color: #357872; }
+html[data-host="boda"] .bn-loading-bar { background: #E3E8E6; }
+html[data-host="boda"] #bn-loading-note { color: #B45309; }
+html[data-host="boda"] #bn-loading-close { background: #FFFFFF; border-color: #C3CDC9; color: #5B6A67; }
+
+
+/* ============================================================
+   第二階段 2B：右側工具列與外掛元件換色（2026-11-11）
+   範圍：工單上傳盒、下載列、LOGO／商品工具、代言人／人物工具、全體影子工具、暫存列、右鍵選單、取色面板 inline 邊框。
+   說明：
+     - 外掛（bn-editor-plugin／bn-state-plugin／bn-workorder-upload-plugin／boda-level-plugin）注入的多數規則已用
+       var(--x, fallback)，2A 的變數覆寫已把它們翻成淺色；本段只處理剩下的硬編碼色。
+     - 代言人橘（#C2410C）與人物紫（#7C3AED）保留語意區分，改為適合白底的較深版本。
+     - 不覆寫 .bn-dl-btn:disabled、.bn-endorser-note-wrap.over（紅框 !important）、.bn-clr:hover（紅字）等功能／錯誤狀態。
+     - !important 僅用於由 JS inline style 設定、且有穩定 id 的純外觀：#_bn_input_ctx（右鍵選單）、#cp-eyedrop、#cp-swatch-groups；
+       每條理由見行內註解。不使用 [style*="色值"]。
+   2C（商品 modal、背景圖庫、fit、影子、版本更新 modal）尚未實作。
+   ============================================================ */
+
+/* 2B-A. 工單上傳盒（bn-workorder-upload-plugin.js）：按鈕已由 --accent 帶動，只改盒底與狀態色 */
+html[data-host="boda"] .bn-workorder-box { background: #E6F2F0; }
+html[data-host="boda"] .bn-workorder-status.ok { color: #1F7A44; }
+html[data-host="boda"] .bn-workorder-status.err { color: #D4392E; }
+html[data-host="boda"] .bn-workorder-status.loading { color: #B45309; }
+
+/* 2B-B. 下載列（bn-editor-plugin.js）：分隔線與進度字已由變數帶動；主按鈕由藍漸層改品牌綠；disabled 的 opacity 規則不動 */
+html[data-host="boda"] .bn-dl-btn { background: linear-gradient(135deg, #357872, #2C6660); color: #FFFFFF; }
+
+/* 2B-C. LOGO／商品工具（bn-editor-plugin.js）：框線、文字、hover 已由變數帶動；只改硬編碼的 hover 底與縮圖底 */
+html[data-host="boda"] .bn-drop:hover,
+html[data-host="boda"] .bn-drop.drag { background: #E6F2F0; }
+html[data-host="boda"] .bn-prev { background: #F4F6F5; }           /* LOGO 預覽縮圖的底，不是圖片本身 */
+html[data-host="boda"] .bn-prod-item img { background: #F4F6F5; }  /* 商品縮圖的底，不是圖片本身 */
+
+/* 2B-D. 代言人／人物工具（bn-editor-plugin.js）：橘＝人物圖／簽名按鈕，紫＝代言人；保留語意，改為白底可讀的深色版 */
+html[data-host="boda"] #bn-char-open-btn,
+html[data-host="boda"] #bn-char2-open-btn { border-color: #C2410C; color: #C2410C; }
+html[data-host="boda"] #bn-char-open-btn:hover,
+html[data-host="boda"] #bn-char2-open-btn:hover { border-color: #C2410C; background: rgba(194,65,12,.08); }
+html[data-host="boda"] .bn-endorser-up { border-color: #7C3AED; color: #7C3AED; }
+html[data-host="boda"] .bn-endorser-up:hover { background: rgba(124,58,237,.08); }
+html[data-host="boda"] .bn-prod-item.bn-endorser-item { border-color: rgba(124,58,237,.35); }
+html[data-host="boda"] #bn-endorser-note-inp:focus { border-color: #7C3AED; }
+html[data-host="boda"] .bn-endorser-note-color button.on { border-color: #7C3AED; color: #7C3AED; }
+html[data-host="boda"] .bn-endorser-hint.on { color: #7C3AED; }
+
+/* 2B-E. 全體商品影子工具（BODA/jbp/js/boda-level-plugin.js）：其他欄位已由變數帶動；
+   .bgs-hex 原寫 var(--bg,#0d1117)，shopee 沒有 --bg 變數而落到深色 fallback，這裡直接給白底深字 */
+html[data-host="boda"] #boda-global-shadow-tool { background: #FAFBFB; }
+html[data-host="boda"] #boda-global-shadow-tool .bgs-hex { background: #FFFFFF; color: #26342F; }
+
+/* 2B-F. 暫存列（bn-state-plugin.js）：#_bn_save_bar 與其按鈕以 cssText 使用 var()，已由變數帶動，無需覆寫。
+   右鍵選單 #_bn_input_ctx：外掛以 element.style 直接寫深色（背景 #1a1d2a、邊框 #2e3347、文字 #dde3f0、mouseenter 背景 #2b2f42），
+   只有 !important 能蓋過 inline style；三條都只改外觀，不影響選單項目的動作與豁免狀態。 */
+html[data-host="boda"] #_bn_input_ctx { background: #FFFFFF !important; border-color: #DDE3E1 !important; box-shadow: 0 8px 24px rgba(20,40,35,.18) !important; }
+html[data-host="boda"] #_bn_input_ctx button { color: #26342F !important; }
+html[data-host="boda"] #_bn_input_ctx button:hover { background: #EEF3F2 !important; }
+
+/* 2B-G. 取色面板裡兩個以 HTML inline style 寫死邊框色的元素（shopee/index.html 916、919 行）：
+   只改邊框／文字色，不影響吸管功能與色票群組內容 */
+html[data-host="boda"] #cp-eyedrop { border-color: #C3CDC9 !important; color: #5B6A67 !important; }
+html[data-host="boda"] #cp-swatch-groups { border-top-color: #DDE3E1 !important; }
+
+
+/* ============================================================
+   第二階段 2C：彈出視窗白底主題（2026-11-11）
+   範圍：商品／背景選擇 modal（bn-editor-plugin.js）、背景圖庫與商品適配（bn-bg-library-plugin.js）、
+         商品影子（bn-shadow-plugin.js）、版本更新（bn-whatsnew-plugin.js）。
+   原則：
+     - 只改遮罩、視窗底、標題、分隔線、表單、分頁、hover、選取、按鈕的顏色／邊框／陰影；不改 display／position／inset／
+       z-index／pointer-events／尺寸／transform／overflow／動畫／backdrop-filter。
+     - 不碰 .bn-fit-stage（商品影像與定位）、.bn-fit-dred（紅框）、.bn-shadow-preview 的底與內容、背景縮圖／商品圖片的 src。
+       縮圖「容器」底色（.bn-bglib-thumb、.bn-preview-cell、.bn-bg-drop-card img）屬 chrome，改為淺灰。
+     - 不覆寫 :disabled（.bn-btn-confirm:disabled 的 opacity）、selected／active／is-hero／dragging 等狀態的切換邏輯，只改其顏色。
+     - 無 !important、無 [style*=…]。JS inline 色（教學文字、#bn-mlimit、[data-fit]）與無 selector 的 toast 不處理。
+     - editor-plugin.js 的 .hbn-plugin-modal（圖片裁切／筆刷編輯器，延遲載入、含畫布操作把手）不在本批，列為待整合。
+   ============================================================ */
+
+/* 2C-A1. 商品／背景選擇 modal：遮罩與視窗 */
+html[data-host="boda"] #bn-bg-modal,
+html[data-host="boda"] #bn-prod-modal { background: rgba(31,43,41,.45); }
+html[data-host="boda"] .bn-bg-modal-box,
+html[data-host="boda"] .bn-modal-box { background: #FFFFFF; border-color: #DDE3E1; box-shadow: 0 24px 70px rgba(20,40,35,.22); }
+html[data-host="boda"] .bn-modal-head { border-bottom-color: #DDE3E1; }
+html[data-host="boda"] .bn-modal-head h3 { color: #26342F; }
+html[data-host="boda"] .bn-modal-close { color: #7A8A86; }
+html[data-host="boda"] .bn-modal-close:hover { color: #26342F; }
+html[data-host="boda"] .bn-modal-foot { border-top-color: #DDE3E1; }
+
+/* 2C-A2. 背景上傳卡片與提示 */
+html[data-host="boda"] .bn-bg-drop-card { border-color: #C3CDC9; color: #5B6A67; }
+html[data-host="boda"] .bn-bg-drop-card:hover,
+html[data-host="boda"] .bn-bg-drop-card.over { border-color: #357872; background: #E6F2F0; color: #357872; }
+html[data-host="boda"] .bn-bg-drop-card img { background: #F4F6F5; }   /* 預覽縮圖容器底，不是圖片本身 */
+html[data-host="boda"] .bn-bg-drop-title { color: #26342F; }
+html[data-host="boda"] .bn-bg-drop-desc { color: #7A8A86; }
+html[data-host="boda"] .bn-bg-drop-name { color: #5B6A67; }
+html[data-host="boda"] .bn-bg-hint { color: #26342F; background: #E6F2F0; border-color: rgba(53,120,114,.3); }
+
+/* 2C-A3. 商品 modal：分頁、拖放、預覽格、排序、按鈕 */
+html[data-host="boda"] .bn-step-tab { border-color: #C3CDC9; color: #5B6A67; }
+html[data-host="boda"] .bn-step-tab.on { background: #E6F2F0; color: #357872; border-color: #357872; }
+html[data-host="boda"] .bn-modal-drop { border-color: #C3CDC9; color: #5B6A67; }
+html[data-host="boda"] .bn-modal-drop:hover,
+html[data-host="boda"] .bn-modal-drop.over { border-color: #357872; background: #E6F2F0; color: #357872; }
+html[data-host="boda"] .bn-preview-cell { border-color: #DDE3E1; background: #F4F6F5; }   /* 預覽格底，商品圖 object-fit 不變 */
+html[data-host="boda"] .bn-preview-cell.is-hero { border-color: #357872; box-shadow: 0 0 0 2px rgba(53,120,114,.2); }
+html[data-host="boda"] .bn-preview-cell .pc-name { color: #5B6A67; }
+html[data-host="boda"] .bn-preview-cell .pc-hero { background: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-preview-cell .pc-rm { background: rgba(38,52,47,.78); border-color: rgba(255,255,255,.4); color: #FFFFFF; }
+html[data-host="boda"] .bn-limit-msg { color: #7A8A86; }
+html[data-host="boda"] .bn-rank-arrow { background: #FFFFFF; border-color: #C3CDC9; color: #5B6A67; }
+html[data-host="boda"] .bn-rank-arrow:hover { background: #E6F2F0; color: #357872; border-color: #357872; }
+html[data-host="boda"] .bn-rank-name { color: #5B6A67; }
+html[data-host="boda"] .bn-rank-tag.hero { background: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-rank-tag.left,
+html[data-host="boda"] .bn-rank-tag.right { background: #EEF3F2; color: #5B6A67; border-color: #DDE3E1; }
+html[data-host="boda"] .bn-rank-hint { color: #7A8A86; }
+html[data-host="boda"] .bn-drop-line { background: #357872; box-shadow: 0 0 8px rgba(53,120,114,.6); }   /* 拖曳插入指示線，只改色；display 由 JS 控制 */
+html[data-host="boda"] .bn-btn-skip { border-color: #C3CDC9; color: #5B6A67; }
+html[data-host="boda"] .bn-btn-skip:hover { border-color: #357872; color: #357872; }
+html[data-host="boda"] .bn-btn-confirm { background: linear-gradient(135deg, #357872, #2C6660); color: #FFFFFF; }
+
+/* 2C-B. 背景圖庫（.bn-bglib-*）：縮圖 <img> 與背景圖本身不碰 */
+html[data-host="boda"] .bn-bglib-overlay { background: rgba(31,43,41,.5); }
+html[data-host="boda"] .bn-bglib-modal { background: #FFFFFF; border-color: #DDE3E1; box-shadow: 0 24px 80px rgba(20,40,35,.22); color: #26342F; }
+html[data-host="boda"] .bn-bglib-head { background: #EEF3F2; border-bottom-color: #DDE3E1; }
+html[data-host="boda"] .bn-bglib-search { background: #FFFFFF; border-color: #C3CDC9; color: #26342F; }
+html[data-host="boda"] .bn-bglib-close { background: #FFFFFF; color: #26342F; border-color: #C3CDC9; }
+html[data-host="boda"] .bn-bglib-tabs,
+html[data-host="boda"] .bn-bglib-filters { background: #FFFFFF; }
+html[data-host="boda"] .bn-bglib-tab { background: #F4F6F5; color: #5B6A67; border-color: #DDE3E1; }
+html[data-host="boda"] .bn-bglib-tab.active { background: #357872; color: #FFFFFF; border-color: #357872; }
+html[data-host="boda"] .bn-bglib-flabel { color: #5B6A67; }
+html[data-host="boda"] .bn-bglib-chip { background: #FFFFFF; color: #26342F; border-color: #C3CDC9; }
+html[data-host="boda"] .bn-bglib-chip:hover { border-color: #357872; }
+html[data-host="boda"] .bn-bglib-chip.active { background: #1F7A44; color: #FFFFFF; border-color: #1F7A44; }
+html[data-host="boda"] .bn-bglib-chip.dim:hover { border-color: #DDE3E1; }
+html[data-host="boda"] .bn-bglib-tags { color: #7A8A86; }
+html[data-host="boda"] .bn-bglib-status { color: #5B6A67; }
+html[data-host="boda"] .bn-bglib-card { background: #FFFFFF; border-color: #DDE3E1; color: #26342F; }
+html[data-host="boda"] .bn-bglib-card:hover { border-color: #357872; }
+html[data-host="boda"] .bn-bglib-card.selected { border-color: #357872; box-shadow: 0 0 0 2px rgba(53,120,114,.24); }
+html[data-host="boda"] .bn-bglib-thumb { background: #F4F6F5; }   /* 縮圖容器底，縮圖本身不變 */
+html[data-host="boda"] .bn-bglib-check { background: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-bglib-foot { background: #EEF3F2; border-top-color: #DDE3E1; }
+html[data-host="boda"] .bn-bglib-upload { background: #1F7A44; color: #FFFFFF; }
+html[data-host="boda"] .bn-bglib-slab { background: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-bglib-slab:hover { background: #2C6660; }
+html[data-host="boda"] .bn-bglib-apply { background: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-bglib-hint { color: #5B6A67; }
+html[data-host="boda"] .bn-bglib-empty { border-color: #C3CDC9; color: #7A8A86; }
+
+/* 2C-C. 商品適配（.bn-fit-*）：.bn-fit-stage 影像／定位／比例與 .bn-fit-dred 紅框不碰 */
+html[data-host="boda"] .bn-fit-overlay { background: rgba(31,43,41,.5); }
+html[data-host="boda"] .bn-fit-modal { background: #FFFFFF; border-color: #DDE3E1; box-shadow: 0 24px 80px rgba(20,40,35,.22); color: #26342F; }
+html[data-host="boda"] .bn-fit-head { background: #EEF3F2; border-bottom-color: #DDE3E1; }
+html[data-host="boda"] .bn-fit-tip { background: rgba(255,255,255,.92); border-color: #DDE3E1; color: #26342F; }
+html[data-host="boda"] .bn-fit-mouse::before { background: #357872; }
+html[data-host="boda"] .bn-fit-side { color: #5B6A67; }
+html[data-host="boda"] .bn-fit-call { background: #FFF7E6; border-color: #E0A200; color: #8A5A00; }
+html[data-host="boda"] .bn-fit-row input[type=range] { accent-color: #357872; }
+html[data-host="boda"] .bn-fit-note { color: #7A8A86; }
+html[data-host="boda"] .bn-fit-note .ok { color: #1F7A44; }
+html[data-host="boda"] .bn-fit-note .warn { color: #B45309; }
+html[data-host="boda"] .bn-fit-note .cy { color: #0E7490; }
+html[data-host="boda"] .bn-fit-foot { background: #EEF3F2; border-top-color: #DDE3E1; }
+html[data-host="boda"] .bn-fit-btn.primary { background: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-fit-btn.ghost { background: #FFFFFF; color: #26342F; border-color: #C3CDC9; }
+html[data-host="boda"] .bn-fit-btn.ghost:hover { border-color: #357872; }
+
+/* 2C-D. 商品影子（.bn-shadow-*）：.bn-shadow-preview 的底色、棋盤格與內容不碰，只改外框線 */
+html[data-host="boda"] #bn-shadow-modal { background: rgba(31,43,41,.45); }
+html[data-host="boda"] .bn-shadow-box { background: #FFFFFF; border-color: #DDE3E1; box-shadow: 0 24px 70px rgba(20,40,35,.22); color: #26342F; }
+html[data-host="boda"] .bn-shadow-head { border-bottom-color: #DDE3E1; }
+html[data-host="boda"] .bn-shadow-close { color: #7A8A86; }
+html[data-host="boda"] .bn-shadow-preview { border-color: #DDE3E1; }
+html[data-host="boda"] .bn-shadow-ctrl label { color: #5B6A67; }
+html[data-host="boda"] .bn-shadow-ctrl label b { color: #26342F; }
+html[data-host="boda"] .bn-shadow-seg button { background: #FFFFFF; border-color: #C3CDC9; color: #5B6A67; }
+html[data-host="boda"] .bn-shadow-seg button.active { background: #357872; border-color: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-shadow-toggle { color: #26342F; }
+html[data-host="boda"] .bn-shadow-row input[type=color] { border-color: #C3CDC9; }
+html[data-host="boda"] .bn-shadow-hint { color: #7A8A86; }
+html[data-host="boda"] .bn-shadow-foot { border-top-color: #DDE3E1; }
+html[data-host="boda"] .bn-shadow-btn { border-color: #C3CDC9; background: #FFFFFF; color: #26342F; }
+html[data-host="boda"] .bn-shadow-btn.primary { background: #357872; border-color: #357872; color: #FFFFFF; }
+html[data-host="boda"] .bn-shadow-btn.ghost { background: transparent; color: #5B6A67; }
+
+/* 2C-E. 版本更新（.bn-wn-*）：只處理 modal；頂部入口 #bn-wn-open 仍隱藏，不在此恢復 */
+html[data-host="boda"] #bn-wn-modal { background: rgba(31,43,41,.45); }
+html[data-host="boda"] .bn-wn-box { background: #FFFFFF; border-color: #DDE3E1; box-shadow: 0 24px 70px rgba(20,40,35,.22); color: #26342F; }
+html[data-host="boda"] .bn-wn-head { border-bottom-color: #DDE3E1; }
+html[data-host="boda"] .bn-wn-close { color: #7A8A86; }
+html[data-host="boda"] .bn-wn-rel { border-bottom-color: #EEF3F2; }
+html[data-host="boda"] .bn-wn-ver { color: #357872; }
+html[data-host="boda"] .bn-wn-rel li { color: #26342F; }
+html[data-host="boda"] .bn-wn-tag { background: #EEF3F2; color: #5B6A67; border-color: #DDE3E1; }
+html[data-host="boda"] .bn-wn-tag.new { color: #1F7A44; border-color: rgba(31,122,68,.4); }
+html[data-host="boda"] .bn-wn-tag.fix { color: #B45309; border-color: rgba(180,83,9,.4); }
+html[data-host="boda"] .bn-wn-tag.tip { color: #357872; border-color: rgba(53,120,114,.4); }
+html[data-host="boda"] .bn-wn-foot { border-top-color: #DDE3E1; }
+html[data-host="boda"] .bn-wn-btn { background: #357872; border-color: #357872; color: #FFFFFF; }
+
+
+/* ============================================================
+   2D 補充修正：浮動面板與 LOGO 選單（2026-11-11）
+   Root Cause：這三個元件的顏色全由 JS 以 element.style（inline）或 !important 樣式寫死，
+   2A 的變數與 2B／2C 的鏡射規則都碰不到，因此在白底介面中仍是黑底。
+     - .bn-bg-panel「背景圖調整」：bn-editor-plugin.js buildBgPanels()（2405–2444）以 cssText 寫底色／邊框／文字；
+       標題 div 與 [data-fit] 按鈕為 inline；原尺寸／填滿的選中狀態由 updateFitBtns() 以 inline 底色切換。
+     - #_bn_logo_inline_menu（工具列 LOGO「編輯」選單）：bn-editor-plugin.js 819–849，cssText 黑底白字、mouseover inline。
+     - #logoMenuV14（LOGO 縮圖 ✎ 選單）：logo-editor-plugin.js 注入的 _bn_lm_css，每條皆 !important。
+   原則：
+     - 只覆寫 background／border／color／box-shadow／accent-color；不碰 display／position／left／top／z-index／
+       width／height／padding／margin／opacity／pointer-events／transform／overflow。
+     - 面板的顯示／隱藏、定位、300ms 延遲、滑桿 disabled（inline opacity）、縮放／位移／fit 狀態更新全由 JS 控制，不動。
+     - 原尺寸／填滿 [data-fit] 的選中狀態只存在於 inline（藍底白字）：依決策保留原本藍色選中態，只補可見外框；不用 [style*=…]。
+     - .logo-v14-trigger 黑色圓形觸發鈕依決策保留原樣。
+     - !important 僅用於蓋過 inline／外掛 !important 的純外觀宣告，逐條註明。
+   ============================================================ */
+
+/* 2D-A. 背景圖調整浮動面板 */
+/* 容器：cssText 寫死 background:#13161f／border #2e3347／color #8b9dbf／box-shadow → 4 個 !important 皆為蓋過 inline */
+html[data-host="boda"] .bn-bg-panel { background: #FFFFFF !important; border-color: #DDE3E1 !important; color: #5B6A67 !important; box-shadow: 0 4px 16px rgba(20,40,35,.18) !important; }
+/* 標題「背景圖調整」：innerHTML 第一個子 div 以 inline color:#dde3f0 → !important 蓋過 inline；2026-11-12 微調為品牌綠 #357872（原 #26342F） */
+html[data-host="boda"] .bn-bg-panel > div:first-child { color: #357872 !important; }
+/* 縮放滑桿：無 inline accent-color，一般規則即可 */
+html[data-host="boda"] .bn-bg-panel input[type=range] { accent-color: #357872; }
+/* ←→↑↓ 微調按鈕：inline 只有 flex:1，外觀為瀏覽器預設，一般規則即可 */
+html[data-host="boda"] .bn-bg-panel .bg-nudge { background: #FFFFFF; border: 1px solid #C3CDC9; border-radius: 4px; color: #26342F; }
+html[data-host="boda"] .bn-bg-panel .bg-nudge:hover { background: #E6F2F0; border-color: #357872; color: #357872; }
+/* 原尺寸／填滿：inline border:none → !important 補一圈可見外框 */
+html[data-host="boda"] .bn-bg-panel [data-fit] { border: 1px solid #DDE3E1 !important; }
+/* 2026-11-12 選中配色（方案 1）：shopee/js/bn-editor-plugin.js updateFitBtns() 以 classList.toggle('on', active) 反映狀態；
+   底色／字色仍由該函式以 inline 寫入（藍／淺），這裡以 !important 蓋過 inline：選中綠底白字、未選中白底灰字。
+   獨立開啟 shopee 時無 data-host 閘門，仍為原本藍色選中態。 */
+html[data-host="boda"] .bn-bg-panel [data-fit].on {
+  background: #357872 !important;
+  color: #FFFFFF !important;
+}
+html[data-host="boda"] .bn-bg-panel [data-fit]:not(.on) {
+  background: #FFFFFF !important;
+  color: #5B6A67 !important;
+}
+
+/* 2D-B. 工具列 LOGO「編輯」選單（#_bn_logo_inline_menu） */
+/* 容器：cssText 寫死 background:#111／color:#fff／box-shadow → 3 個 !important 蓋過 inline；淺色邊框以 box-shadow 外圈呈現，不改盒尺寸 */
+html[data-host="boda"] #_bn_logo_inline_menu { background: #FFFFFF !important; color: #26342F !important; box-shadow: 0 0 0 1px #DDE3E1, 0 8px 24px rgba(20,40,35,.18) !important; }
+/* 項目：cssText 寫死 color:#fff → !important；mouseover 以 inline 寫 background:#2b2b2b → :hover !important 蓋過 */
+html[data-host="boda"] #_bn_logo_inline_menu button { color: #26342F !important; }
+html[data-host="boda"] #_bn_logo_inline_menu button:hover { background: #EEF3F2 !important; }
+
+/* 2D-C. LOGO 縮圖 ✎ 選單（#logoMenuV14）：外掛規則本身為 !important，以 html[data-host] 前綴提高特異性（0,1,1,1 > 0,1,0,0）後同為 !important 即可覆蓋 */
+html[data-host="boda"] #logoMenuV14 { background: #FFFFFF !important; color: #26342F !important; box-shadow: 0 0 0 1px #DDE3E1, 0 8px 24px rgba(20,40,35,.18) !important; }
+html[data-host="boda"] #logoMenuV14 button { color: #26342F !important; }
+html[data-host="boda"] #logoMenuV14 button:hover { background: #EEF3F2 !important; }
+/* 2D-D. .logo-v14-trigger：依決策不修改。 */
+
+
+/* ============================================================
+   UI-003 2E — Match activity resource tool sidebar width（2026-11-12）
+   曝光資源右側工具列 #sidebar 由 shopee 原本 260px 改為 340px，與 BODA 活動頁資源右側工具列
+   #import-canvas-tools（BODA/index.html 723 行：width:340px; flex:0 0 340px，border-box）一致。
+   方案 A：第一階段的 inset:0 260px 0 0 規則逐字保留在上方，由此處同特異性、較後的規則覆寫。
+   只改寬度與遮罩右緣；flex-direction、邊框、padding、內部欄位、DOM、畫布 iframe、縮放、匯出不動。
+   ============================================================ */
+html[data-host="boda"] #sidebar {
+  width: 340px;
+}
+
+html[data-host="boda"] #bn-loading-overlay,
+html[data-host="boda"] #bn-download-overlay {
+  inset: 0 340px 0 0;
+}
+
+
+/* ============================================================
+   UI-004-A — 右側工具列基礎字級、表單與間距一致化（2026-11-12）
+   參考：BODA/index.html 活動頁資源右側工具列 #import-canvas-tools（欄位 label 11px/600、input.fv 30px/12px/radius 6、
+         #import-level select 34px/12.5px/700、.field 間距 12px、側邊內距 16px、區塊標題 11.5–12px/800）；首頁作補充。
+   原則：
+     - 只改字級、字重、行高、內距、高度、圓角；不用全域 font-size、transform:scale、zoom。
+     - 單行 input 固定 30px；textarea 不固定高度（只改字級／圓角／內距，min-height 維持原值）。
+     - 不碰 #sidebar 340px、遮罩 inset、色點／色票 background、超字紅框／警語／disabled／focus 的狀態規則。
+     - 浮動面板、LOGO 選單、Modal、外掛區塊（LOGO／商品／人物／背景／下載／暫存列）留待 B／C。
+     - .s-section 的字級／內距也會套到外掛插入的區段標題（同一 class）；其 inline margin-top 仍由外掛控制。
+   ============================================================ */
+
+/* A-1. 工具列標頭與捲動區：11px/700 padding 12px 14px → 12px/800 padding 14px 16px；捲動區上下 10px → 12px */
+html[data-host="boda"] #sidebar-head { font-size: 12px; font-weight: 800; letter-spacing: .3px; padding: 14px 16px; }
+html[data-host="boda"] #sidebar-scroll { padding: 12px 0; }
+
+/* A-2. 區段標題：10px/700 ink3 padding 4px 14px 6px margin-top 8px → 11.5px/800 ink2 padding 8px 16px 6px margin-top 12px */
+html[data-host="boda"] .s-section { font-size: 11.5px; font-weight: 800; letter-spacing: .3px; color: #5B6A67; padding: 8px 16px 6px; margin-top: 12px; }
+
+/* A-3. 文字欄位區塊：容器 4px 14px / mb 4px → 2px 16px / mb 8px（欄位間距 2+8+2 = 12px）；label 10px → 11px/600 mb 4px */
+html[data-host="boda"] .s-field-inline { padding: 2px 16px; margin-bottom: 8px; }
+html[data-host="boda"] .s-field-inline label { font-size: 11px; font-weight: 600; color: #5B6A67; margin-bottom: 4px; line-height: 1.4; }
+html[data-host="boda"] .s-field-row { gap: 8px; }
+/* 單行輸入：≈27px（padding 5px 8px、radius 4）→ 30px、radius 6；textarea 只改字級／圓角／內距，不固定高度 */
+html[data-host="boda"] .s-field-row input[type="text"] { height: 30px; padding: 5px 8px; font-size: 12px; border-radius: 6px; }
+html[data-host="boda"] .s-field-row textarea { padding: 5px 8px; font-size: 12px; border-radius: 6px; }
+/* 字數計數：10px → 11px（warn／over 顏色規則沿用 2A） */
+html[data-host="boda"] .char-count-badge { font-size: 11px; }
+
+/* A-4. 等級下拉：≈29px/12px/600 → 34px/12.5px/700、radius 6、強邊框；說明 10px → 11px */
+html[data-host="boda"] #lv-wrap { padding: 4px 16px 8px; }
+html[data-host="boda"] #lv-wrap select { height: 34px; padding: 0 10px; font-size: 12.5px; font-weight: 700; border-radius: 6px; border-color: #C3CDC9; }
+html[data-host="boda"] #lv-note { font-size: 11px; line-height: 1.55; margin-top: 6px; }
+
+/* A-5. 排版勾選：padding 6px 14px + margin 1px 6px（文字距邊 20px）→ padding 7px 10px + margin 1px 6px（距邊 16px）；checkbox 14 → 16px；小字 10/9.5 → 11/10.5 */
+html[data-host="boda"] .layout-check-item { padding: 7px 10px; margin: 1px 6px; gap: 8px; }
+html[data-host="boda"] .layout-check-item input[type="checkbox"] { width: 16px; height: 16px; }
+html[data-host="boda"] .layout-check-item .lc-name { font-size: 12px; font-weight: 600; }
+html[data-host="boda"] .layout-check-item .lc-size,
+html[data-host="boda"] .layout-check-item .lc-tip { font-size: 11px; }
+html[data-host="boda"] .lc-group { font-size: 10.5px; padding: 8px 16px 2px; }
+html[data-host="boda"] .no-layouts { font-size: 11px; padding: 12px 16px; }
+
+/* A-6. 其他顏色列：padding 5px 14px → 6px 16px；label 10px → 11px/600（.color-dot 尺寸與 background 不動） */
+html[data-host="boda"] .color-row { padding: 6px 16px; gap: 8px; }
+html[data-host="boda"] .color-row label { font-size: 11px; font-weight: 600; }
+
+
+/* ============================================================
+   UI-004-B — 外掛區塊、上傳區、說明文字與操作按鈕一致化（2026-11-12）
+   參考：BODA .btn（12.5px/700、padding 8px 16px、radius 6）、#btn-upload-snapshot 36px、.if-btn 26px/11px、
+         .icc-picker 34×28、#upload-exposure-status（padding 9px 11px、11.5px）、區塊側邊 16px。
+   原則：
+     - 只改字級、字重、行高、內距、高度、圓角；不動 display／position／inset／z-index／DOM。
+     - 外掛注入 <style> 的規則以 html[data-host] 前綴鏡射覆寫；!important 僅用在 JS cssText／inline style 阻擋的外觀屬性，逐條註明。
+     - 小按鈕例外：清單移除／編輯／影子鈕 26px、上下箭頭 20px、代言人色彩模式鈕 26px、#bn-bg-clear 18px 圓鈕不動。
+     - 不碰 input[type=file] 覆蓋層、縮圖 src／object-fit、.bn-dl-btn:disabled、.bn-endorser-note-wrap.over 紅框、
+       .bn-endorser-note-color button.on 配色、#bn-content-warning.show、.bn-bg-panel .on、340px／遮罩／浮動面板／Modal。
+     - 人物列的 inline 名稱 11px／位置標籤 9px、flex-wrap／gap、外掛 .s-section 的 inline margin-top 不覆寫。
+   ============================================================ */
+
+/* B-1. 上傳與開啟按鈕 */
+/* 工單上傳：12px/700 padding 8px 10px radius 6 → 12.5px/700 min-height 34 padding 8px 12px */
+html[data-host="boda"] .bn-workorder-btn { font-size: 12.5px; font-weight: 700; min-height: 34px; padding: 8px 12px; border-radius: 6px; }
+/* LOGO 拖放框：11px padding 9px 10px radius 7 → 12px/700 min-height 34 padding 10px radius 6（覆蓋層 input 的 inset:0 不受影響） */
+html[data-host="boda"] .bn-drop { font-size: 12px; font-weight: 700; min-height: 34px; padding: 10px; border-radius: 6px; }
+/* 開啟商品／人物／簽名／代言人／背景：11px padding 8px（代言人 8px 4px）radius 7 → 12px/700 min-height 34 padding 8px 10px radius 6 */
+html[data-host="boda"] #bn-prod-open-btn,
+html[data-host="boda"] #bn-char-open-btn,
+html[data-host="boda"] #bn-char2-open-btn,
+html[data-host="boda"] .bn-endorser-up,
+html[data-host="boda"] #bn-bg-open-btn { font-size: 12px; font-weight: 700; min-height: 34px; padding: 8px 10px; border-radius: 6px; }
+
+/* B-2. 清單與小按鈕 */
+/* 商品／LOGO／代言人列：11px padding 4px 7px gap 6 radius 5 → 12px padding 6px 8px gap 8 radius 6；縮圖 32 → 36（object-fit:contain 與 src 不動） */
+html[data-host="boda"] .bn-prod-item { font-size: 12px; padding: 6px 8px; gap: 8px; border-radius: 6px; }
+html[data-host="boda"] .bn-prod-item img { width: 36px; height: 36px; }
+/* 列內按鈕（編輯／影子／移除）：10px padding 2px 6px（≈18px）→ 11px height 26 padding 0 7px */
+html[data-host="boda"] .bn-prod-item button { font-size: 11px; height: 26px; padding: 0 7px; border-radius: 5px; }
+/* 上下箭頭（icon-only）：以更高特異性排除上列 26px → 11px height 20 padding 0 5px */
+html[data-host="boda"] .bn-prod-item .bn-prod-move button { font-size: 11px; height: 20px; padding: 0 5px; line-height: 1; }
+/* LOGO 清除：11px padding 3px radius 5 → 11px height 26 radius 5 */
+html[data-host="boda"] .bn-clr { font-size: 11px; height: 26px; padding: 0 7px; border-radius: 5px; }
+
+/* B-3. 說明、狀態與代言人控制 */
+html[data-host="boda"] .bn-workorder-status { font-size: 11px; line-height: 1.5; margin-top: 8px; }
+html[data-host="boda"] .bn-dl-progress { font-size: 11px; }
+html[data-host="boda"] .bn-endorser-hint { font-size: 11px; line-height: 1.5; }
+html[data-host="boda"] #bn-endorser-note-count { font-size: 11px; }
+html[data-host="boda"] #boda-global-shadow-tool .bgs-status { font-size: 10.5px; line-height: 1.5; }
+/* #bn-bg-summary、#bn-char-hint：外掛以 HTML inline style 寫死 font-size:10px → !important 蓋過 inline（純外觀） */
+html[data-host="boda"] #bn-bg-summary,
+html[data-host="boda"] #bn-char-hint { font-size: 11px !important; line-height: 1.5 !important; }
+html[data-host="boda"] .bn-endorser-note-wrap label { font-size: 11px; font-weight: 600; }
+/* 色彩模式鈕：10px padding 2px 7px → 11px height 26 padding 0 8px（.on 的紫色配色沿用 2B，不動） */
+html[data-host="boda"] .bn-endorser-note-color button { font-size: 11px; height: 26px; padding: 0 8px; }
+/* 指定字色：26×20 → 34×28（BODA .icc-picker） */
+html[data-host="boda"] .bn-endorser-note-color input[type=color] { width: 34px; height: 28px; }
+
+/* B-4. 區塊內距與全體影子工具 */
+html[data-host="boda"] .bn-workorder-box { padding: 12px 16px 14px; }
+html[data-host="boda"] .bn-section { padding: 4px 16px 12px; }
+html[data-host="boda"] #boda-global-shadow-tool { padding: 10px 12px; border-radius: 6px; }
+html[data-host="boda"] #boda-global-shadow-tool .bgs-title { font-size: 11.5px; font-weight: 800; }
+html[data-host="boda"] #boda-global-shadow-tool .bgs-hex { height: 30px; font-size: 12px; border-radius: 6px; }
+html[data-host="boda"] #boda-global-shadow-tool button { font-size: 11px; height: 26px; padding: 0 8px; }
+html[data-host="boda"] #boda-global-shadow-tool .bgs-apply { height: 28px; }
+/* 內容警語（顯示由 .show 控制、配色沿用 2A）：margin 2px 14px 8px padding 7px 9px 11px → 2px 16px 10px / 9px 11px / 11.5px lh 1.6 */
+html[data-host="boda"] #bn-content-warning { margin: 2px 16px 10px; padding: 9px 11px; font-size: 11.5px; line-height: 1.6; }
+html[data-host="boda"] #bn-content-warning button { font-size: 11px; font-weight: 800; padding: 4px 10px; }
+
+/* B-5. 下載列與暫存列 */
+html[data-host="boda"] #bn-download-bar { padding: 12px 16px; }
+/* 下載主鈕：12px/700 padding 9px radius 7 → 12.5px/700 min-height 36 padding 9px 12px radius 6（:disabled opacity 不動） */
+html[data-host="boda"] .bn-dl-btn { font-size: 12.5px; font-weight: 700; min-height: 36px; padding: 9px 12px; border-radius: 6px; }
+/* 暫存列（bn-state-plugin.js 1086 行 cssText：padding 8px 14px; gap 6px）→ !important 蓋過 inline */
+html[data-host="boda"] #_bn_save_bar { padding: 10px 16px !important; gap: 8px !important; }
+/* 暫存列的「下載暫存」button 與「上傳暫存」label（cssText bs：padding 7px 6px; font-size 11px; radius 7）→ !important 蓋過 inline；
+   padding 8px 6px + line-height 16px = 32px，button 與 block label 高度一致 */
+html[data-host="boda"] #_bn_save_bar > button,
+html[data-host="boda"] #_bn_save_bar > label { font-size: 12px !important; font-weight: 700 !important; min-height: 32px; padding: 8px 6px !important; line-height: 16px !important; border-radius: 6px !important; }
+/* 清除列（無 id，緊接在 #_bn_save_bar 之後的 div；cssText padding 0 14px 10px）與清除鈕（cssText padding 7px 6px; 11px; radius 7）
+   → !important 蓋過 inline；紅字與 mouseenter 的紅色淡底沿用外掛，不覆寫 */
+html[data-host="boda"] #_bn_save_bar + div { padding: 0 16px 12px !important; }
+html[data-host="boda"] #_bn_save_bar + div > button { font-size: 12px !important; font-weight: 700 !important; min-height: 32px; padding: 8px 6px !important; line-height: 16px !important; border-radius: 6px !important; }
+
+
+/* ============================================================
+   UI-004-C 第一批（C-3／C-4／C-5）— 商品／背景選擇、背景圖庫／適配、商品影子 Modal 字級與間距一致化（2026-11-12）
+   參考：BODA #import-toolbar h2 15px/800（Modal 標題）、.btn 12.5px/700 padding 8px 16px radius 6 min-height 34（按鈕）、
+         .field label 11px/600（控制標籤）、輔助說明 11–11.5px。
+   原則：
+     - 只改字級、字重、內距、最小高度、圓角；全部鏡射外掛注入 <style> 的 selector 並加 html[data-host] 前綴，**不使用 !important**。
+     - 不改 Modal 遮罩、z-index、定位、width／max-height／overflow、body／foot 內距與內部捲動。
+     - 不改預覽縮圖尺寸（.bn-preview-cell img 88px）、grid、card hover transform、.bn-fit-stage／tip／dred／imgwrap／guide／arrows、
+       .bn-shadow-preview／canvas／range、控制區 250px、參數預設值與演算法。
+     - 2C 的配色（.on／selected／is-hero／active／:disabled）規則不動，只補尺寸屬性。
+   C-1（背景圖調整面板）、C-2（LOGO／文字浮動選單）、F（版本更新 Modal）未核准，不在此批。
+   ============================================================ */
+
+/* C-3. 商品／背景選擇 Modal（bn-editor-plugin.js 注入 CSS） */
+html[data-host="boda"] .bn-modal-head h3 { font-size: 15px; font-weight: 800; }                              /* 14px/700 → 15px/800 */
+html[data-host="boda"] .bn-step-tab { font-size: 12px; font-weight: 700; padding: 6px 14px; }                /* 5px 14px → 6px 14px，pill 與 .on 配色不動 */
+html[data-host="boda"] .bn-modal-drop { font-size: 12.5px; }                                                  /* 12px → 12.5px */
+html[data-host="boda"] .bn-preview-cell .pc-name { font-size: 11px; }                                         /* 10px → 11px */
+html[data-host="boda"] .bn-preview-cell .pc-hero { font-size: 10px; }                                         /* 9px → 10px */
+html[data-host="boda"] .bn-rank-name,
+html[data-host="boda"] .bn-rank-tag { font-size: 11px; }                                                      /* 10px → 11px */
+html[data-host="boda"] .bn-btn-skip,
+html[data-host="boda"] .bn-btn-confirm { font-size: 12.5px; font-weight: 700; min-height: 34px; padding: 8px 16px; border-radius: 6px; }  /* 12px、7px 14/18px、r7 → BODA .btn；:disabled 不動 */
+html[data-host="boda"] .bn-bg-drop-title { font-size: 14px; font-weight: 800; }                              /* 14px/700 → 14px/800 */
+html[data-host="boda"] .bn-bg-drop-desc { font-size: 11.5px; }                                                /* 11px → 11.5px */
+html[data-host="boda"] .bn-bg-drop-name { font-size: 11px; }                                                  /* 10px → 11px */
+
+/* C-4a. 背景圖庫（bn-bg-library-plugin.js 注入 CSS）：grid、縮圖、card hover transform、selected、捲動不動 */
+html[data-host="boda"] .bn-bglib-head h3 { font-size: 15px; font-weight: 800; }                              /* 15px（無字重）→ 15px/800 */
+html[data-host="boda"] .bn-bglib-search { height: 34px; font-size: 12.5px; border-radius: 6px; }             /* padding 7px 10px r8 → 34px 高、12.5px、r6（padding 維持） */
+html[data-host="boda"] .bn-bglib-close { min-height: 34px; border-radius: 6px; }                             /* 6px 10px r8 → min-height 34、r6 */
+html[data-host="boda"] .bn-bglib-tab { font-size: 12px; font-weight: 700; padding: 6px 14px; }               /* 6px 13px → 6px 14px，pill 與 .active 不動 */
+html[data-host="boda"] .bn-bglib-chip { padding: 4px 10px; }                                                  /* 3px 10px → 4px 10px */
+html[data-host="boda"] .bn-bglib-tags { font-size: 11px; }                                                    /* 10px → 11px */
+html[data-host="boda"] .bn-bglib-upload,
+html[data-host="boda"] .bn-bglib-slab,
+html[data-host="boda"] .bn-bglib-apply { font-size: 12.5px; font-weight: 700; min-height: 34px; padding: 8px 16px; border-radius: 6px; }  /* 8px 14px r8 → BODA .btn */
+
+/* C-4b. 背景圖適配（同檔注入）：.bn-fit-stage／tip／dred／imgwrap／guide／arrows、拖曳、滑桿與計算不動 */
+html[data-host="boda"] .bn-fit-head h3 { font-size: 15px; font-weight: 800; }                                /* 15px → 15px/800 */
+html[data-host="boda"] .bn-fit-side { font-size: 12.5px; }                                                    /* 12px → 12.5px */
+html[data-host="boda"] .bn-fit-note { font-size: 11.5px; }                                                    /* 11px → 11.5px */
+html[data-host="boda"] .bn-fit-btn { font-size: 12.5px; font-weight: 700; min-height: 34px; padding: 8px 16px; border-radius: 6px; }  /* 13px 8px 15px r8 → BODA .btn；.primary/.ghost 配色不動 */
+
+/* C-5. 商品影子 Modal（bn-shadow-plugin.js 注入 CSS）：preview／canvas／range／250px 控制區／預設值不動 */
+html[data-host="boda"] .bn-shadow-head h3 { font-size: 15px; font-weight: 800; }                             /* 14px/700 → 15px/800 */
+html[data-host="boda"] .bn-shadow-ctrl label { font-size: 11px; font-weight: 600; margin-bottom: 4px; }      /* 11px mb 3 → 11px/600 mb 4 */
+html[data-host="boda"] .bn-shadow-seg button { font-size: 12px; font-weight: 700; min-height: 30px; }        /* 12px 6px 0 → 12px/700 min-height 30；.active 配色不動 */
+html[data-host="boda"] .bn-shadow-hint { font-size: 11px; }                                                   /* 10px → 11px */
+html[data-host="boda"] .bn-shadow-btn { font-size: 12.5px; font-weight: 700; min-height: 34px; padding: 8px 14px; border-radius: 6px; }  /* 12px 7px 14px r7 → 12.5px/700 34px r6 */
+
+
+/* ============================================================
+   UI-004-C-1（方案 B：保守放大）— 背景圖調整浮動面板 .bn-bg-panel 字級與按鈕可點高度（2026-11-12）
+   面板由 bn-editor-plugin.js buildBgPanels()（2405–2444）以 cssText 建立：width:150px（border-box，內寬 150−2−16=132px）、
+   padding:8px、font-size:10px；定位由 updatePanelPos() 以 offsetHeight 即時 clamp 在版位範圍內（不動）。
+   原則：
+     - 只改 font-size／font-weight／padding／min-height／height／line-height；不碰 width、position、display、left、top、z-index、
+       box-shadow、滑桿 disabled／opacity／cursor、.on／:not(.on) 配色、標題品牌綠、JS 定位與事件。
+     - padding 8px 與標題 margin-bottom 6px 維持原樣，面板高度約由 171px 增為 183px（估算，line-height normal≈1.2）。
+     - !important 共 3 個宣告，皆為蓋過 inline：容器 font-size（cssText 10px）、[data-fit] font-size（inline 9px）、[data-fit] padding（inline 3px）。
+       按鈕不繼承字級（UA font 重設），故 [data-fit]／.bg-nudge 需各自指定。
+   C-2（LOGO／文字浮動選單）、F（版本更新 Modal）、D 未核准，不在此批。
+   ============================================================ */
+/* 1. 容器：10px → 11px（cssText inline → !important）；padding 8px 不覆寫 */
+html[data-host="boda"] .bn-bg-panel { font-size: 11px !important; }
+/* 2. 標題「背景圖調整」：繼承 10px/700 → 11.5px/800；margin-bottom 6px 與 2D 的品牌綠不動 */
+html[data-host="boda"] .bn-bg-panel > div:first-child { font-size: 11.5px; font-weight: 800; }
+/* 3. 原尺寸／填滿：inline 9px、padding 3px → 11px、3px 6px（!important 蓋過 inline）、min-height 22px；
+      兩顆按鈕仍在 inline flex 列（gap 3px）內各 64.5px，文字區 50.5px ≥「原尺寸」≈33px；border-radius 與 .on／:not(.on) 配色不動 */
+html[data-host="boda"] .bn-bg-panel [data-fit] { font-size: 11px !important; padding: 3px 6px !important; min-height: 22px; }
+/* 4. ←→↑↓：UA 預設 13.33px／≈20px → 11px、22px、line-height 1；flex:1、白底／邊框／hover 與方向功能不動 */
+html[data-host="boda"] .bn-bg-panel .bg-nudge { font-size: 11px; height: 22px; line-height: 1; }
+
+
+/* ============================================================
+   UI-004-C-2（方案 B：保守調整）— LOGO／文字浮動選單字級、內距與圓角（2026-11-12）
+   三個選單皆掛在 shopee document.body；min-width（120／118／200）、JS 定位常數（130／134、rect.right−118、220／100）、
+   顯示／隱藏、hidden 屬性、hover 事件、豁免 dataset 一律不動。
+   原則：
+     - 只改 border-radius／font-size／padding；不寫 display（#logoMenuV14 button[hidden] 依賴 display:none，同 specificity 0,1,1,1）、
+       不寫 width／min-width／position／left／top／z-index／background／color（2B／2D 已覆寫者除外）。
+     - !important：#_bn_logo_inline_menu 與 #_bn_input_ctx 以 cssText／inline 寫入（radius、字級、padding），#logoMenuV14 外掛規則本身全為 !important，
+       故每個覆寫宣告皆需 !important（共 10 個）。
+     - 第 4 項補正：#_bn_input_ctx 的項目是 <div>（bn-state-plugin.js 401），2B 第 170–171 行的 button selector 不會命中；
+       新增 > div 規則，原規則保留不刪。
+     - .logo-v14-trigger 黑色圓形不動。
+   ============================================================ */
+/* 1. 工具列 LOGO「編輯」選單（bn-editor-plugin.js 819–849，cssText 黑底 → 2D-B 已白底）：radius 10 → 8；button 13px／7px 14px → 12.5px／8px 14px；寬度仍由 min-width 120 決定 */
+html[data-host="boda"] #_bn_logo_inline_menu { border-radius: 8px !important; }
+html[data-host="boda"] #_bn_logo_inline_menu button { font-size: 12.5px !important; padding: 8px 14px !important; }
+/* 2. LOGO 縮圖 ✎ 選單（logo-editor-plugin.js _bn_lm_css，全 !important）：radius 10 → 8；button 12px／7px 12px → 12.5px／8px 14px；min-width 118 與右對齊定位不動 */
+html[data-host="boda"] #logoMenuV14 { border-radius: 8px !important; }
+html[data-host="boda"] #logoMenuV14 button { font-size: 12.5px !important; padding: 8px 14px !important; }
+/* 3. 文字欄右鍵選單（bn-state-plugin.js 388–392，cssText）：radius 10 → 8；容器字級 13 → 12.5（項目繼承）；min-width 200 與項目 padding 8px 16px 不動 */
+html[data-host="boda"] #_bn_input_ctx { border-radius: 8px !important; font-size: 12.5px !important; }
+/* 4. 補正：項目為 <div>（inline color #dde3f0、mouseenter inline #2b2f42、mouseleave 清空）→ 深字、hover 淺灰 */
+html[data-host="boda"] #_bn_input_ctx > div { color: #26342F !important; }
+html[data-host="boda"] #_bn_input_ctx > div:hover { background: #EEF3F2 !important; }
+
+
+/* ============================================================
+   UI-005 — BODA 嵌入模式右側欄重排與收合（Accordion）（2026-11-12）
+   DOM 由 BODA/JS/boda-exposure-sidebar.js 於子頁內建立（只搬移既有節點）；本區只負責外觀與隱藏。
+   原則：
+     - 標題列沿用 UI-004-A 的 .s-section 規範（11.5px／800／#5B6A67、側邊 16px）；箭頭為純 CSS。
+     - 收合以 body[hidden] 隱藏，不動子節點。
+     - 原 .s-section 標題加上 data-boda-acc-src 後隱藏（不刪除）；「排版選擇」原標題為 inline display:flex，故需 !important。
+     - 依需求隱藏：#lv-note（活動等級說明；.warn 錯誤訊息仍顯示）、#bn-endorser-hint、#bn-bg-summary、#boda-global-shadow-tool、
+       #_bn_save_bar 與其後的清除列（下載暫存／上傳暫存／清除本機暫存）。功能與資料機制不動。
+   ============================================================ */
+/* 1. 收合容器與標題列 */
+html[data-host="boda"] .boda-acc-list { display: block; margin-top: 4px; }
+html[data-host="boda"] .boda-acc { border-top: 1px solid #DDE3E1; }
+html[data-host="boda"] .boda-acc:last-child { border-bottom: 1px solid #DDE3E1; }
+html[data-host="boda"] .boda-acc.is-empty { display: none; }
+html[data-host="boda"] .boda-acc-head { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 16px; cursor: pointer; user-select: none; font-size: 11.5px; font-weight: 800; letter-spacing: .3px; color: #5B6A67; background: #FFFFFF; }
+html[data-host="boda"] .boda-acc-head:hover { background: #F4F6F5; color: #26342F; }
+html[data-host="boda"] .boda-acc-head:focus-visible { outline: 2px solid #357872; outline-offset: -2px; }
+html[data-host="boda"] .boda-acc.is-open > .boda-acc-head { color: #26342F; }
+html[data-host="boda"] .boda-acc-title { flex: 1 1 auto; }
+html[data-host="boda"] .boda-acc-extra { display: flex; align-items: center; gap: 4px; margin-right: 6px; }
+html[data-host="boda"] .boda-acc-extra:empty { display: none; }
+html[data-host="boda"] .boda-acc-extra > span { display: flex; gap: 4px; }
+html[data-host="boda"] .boda-acc-arrow { position: relative; flex: 0 0 16px; width: 16px; height: 16px; }
+html[data-host="boda"] .boda-acc-arrow::before { content: ""; position: absolute; left: 4px; top: 2px; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s, top .15s; }
+html[data-host="boda"] .boda-acc.is-open > .boda-acc-head .boda-acc-arrow::before { top: 6px; transform: rotate(-135deg); }
+/* 2. 內容區 */
+html[data-host="boda"] .boda-acc-body { padding: 2px 0 10px; }
+html[data-host="boda"] .boda-acc-body[hidden] { display: none; }
+html[data-host="boda"] .boda-acc-body > .bn-section { margin-top: 0; }
+html[data-host="boda"] .boda-acc-body > .s-field-inline:first-child { margin-top: 4px; }
+html[data-host="boda"] .boda-acc-body > #bn-char-open-btn { margin-top: 4px !important; }
+html[data-host="boda"] .boda-acc-body > #bn-char-open-btn,
+html[data-host="boda"] .boda-acc-body > #bn-char2-open-btn,
+html[data-host="boda"] .boda-acc-body > #bn-char-hint { margin-left: 16px; margin-right: 16px; width: auto; }
+/* 3. 原區段標題：加標記後隱藏（不刪除） */
+html[data-host="boda"] #sidebar-scroll .s-section[data-boda-acc-src] { display: none !important; }
+/* 4. 依需求隱藏的說明文字與控制項（僅 UI 隱藏，功能與資料不動） */
+html[data-host="boda"] #lv-note:not(.warn) { display: none; }
+html[data-host="boda"] #bn-endorser-hint { display: none !important; }
+html[data-host="boda"] #bn-bg-summary { display: none !important; }
+html[data-host="boda"] #boda-global-shadow-tool { display: none !important; }
+html[data-host="boda"] #_bn_save_bar,
+html[data-host="boda"] #_bn_save_bar + div { display: none !important; }
+
+
+/* ============================================================
+   UI-005-B — 右側欄標題列微調（2026-11-12）：移除「工具列」標題列；Accordion 標題與箭頭改品牌綠、比照「活動等級」(.s-section) 字級字重；
+   標題列固定在 340px 內（寬度 100%、border-box、overflow hidden、標題可截斷），全選／全消縮放 1.2 後預留空間、箭頭永遠可見。
+   只動標題列，不動收合內容；#sidebar-head 隱藏為 display:none（節點保留，獨立 shopee 不受影響）。
+   ============================================================ */
+/* 1. 移除「🎛 工具列」標題列（含背景、邊框與高度） */
+html[data-host="boda"] #sidebar-head { display: none !important; }
+html[data-host="boda"] #sidebar-scroll { padding-top: 8px; }
+/* 2. Accordion 標題列：比照 .s-section（11.5px／800／letter-spacing .3px）、品牌綠；限制在側欄寬度內 */
+html[data-host="boda"] .boda-acc-head { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; overflow: hidden; gap: 6px; padding: 8px 14px 8px 16px; font-size: 11.5px; font-weight: 800; letter-spacing: .3px; line-height: 1.3; color: #357872; }
+html[data-host="boda"] .boda-acc-head:hover { background: #F4F6F5; color: #2C6660; }
+html[data-host="boda"] .boda-acc.is-open > .boda-acc-head { color: #357872; }
+html[data-host="boda"] .boda-acc-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 3. 全選／全消（BODA 另以 transform:scale(1.2) 放大）：固定寬、不壓縮、左右預留縮放空間，點擊不觸發收合（JS 既有） */
+html[data-host="boda"] .boda-acc-extra { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 0 6px 0 4px; padding: 0 4px; }
+html[data-host="boda"] .boda-acc-extra > span { display: flex; gap: 8px; align-items: center; }
+html[data-host="boda"] .boda-acc-extra button { white-space: nowrap; }
+/* 4. 箭頭：固定 16px、不壓縮、品牌綠（currentColor） */
+html[data-host="boda"] .boda-acc-arrow { flex: 0 0 16px; width: 16px; height: 16px; min-width: 16px; color: #357872; }
+html[data-host="boda"] .boda-acc-head:hover .boda-acc-arrow { color: #2C6660; }
+
+
+/* ============================================================
+   UI-005-B 第二輪修正（2026-11-12）：
+   1. 「版位選擇」溢出根因：BODA/index.html scaleExposureLayoutBulkActions() 以 button,[role="button"] 文字含「全選／全消」判斷，
+      標題列原帶 role="button" 且含兩顆按鈕 → 整列被 transform:scale(1.2) 放大（340 → 408px）。JS 已移除標題列 role（改放標題文字）；
+      本區再把標題列內的兩顆按鈕 transform 取消，改以正常尺寸（11px／24px）排版，不再依賴 overflow hidden 裁切。
+   2. 活動等級：標題品牌綠、縮小標題與下拉之間距。
+   ============================================================ */
+/* 1. 活動等級 */
+html[data-host="boda"] #lv-section { color: #357872; margin-top: 2px; padding: 6px 16px 2px; }
+html[data-host="boda"] #lv-wrap { padding: 0 16px 8px; }
+/* 2. 版位選擇標題列：標題靠左、全選／全消靠右、箭頭最右；flex 空間分配，不用 overflow hidden */
+html[data-host="boda"] .boda-acc-head { overflow: visible; gap: 8px; padding: 8px 14px 8px 16px; }
+html[data-host="boda"] .boda-acc-title { flex: 1 1 auto; min-width: 0; }
+html[data-host="boda"] .boda-acc-extra { flex: 0 0 auto; min-width: 0; margin: 0; padding: 0; gap: 6px; }
+html[data-host="boda"] .boda-acc-extra > span { display: flex; gap: 6px; align-items: center; }
+html[data-host="boda"] .boda-acc-extra button,
+html[data-host="boda"] .boda-acc-extra [data-boda-layout-bulk-action] { transform: none !important; }
+html[data-host="boda"] .boda-acc-extra button { flex: 0 0 auto; height: 24px; line-height: 22px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700; border-radius: 5px !important; white-space: nowrap; }
+html[data-host="boda"] .boda-acc-arrow { flex: 0 0 16px; width: 16px; min-width: 16px; margin-left: 2px; }
+
+
+/* ============================================================
+   UI-005-C — 背景圖「選擇背景」按鈕與 LOGO 上傳區精簡（2026-11-12）
+   只動 #bn-bg-open-btn 與 #bn-logo-drop 兩個控制項的外觀；事件、上傳、拖曳、清單、資料不動。
+   - #bn-bg-open-btn 文字由外掛 JS 在上傳／更換／清除時改寫（「⬆ 上傳背景圖」／「⬆ 更換背景圖」），不改 shopee；
+     以 font-size:0 隱藏原文字、::before 顯示固定文字「選擇背景」（無上傳圖示）。
+   - 扁平、細實線（背景）／細虛線（LOGO）邊框、較小高度、文字置中、品牌綠 #357872；hover 淺綠底。
+   ============================================================ */
+/* 1. 背景圖：「開啟背景圖庫」（UI-005-N 改自「選擇背景」）。外掛仍會在上傳／更換／清除時改寫 textContent，故文字與兩個 icon 全以
+      ::before／::after 呈現：::before = lineIcon('image') 路徑（BODA index.html 26423，同 stroke 1.8／round 線條系統，以 data-URI 置於左側）＋文字；
+      ::after = 同線條系統的向右小箭頭（up／down 箭頭路徑旋轉版）。hover 淡綠底、深綠線。click → _bnOpenBgModal 不動。 */
+html[data-host="boda"] #bn-bg-open-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; height: 30px; padding: 0 10px; font-size: 0; line-height: 0; background: #FFFFFF; border: 1px solid #357872; border-radius: 6px; color: #357872; cursor: pointer; }
+html[data-host="boda"] #bn-bg-open-btn::before { content: "開啟背景圖庫"; display: inline-block; padding-left: 21px; font-size: 12px; font-weight: 700; line-height: 16px; letter-spacing: .2px; color: #357872; white-space: nowrap; background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23357872' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='8.2' cy='9' r='1.6'/%3E%3Cpath d='m3.5 17 5-5 3.6 3.5 2.8-2.7 5.6 5.2'/%3E%3C/svg%3E") left center / 16px 16px no-repeat; }
+html[data-host="boda"] #bn-bg-open-btn::after { content: ""; display: inline-block; width: 12px; height: 12px; margin-left: 4px; background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23357872' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m10 6 6 6-6 6'/%3E%3C/svg%3E") center / 12px 12px no-repeat; }
+html[data-host="boda"] #bn-bg-open-btn:hover { background: #E6F2F0; border-color: #2C6660; color: #2C6660; }
+html[data-host="boda"] #bn-bg-open-btn:hover::before { color: #2C6660; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232C6660' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='8.2' cy='9' r='1.6'/%3E%3Cpath d='m3.5 17 5-5 3.6 3.5 2.8-2.7 5.6 5.2'/%3E%3C/svg%3E"); }
+html[data-host="boda"] #bn-bg-open-btn:hover::after { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232C6660' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m10 6 6 6-6 6'/%3E%3C/svg%3E"); }
+/* 2. LOGO 上傳區：細虛線、30px 高、文字置中、品牌綠；原文字與隱形 file input 不動 */
+html[data-host="boda"] #bn-logo-drop { display: flex; align-items: center; justify-content: center; min-height: 0; height: 30px; padding: 0 10px; font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: .2px; background: #FFFFFF; border: 1px dashed #357872; border-radius: 6px; color: #357872; }
+html[data-host="boda"] #bn-logo-drop:hover,
+html[data-host="boda"] #bn-logo-drop.drag { background: #E6F2F0; border-color: #2C6660; color: #2C6660; }
+/* 3. 兩個控制項所在的 .bn-section 上下留白收緊（只限這兩個區塊） */
+html[data-host="boda"] #boda-acc-body-bg > .bn-section,
+html[data-host="boda"] #boda-acc-body-logo > .bn-section { padding: 2px 16px 8px; }
+
+
+/* ============================================================
+   UI-005-D — 商品圖區塊外觀（2026-11-12）：上傳按鈕比照 #bn-logo-drop、影子鈕與編輯／移除一致、隱藏旋轉控制
+   - #bn-prod-open-btn：文字由 boda-exposure-sidebar.js 改為「＋ 點擊或拖曳上傳商品圖」；click → openModal 事件不動。
+   - 影子鈕：外掛在影子開啟時以 inline color #58a6ff 標示，需 !important 蓋過；以穩定的 title 屬性（「編輯影子（目前：開／關）」）選取。
+   - 旋轉控制：商品／人物列的 <label title="旋轉角度…">（含 number input 與「°」），只隱藏 UI；input 無 id，不在暫存 toolbar 收集範圍。
+   ============================================================ */
+/* 1. 商品圖上傳按鈕：與 #bn-logo-drop 相同外觀 */
+html[data-host="boda"] #bn-prod-open-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; height: 30px; padding: 0 10px; font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: .2px; background: #FFFFFF; border: 1px dashed #357872; border-radius: 6px; color: #357872; cursor: pointer; }
+html[data-host="boda"] #bn-prod-open-btn:hover { background: #E6F2F0; border-color: #2C6660; color: #2C6660; }
+html[data-host="boda"] #boda-acc-body-product > .bn-section { padding: 2px 16px 8px; }
+/* 2. 影子鈕：與同列「編輯」「移除」一致（蓋過影子開啟時的 inline 藍字；開／關狀態仍在 title 提示） */
+html[data-host="boda"] .bn-prod-item button[title^="編輯影子"] { color: #7A8A86 !important; }
+html[data-host="boda"] .bn-prod-item button[title^="編輯影子"]:hover { color: #357872 !important; }
+/* 3. 隱藏旋轉控制（0°）：只隱藏 UI，DOM／事件／旋轉值保留 */
+html[data-host="boda"] #bn-prod-list .bn-prod-item > label[title^="旋轉角度"] { display: none !important; }
+
+
+/* ============================================================
+   UI-005-E — 人物圖區塊（2026-11-12）：單一上傳入口、隱藏原人物圖1／2 按鈕與說明、人物卡片分流到人物圖 Accordion
+   - #boda-char-upload-btn 由 boda-exposure-sidebar.js 建立，外觀與 #bn-prod-open-btn 相同；兩張皆有時 disabled。
+   - 人物卡片由 #bn-prod-list 搬到 #boda-char-list（同 .bn-prod-list 結構，列樣式沿用 .bn-prod-item）。
+   - 原 #bn-char-open-btn／#bn-char2-open-btn／#bn-char-hint 隱藏（display:none），功能與資料不動。
+   ============================================================ */
+html[data-host="boda"] #boda-char-wrap { padding: 2px 16px 8px; }
+html[data-host="boda"] #boda-char-upload-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; height: 30px; padding: 0 10px; font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: .2px; background: #FFFFFF; border: 1px dashed #357872; border-radius: 6px; color: #357872; cursor: pointer; }
+html[data-host="boda"] #boda-char-upload-btn:hover { background: #E6F2F0; border-color: #2C6660; color: #2C6660; }
+html[data-host="boda"] #boda-char-upload-btn:disabled { opacity: .5; cursor: default; background: #FFFFFF; border-color: #C3CDC9; color: #7A8A86; }
+html[data-host="boda"] #boda-char-list { margin-top: 6px; }
+html[data-host="boda"] #boda-char-list:empty { display: none; }
+html[data-host="boda"] #boda-acc-body-character > #bn-char-open-btn,
+html[data-host="boda"] #boda-acc-body-character > #bn-char2-open-btn,
+html[data-host="boda"] #boda-acc-body-character > #bn-char-hint { display: none !important; }
+/* UI-005-D 的旋轉控制隱藏同樣套用到搬到人物圖區塊的列 */
+html[data-host="boda"] #boda-char-list .bn-prod-item > label[title^="旋轉角度"] { display: none !important; }
+
+
+/* ============================================================
+   UI-005-H — 代言人區塊（2026-11-12）：上傳鈕比照商品圖、隱藏字數提示、黑白字色圓圈、隱藏原字色列
+   - 兩顆上傳鈕文字由外掛在上傳／更換時改寫（「＋ 上傳代言人照」／「⟳ 更換代言人照」…），以 font-size:0 + ::before 顯示固定文字；
+     .has-img（已上傳）時顯示「⟳ 更換…」。事件、file input 不動。
+   - 圓圈由 boda-exposure-sidebar.js 建立於 .bn-endorser-note-wrap label 右側，沿用 .color-dot（20px、2px 外框）；
+     選取呈現與「掛標顏色」相同（.active，無額外 CSS）；自動黑白時兩圈皆未選取。
+   - 原字色列 .bn-endorser-note-color（自動黑白鈕＋色盤）只隱藏，JS 仍透過它們設定狀態。
+   ============================================================ */
+/* 1. 上傳鈕 */
+html[data-host="boda"] .bn-endorser-btns { gap: 8px; }
+html[data-host="boda"] .bn-endorser-up { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; height: 30px; padding: 0 6px; font-size: 0; line-height: 0; background: #FFFFFF; border: 1px dashed #357872; border-radius: 6px; color: #357872; cursor: pointer; }
+html[data-host="boda"] .bn-endorser-up.has-img { border-style: dashed; }
+html[data-host="boda"] .bn-endorser-up::before { font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: .2px; color: #357872; white-space: nowrap; }
+html[data-host="boda"] #bn-endorser-photo-btn::before { content: "＋ 點擊上傳代言人"; }
+html[data-host="boda"] #bn-endorser-sign-btn::before { content: "＋ 點擊上傳簽名檔"; }
+html[data-host="boda"] #bn-endorser-photo-btn.has-img::before { content: "⟳ 更換代言人"; }
+html[data-host="boda"] #bn-endorser-sign-btn.has-img::before { content: "⟳ 更換簽名檔"; }
+html[data-host="boda"] .bn-endorser-up:hover { background: #E6F2F0; border-color: #2C6660; color: #2C6660; }
+html[data-host="boda"] .bn-endorser-up:hover::before { color: #2C6660; }
+/* 2. 代言人小字標題列：隱藏「最多 10 字（兩排）」提示；超字時仍以紅框（.over）與下載擋件提示 */
+html[data-host="boda"] #bn-endorser-note-count { display: none; }
+html[data-host="boda"] .bn-endorser-note-wrap label { align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; }
+html[data-host="boda"] .bn-endorser-note-wrap label > span:first-child { flex: 1 1 auto; min-width: 0; }
+/* 3. 黑白字色圓圈：與「掛標顏色」圓圈完全相同（.color-dot 基礎樣式＋ .active 切換；掛標顏色本身對 .active 沒有額外 CSS），
+      白圈的 inset 內框同 renderTagColorRow 以 inline 設定；不另設綠環或虛線（UI-005-H 第二輪移除） */
+html[data-host="boda"] .boda-note-dots { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; margin-left: auto; padding-right: 2px; }
+html[data-host="boda"] .boda-note-dot:focus-visible { outline: 2px solid #357872; outline-offset: 2px; }
+/* 4. 原字色列：只隱藏 */
+html[data-host="boda"] #bn-endorser-section .bn-endorser-note-color { display: none !important; }
+
+
+/* ============================================================
+   UI-005-I — 右側欄底部「完成」按鈕（2026-11-12）：由 BODA/index.html installExposureDoneButton() 建於 #bn-download-bar 內、
+   #bn-dl-all 正上方；外觀比照 .bn-dl-btn（UI-003 2B 品牌綠漸層、UI-004-B 36px／12.5px／radius 6），兩鈕同寬、間距 8px。
+   ============================================================ */
+/* UI-005-J：改比照 BODA 首頁「開始編輯」（index.html .btn.primary：--teal #4d9b95 底／邊、白字、12.5px／700、radius --radius-sm 6px、
+   padding 8px 16px、hover --teal-dark #357872；子頁沒有 BODA 的 CSS 變數，故寫實際值）。高度與下載鈕同為 36px、同寬、間距 8px。 */
+html[data-host="boda"] #boda-exposure-done-btn { display: block; width: 100%; min-height: 36px; margin: 0 0 8px; padding: 8px 16px; background: #4d9b95; border: 1px solid #4d9b95; border-radius: 6px; color: #FFFFFF; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: .12s; }
+html[data-host="boda"] #boda-exposure-done-btn:hover { background: #357872; border-color: #357872; }
+html[data-host="boda"] #boda-exposure-done-btn:focus-visible { outline: 2px solid #357872; outline-offset: 2px; }
+
+/* UI-005-K（2026-11-12）：下載鈕圖示改用活動頁資源同一個 lineIcon('download') SVG；樣式沿用 BODA index.html
+   632／638 行（#view-import .line-icon／.btn .line-icon）的值，因子頁不套 BODA 主頁 CSS，故在此複寫同值。 */
+html[data-host="boda"] #bn-dl-all .line-icon { display: inline-block; width: 15px; height: 15px; margin-right: 3px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* UI-005-L（2026-11-12）：中間工作區版位預覽水平置中。#preview-area 為 flex column（shopee index.html 191：align-items:flex-start 靠左），
+   在 BODA 以 `safe center` 置中：以 #preview-area 自身（左側導覽列與右側 340px 工具列之間）寬度為基準，所有 .preview-block 共用同一條中心線；
+   卡片比工作區寬時 `safe` 自動退回靠左起始，保留 overflow-x 捲動、不裁切。垂直順序、gap 16px、padding 20px、縮放（JS）不動。 */
+html[data-host="boda"] #preview-area { align-items: safe center; }
+
+/* UI-005-M（2026-11-12）：背景圖庫 Modal 標題去掉 🖼 小圖示。標題為單一文字節點「🖼 背景圖庫」（bn-bg-library-plugin.js 455），
+   不改 shopee、不動 DOM：以 font-size:0 收起原文字，::before 顯示「背景圖庫」（15px／800 同 UI-004-C 第一批），無 icon 留白；
+   aria-labelledby、搜尋、分類、清單、按鈕與關閉功能不動。 */
+html[data-host="boda"] #bn-bglib-title { font-size: 0; line-height: 0; }
+html[data-host="boda"] #bn-bglib-title::before { content: "背景圖庫"; font-size: 15px; font-weight: 800; line-height: 1.3; white-space: nowrap; }

@@ -1,0 +1,7126 @@
+【使用說明】
+1. 每一段標題後面，把 Photoshop 右鍵 copy 出來的 CSS 直接貼上即可，格式不用改。
+2. 記得連「卡片外框」（圓角、背景色/邊框色那一層）也一起選、一起複製。
+3. 如果這個變體跟前一個變體比，只是「多了一個圖層」（例如 A-2 只比 A-1 多一個圓標），
+   只要貼「新增的那個圖層」CSS 就好，重複的不用再貼一次。
+4. 這個系列完全沒有的圖層（例如 B 系列沒有 LOGO），該段可以留空或直接刪掉那一段。
+5. 這次補上之前缺的 A-5、B-5（固定雙行品名、只變裝飾的那個款式），
+   其餘 A-1~4、B-1~4、C-1~4、D-1~4、E-1~2、F-1 麻煩重新給一次完整的，
+   確保跟目前實際的設計一致（尤其如果有調過座標的話）。
+6. 如果有「商品範圍」這個圖層（標示商品照片實際要放的位置），麻煩每個變體都附一份，
+   之前只有 A-1 有給，其他版位商品圖目前都還是暫時借用整個卡片背景當範圍。
+
+
+===== A-1（對應 副區-A-1-1.jpg）=====
+（基本款：底圖/卡片外框、促標、LOGO、品名、警語、商品範圍）
+.副區_A_1_1_jpg {
+  position: absolute;
+  left: 363px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 40;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 158px;
+  z-index: 39;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 38;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 37;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 164.766px;
+  top: 62.847px;
+  z-index: 36;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 65px;
+  z-index: 35;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 36.687px;
+  top: 294.675px;
+  z-index: 34;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 49.984px;
+  top: 326.006px;
+  z-index: 33;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 32;
+}
+
+===== A-1（對應 副區-A-1-2.jpg）=====
+.副區_A_1_2_jpg {
+  position: absolute;
+  left: 363px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 49;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 191px;
+  z-index: 48;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 47;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 46;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 45;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 44;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 329.175px;
+  z-index: 43;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 42;
+}
+
+===== A-1（對應 副區-A-1-3.jpg）=====
+.副區_A_1_3_jpg {
+  position: absolute;
+  left: 363px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 58;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 191px;
+  z-index: 57;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 56;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 55;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 54;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 53;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 52;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 51;
+}
+
+===== A-1（對應 副區-A-1-4.jpg）=====
+.副區_A_1_4_jpg {
+  position: absolute;
+  left: 363px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 66;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 237px;
+  z-index: 65;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 64;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 63;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 62;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 61;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 60;
+}
+
+
+===== A-2（對應 副區-A-2-1.jpg）=====
+（比A-1多：圓標）
+.副區_A_2_1_jpg {
+  position: absolute;
+  left: 803px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 78;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 158px;
+  z-index: 77;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 76;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 75;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 74;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 73;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 72;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 71;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 296.175px;
+  z-index: 70;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 69;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 68;
+}
+
+===== A-2（對應 副區-A-2-2.jpg）=====
+.副區_A_2_2_jpg {
+  position: absolute;
+  left: 803px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 89;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 191px;
+  z-index: 88;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 87;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 86;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 85;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 84;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 83;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 82;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 329.175px;
+  z-index: 81;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 80;
+}
+
+===== A-2（對應 副區-A-2-3.jpg）=====
+.副區_A_2_3_jpg {
+  position: absolute;
+  left: 803px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 100;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 191px;
+  z-index: 99;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 98;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 97;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 96;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 95;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 94;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 93;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 92;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 91;
+}
+
+===== A-2（對應 副區-A-2-4.jpg）=====
+.副區_A_2_4_jpg {
+  position: absolute;
+  left: 803px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 110;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 237px;
+  z-index: 109;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 108;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 107;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 106;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 105;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 104;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 103;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 102;
+}
+
+
+===== A-3（對應 副區-A-3-1.jpg）=====
+（比A-1多：CTA 圖示版，無文字的那個箭頭圓鈕）
+.副區_A_3_1_jpg {
+  position: absolute;
+  left: 1243px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 122;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 154px;
+  z-index: 121;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 120;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 119;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 118;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 117;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 157px;
+  width: 22px;
+  height: 26px;
+  z-index: 116;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 145px;
+  width: 51px;
+  height: 51px;
+  z-index: 115;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 296.175px;
+  z-index: 114;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 113;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 112;
+}
+
+===== A-3（對應 副區-A-3-2.jpg）=====
+.副區_A_3_2_jpg {
+  position: absolute;
+  left: 1243px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 133;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 191px;
+  z-index: 132;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 131;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 130;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 129;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 128;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 179px;
+  width: 22px;
+  height: 26px;
+  z-index: 127;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 167px;
+  width: 51px;
+  height: 51px;
+  z-index: 126;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 329.175px;
+  z-index: 125;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 124;
+}
+
+
+===== A-3（對應 副區-A-3-3.jpg）=====
+.副區_A_3_3_jpg {
+  position: absolute;
+  left: 1243px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 144;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 191px;
+  z-index: 143;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 142;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 141;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 140;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 139;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 179px;
+  width: 22px;
+  height: 26px;
+  z-index: 138;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 167px;
+  width: 51px;
+  height: 51px;
+  z-index: 137;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 136;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 135;
+}
+
+===== A-3（對應 副區-A-3-4.jpg）=====
+.副區_A_3_4_jpg {
+  position: absolute;
+  left: 1243px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 154;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 237px;
+  z-index: 153;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 152;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 151;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 150;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 149;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 190px;
+  width: 22px;
+  height: 26px;
+  z-index: 148;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 178px;
+  width: 51px;
+  height: 51px;
+  z-index: 147;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 146;
+}
+
+
+===== A-4（對應 副區-A-4-1.jpg）=====
+（比A-1多：CTA 文字版「領券去」；品名是雙行4字+4字的版本）
+.副區_A_4_1_jpg {
+  position: absolute;
+  left: 1678px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 167;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 204px;
+  top: 89px;
+  width: 168px;
+  height: 154px;
+  z-index: 166;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 165;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 164;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 163;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 162;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 161;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 160;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 159;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 29.688px;
+  top: 154.175px;
+  z-index: 158;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 34.984px;
+  top: 232.006px;
+  z-index: 157;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 156;
+}
+
+===== A-4（對應 副區-A-4-2.jpg）=====
+.副區_A_4_2_jpg {
+  position: absolute;
+  left: 1678px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 179;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 348px;
+  height: 110px;
+  z-index: 178;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 177;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 176;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 175;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 174;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 173;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 172;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 171;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 250.175px;
+  z-index: 170;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 169;
+}
+
+===== A-4（對應 副區-A-4-3.jpg）=====
+.副區_A_4_3_jpg {
+  position: absolute;
+  left: 1678px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 191;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 348px;
+  height: 110px;
+  z-index: 190;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 189;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 188;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 187;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 186;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 185;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 184;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 183;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 247.006px;
+  z-index: 182;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 181;
+}
+
+===== A-4（對應 副區-A-4-4.jpg）=====
+
+.副區_A_4_4_jpg {
+  position: absolute;
+  left: 1678px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 202;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 348px;
+  height: 157px;
+  z-index: 201;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 200;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 199;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 198;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 197;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 196;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 195;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 194;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 193;
+}
+
+
+===== A-5（對應 副區-A-5-1.jpg）=====
+（固定雙行品名4字+4字+警語5字內；裝飾用變體，例如可能是純底圖或另一種CTA）
+.副區_A_5_1_jpg {
+  position: absolute;
+  left: 363px;
+  top: 2020px;
+  width: 400px;
+  height: 350px;
+  z-index: 212;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 218px;
+  top: 89px;
+  width: 154px;
+  height: 238px;
+  z-index: 211;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 210;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 209;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 208;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 207;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 41.688px;
+  top: 190.175px;
+  z-index: 206;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 46.984px;
+  top: 268.006px;
+  z-index: 205;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 204;
+}
+
+===== A-5（對應 副區-A-5-2.jpg）=====
+.副區_A_5_2_jpg {
+  position: absolute;
+  left: 803px;
+  top: 2020px;
+  width: 400px;
+  height: 350px;
+  z-index: 224;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 218px;
+  top: 89px;
+  width: 154px;
+  height: 238px;
+  z-index: 223;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 222;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 221;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 220;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 219;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 77.593px;
+  top: 149.846px;
+  z-index: 218;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 63px;
+  top: 83px;
+  width: 120px;
+  height: 121px;
+  z-index: 217;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 41.688px;
+  top: 249.175px;
+  z-index: 216;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 46.984px;
+  top: 327.006px;
+  z-index: 215;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 214;
+}
+
+===== A-5（對應 副區-A-5-3.jpg）=====
+.副區_A_5_3_jpg {
+  position: absolute;
+  left: 1243px;
+  top: 2020px;
+  width: 400px;
+  height: 350px;
+  z-index: 236;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 218px;
+  top: 89px;
+  width: 154px;
+  height: 238px;
+  z-index: 235;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 42.421px;
+  top: 24.412px;
+  z-index: 234;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 19px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 233;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 162.766px;
+  top: 64.347px;
+  z-index: 232;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 231;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 103px;
+  top: 279px;
+  width: 22px;
+  height: 26px;
+  z-index: 230;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 86px;
+  top: 267px;
+  width: 51px;
+  height: 51px;
+  z-index: 229;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 29.688px;
+  top: 154.175px;
+  z-index: 228;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 34.984px;
+  top: 232.006px;
+  z-index: 227;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 226;
+}
+
+
+
+===== B-1（對應 副區-B-1-1.jpg）=====
+（基本款：底圖/卡片外框、促標（滿版無LOGO）、品名、警語、商品範圍）
+.副區_B_1_1_jpg {
+  position: absolute;
+  left: 2322px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 257;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 158px;
+  z-index: 256;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 255;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 254;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 296.175px;
+  z-index: 253;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 252;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 251;
+}
+
+===== B-1（對應 副區-B-1-2.jpg）=====
+.副區_B_1_2_jpg {
+  position: absolute;
+  left: 2322px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 264;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 191px;
+  z-index: 263;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 262;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 261;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 329.175px;
+  z-index: 260;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 259;
+}
+
+
+===== B-1（對應 副區-B-1-3.jpg）=====
+.副區_B_1_3_jpg {
+  position: absolute;
+  left: 2322px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 271;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 191px;
+  z-index: 270;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 269;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 268;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 267;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 266;
+}
+
+===== B-1（對應 副區-B-1-4.jpg）=====
+.副區_B_1_4_jpg {
+  position: absolute;
+  left: 2322px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 277;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 237px;
+  z-index: 276;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 275;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 274;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 273;
+}
+
+
+===== B-2（對應 副區-B-2-1.jpg）=====
+（比B-1多：圓標）
+.副區_B_2_1_jpg {
+  position: absolute;
+  left: 2762px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 287;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 158px;
+  z-index: 286;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 285;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 284;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 283;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 282;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 296.175px;
+  z-index: 281;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 280;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 279;
+}
+
+===== B-2（對應 副區-B-2-2.jpg）=====
+.副區_B_2_2_jpg {
+  position: absolute;
+  left: 2762px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 296;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 191px;
+  z-index: 295;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 294;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 293;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 292;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 291;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 329.175px;
+  z-index: 290;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 289;
+}
+
+===== B-2（對應 副區-B-2-3.jpg）=====
+.副區_B_2_3_jpg {
+  position: absolute;
+  left: 2762px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 305;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 191px;
+  z-index: 304;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 303;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 302;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 301;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 300;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 299;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 298;
+}
+
+===== B-2（對應 副區-B-2-4.jpg）=====
+.副區_B_2_4_jpg {
+  position: absolute;
+  left: 2762px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 313;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 146px;
+  top: 89px;
+  width: 229px;
+  height: 237px;
+  z-index: 312;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 311;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 310;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 36.593px;
+  top: 172.846px;
+  z-index: 309;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 22px;
+  top: 106px;
+  width: 120px;
+  height: 121px;
+  z-index: 308;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 307;
+}
+
+
+
+===== B-1（對應 副區-B-1-2.jpg）=====
+.副區_B_1_2_jpg {
+  position: absolute;
+  left: 2322px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 264;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 27px;
+  top: 89px;
+  width: 348px;
+  height: 191px;
+  z-index: 263;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 262;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 261;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 329.175px;
+  z-index: 260;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 259;
+}
+
+
+===== B-3（對應 副區-B-3-1.jpg）=====
+（比B-1多：CTA 圖示版）
+.副區_B_3_1_jpg {
+  position: absolute;
+  left: 3202px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 323;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 154px;
+  z-index: 322;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 321;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 320;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 157px;
+  width: 22px;
+  height: 26px;
+  z-index: 319;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 145px;
+  width: 51px;
+  height: 51px;
+  z-index: 318;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 296.175px;
+  z-index: 317;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 316;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 315;
+}
+
+===== B-3（對應 副區-B-3-2.jpg）=====
+.副區_B_3_2_jpg {
+  position: absolute;
+  left: 3202px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 332;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 191px;
+  z-index: 331;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 330;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 329;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 179px;
+  width: 22px;
+  height: 26px;
+  z-index: 328;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 167px;
+  width: 51px;
+  height: 51px;
+  z-index: 327;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 329.175px;
+  z-index: 326;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 325;
+}
+
+===== B-3（對應 副區-B-3-3.jpg）=====
+.副區_B_3_3_jpg {
+  position: absolute;
+  left: 3202px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 341;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 191px;
+  z-index: 340;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 339;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 338;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 179px;
+  width: 22px;
+  height: 26px;
+  z-index: 337;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 167px;
+  width: 51px;
+  height: 51px;
+  z-index: 336;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 326.006px;
+  z-index: 335;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 334;
+}
+
+===== B-3（對應 副區-B-3-4.jpg）=====
+.副區_B_3_4_jpg {
+  position: absolute;
+  left: 3202px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 349;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 296px;
+  height: 237px;
+  z-index: 348;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 347;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 346;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 344px;
+  top: 190px;
+  width: 22px;
+  height: 26px;
+  z-index: 345;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 327px;
+  top: 178px;
+  width: 51px;
+  height: 51px;
+  z-index: 344;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 343;
+}
+
+
+===== B-4（對應 副區-B-4-1.jpg）=====
+（比B-1多：CTA 文字版「領券去」；品名雙行4字+4字）
+.副區_B_4_1_jpg {
+  position: absolute;
+  left: 3637px;
+  top: 416px;
+  width: 400px;
+  height: 350px;
+  z-index: 360;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 204px;
+  top: 89px;
+  width: 168px;
+  height: 154px;
+  z-index: 359;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 358;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 65px;
+  z-index: 357;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 356;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 355;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 354;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 29.688px;
+  top: 154.175px;
+  z-index: 353;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 34.984px;
+  top: 232.006px;
+  z-index: 352;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 351;
+}
+
+===== B-4（對應 副區-B-4-2.jpg）=====
+.副區_B_4_2_jpg {
+  position: absolute;
+  left: 3637px;
+  top: 766px;
+  width: 400px;
+  height: 350px;
+  z-index: 370;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 348px;
+  height: 110px;
+  z-index: 369;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 368;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 65px;
+  z-index: 367;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 366;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 365;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 364;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 40.687px;
+  top: 250.175px;
+  z-index: 363;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 362;
+}
+
+===== B-4（對應 副區-B-4-3.jpg）=====
+.副區_B_4_3_jpg {
+  position: absolute;
+  left: 3637px;
+  top: 1116px;
+  width: 400px;
+  height: 350px;
+  z-index: 380;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 348px;
+  height: 110px;
+  z-index: 379;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 378;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 377;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 376;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 375;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 374;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 53.984px;
+  top: 247.006px;
+  z-index: 373;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 372;
+}
+
+===== B-4（對應 副區-B-4-4.jpg）=====
+.副區_B_4_4_jpg {
+  position: absolute;
+  left: 3637px;
+  top: 1466px;
+  width: 400px;
+  height: 350px;
+  z-index: 389;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 24px;
+  top: 89px;
+  width: 348px;
+  height: 157px;
+  z-index: 388;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 387;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 386;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 257px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 385;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 128.531px;
+  top: 312.493px;
+  z-index: 384;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 100px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 383;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 382;
+}
+
+
+===== B-5（對應 副區-B-5-1.jpg）=====
+（固定雙行品名4字+4字+警語5字內；跟A-5同類型但無LOGO）
+.副區_B_5_1_jpg {
+  position: absolute;
+  left: 2322px;
+  top: 2020px;
+  width: 400px;
+  height: 350px;
+  z-index: 397;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 218px;
+  top: 89px;
+  width: 154px;
+  height: 238px;
+  z-index: 396;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 395;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 394;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 41.688px;
+  top: 190.175px;
+  z-index: 393;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 46.984px;
+  top: 268.006px;
+  z-index: 392;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 391;
+}
+
+===== B-5（對應 副區-B-5-2.jpg）=====
+.副區_B_5_2_jpg {
+  position: absolute;
+  left: 2762px;
+  top: 2020px;
+  width: 400px;
+  height: 350px;
+  z-index: 407;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 218px;
+  top: 89px;
+  width: 154px;
+  height: 238px;
+  z-index: 406;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 405;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 404;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 77.593px;
+  top: 149.846px;
+  z-index: 403;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 63px;
+  top: 83px;
+  width: 120px;
+  height: 121px;
+  z-index: 402;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 41.688px;
+  top: 249.175px;
+  z-index: 401;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 46.984px;
+  top: 327.006px;
+  z-index: 400;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 399;
+}
+
+===== B-5（對應 副區-B-5-3.jpg）=====
+.副區_B_5_3_jpg {
+  position: absolute;
+  left: 3202px;
+  top: 2020px;
+  width: 400px;
+  height: 350px;
+  z-index: 417;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 218px;
+  top: 89px;
+  width: 154px;
+  height: 238px;
+  z-index: 416;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 415;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 414;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 103px;
+  top: 279px;
+  width: 22px;
+  height: 26px;
+  z-index: 413;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 86px;
+  top: 267px;
+  width: 51px;
+  height: 51px;
+  z-index: 412;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 29.688px;
+  top: 154.175px;
+  z-index: 411;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 34.984px;
+  top: 232.006px;
+  z-index: 410;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 409;
+}
+
+===== B-5（對應 副區-B-5-4.jpg）=====
+.副區_B_5_4_jpg {
+  position: absolute;
+  left: 3637px;
+  top: 2020px;
+  width: 400px;
+  height: 350px;
+  z-index: 428;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 218px;
+  top: 89px;
+  width: 154px;
+  height: 238px;
+  z-index: 427;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 38.438px;
+  top: 63.581px;
+  z-index: 426;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 376px;
+  height: 65px;
+  z-index: 425;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 181px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 424;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 52.531px;
+  top: 312.493px;
+  z-index: 423;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 24px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 422;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 41.688px;
+  top: 154.175px;
+  z-index: 421;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 46.984px;
+  top: 232.006px;
+  z-index: 420;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 375px;
+  height: 329px;
+  z-index: 419;
+}
+
+
+===== C-1（對應 副區-C-1-1.jpg）=====
+（基本款：底圖/卡片外框、促標、LOGO、品名、警語、商品範圍 — 雙欄12字/16字版）
+.副區_C_1_1_jpg {
+  position: absolute;
+  left: 4338px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 440;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 548px;
+  height: 154px;
+  z-index: 439;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 438;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 437;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 436;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 435;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 291.175px;
+  z-index: 432;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 431;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 430;
+}
+===== C-1（對應 副區-C-1-2.jpg）=====
+.副區_C_1_2_jpg {
+  position: absolute;
+  left: 4338px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 451;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 548px;
+  height: 193px;
+  z-index: 450;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 449;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 448;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 447;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 446;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 329.175px;
+  z-index: 443;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 442;
+}
+
+===== C-1（對應 副區-C-1-3.jpg）=====
+.副區_C_1_3_jpg {
+  position: absolute;
+  left: 4338px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 462;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 548px;
+  height: 193px;
+  z-index: 461;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 460;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 459;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 458;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 457;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 454;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 453;
+}
+
+
+
+===== C-2（對應 副區-C-2-1.jpg）=====
+（比C-1多：圓標，單顆共用）
+.副區_C_2_1_jpg {
+  position: absolute;
+  left: 4973px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 474;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 412px;
+  height: 154px;
+  z-index: 473;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 472;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 471;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 470;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 469;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 464.593px;
+  top: 167.846px;
+  z-index: 468;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 450px;
+  top: 101px;
+  width: 120px;
+  height: 121px;
+  z-index: 467;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 291.175px;
+  z-index: 466;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 465;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 464;
+}
+
+===== C-2（對應 副區-C-2-2.jpg）=====
+.副區_C_2_2_jpg {
+  position: absolute;
+  left: 4973px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 485;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 412px;
+  height: 193px;
+  z-index: 484;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 483;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 482;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 481;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 480;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 464.593px;
+  top: 167.846px;
+  z-index: 479;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 450px;
+  top: 101px;
+  width: 120px;
+  height: 121px;
+  z-index: 478;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 329.175px;
+  z-index: 477;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 476;
+}
+
+===== C-2（對應 副區-C-2-3.jpg）=====
+.副區_C_2_3_jpg {
+  position: absolute;
+  left: 4973px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 496;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 412px;
+  height: 193px;
+  z-index: 495;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 494;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 493;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 492;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 491;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 464.593px;
+  top: 167.846px;
+  z-index: 490;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 450px;
+  top: 101px;
+  width: 120px;
+  height: 121px;
+  z-index: 489;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 488;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 487;
+}
+
+
+===== C-3（對應 副區-C-3-1.jpg）=====
+（比C-1多：CTA 圖示版）
+.副區_C_3_1_jpg {
+  position: absolute;
+  left: 5608px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 508;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 476px;
+  height: 154px;
+  z-index: 507;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 506;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 505;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 504;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 503;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 536px;
+  top: 182px;
+  width: 22px;
+  height: 26px;
+  z-index: 502;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 519px;
+  top: 170px;
+  width: 51px;
+  height: 51px;
+  z-index: 501;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 291.175px;
+  z-index: 500;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 499;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 498;
+}
+
+===== C-3（對應 副區-C-3-2.jpg）=====
+.副區_C_3_2_jpg {
+  position: absolute;
+  left: 5608px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 519;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 476px;
+  height: 193px;
+  z-index: 518;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 517;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 516;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 515;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 514;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 536px;
+  top: 182px;
+  width: 22px;
+  height: 26px;
+  z-index: 513;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 519px;
+  top: 170px;
+  width: 51px;
+  height: 51px;
+  z-index: 512;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 329.175px;
+  z-index: 511;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 510;
+}
+
+===== C-3（對應 副區-C-3-3.jpg）=====
+.副區_C_3_3_jpg {
+  position: absolute;
+  left: 5608px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 530;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 476px;
+  height: 193px;
+  z-index: 529;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 528;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 527;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 526;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 525;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 536px;
+  top: 182px;
+  width: 22px;
+  height: 26px;
+  z-index: 524;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 519px;
+  top: 170px;
+  width: 51px;
+  height: 51px;
+  z-index: 523;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 522;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 521;
+}
+
+
+===== C-4（對應 副區-C-4-1.jpg）=====
+（比C-1多：CTA 文字版「領券去」；品名雙行6字+6字。上次這份沒貼到CTA圖層，這次麻煩補上）
+.副區_C_4_1_jpg {
+  position: absolute;
+  left: 4338px;
+  top: 2020px;
+  width: 600px;
+  height: 350px;
+  z-index: 540;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 539;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 538;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 537;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 536;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 535;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 193.175px;
+  z-index: 534;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 273.006px;
+  z-index: 533;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 532;
+}
+
+===== C-4（對應 副區-C-4-2.jpg）=====
+.副區_C_4_2_jpg {
+  position: absolute;
+  left: 4973px;
+  top: 2020px;
+  width: 600px;
+  height: 350px;
+  z-index: 552;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 551;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 550;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 549;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 548;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 547;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 124.593px;
+  top: 150.846px;
+  z-index: 546;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 110px;
+  top: 84px;
+  width: 120px;
+  height: 121px;
+  z-index: 545;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 249.175px;
+  z-index: 544;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 327.006px;
+  z-index: 543;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 542;
+}
+
+===== C-4（對應 副區-C-4-3.jpg）=====
+.副區_C_4_3_jpg {
+  position: absolute;
+  left: 5608px;
+  top: 2020px;
+  width: 600px;
+  height: 350px;
+  z-index: 564;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 563;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 562;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 561;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 560;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 559;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 162px;
+  top: 268px;
+  width: 22px;
+  height: 26px;
+  z-index: 558;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 145px;
+  top: 256px;
+  width: 51px;
+  height: 51px;
+  z-index: 557;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 157.175px;
+  z-index: 556;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 237.006px;
+  z-index: 555;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 554;
+}
+
+===== C-4（對應 副區-C-4-4.jpg）=====
+.副區_C_4_4_jpg {
+  position: absolute;
+  left: 5608px;
+  top: 2370px;
+  width: 600px;
+  height: 350px;
+  z-index: 577;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 576;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 575;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 574;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 573;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 572;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 227px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 571;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 98.531px;
+  top: 312.493px;
+  z-index: 570;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 70px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 569;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 157.175px;
+  z-index: 568;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 237.006px;
+  z-index: 567;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 566;
+}
+
+
+===== D-1（對應 副區-D-1-1.jpg）=====
+（基本款：底圖/卡片外框、促標（滿版無LOGO，字數上限12）、品名、警語、商品範圍 — 雙欄版）
+.副區_D_1_1_jpg {
+  position: absolute;
+  left: 6561px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 587;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 548px;
+  height: 154px;
+  z-index: 586;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 585;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 584;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 291.175px;
+  z-index: 581;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 580;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 579;
+}
+
+===== D-1（對應 副區-D-1-2.jpg）=====
+.副區_D_1_2_jpg {
+  position: absolute;
+  left: 6561px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 596;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 548px;
+  height: 193px;
+  z-index: 595;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 594;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 593;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 329.175px;
+  z-index: 590;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 589;
+}
+
+===== D-1（對應 副區-D-1-3.jpg）=====
+.副區_D_1_3_jpg {
+  position: absolute;
+  left: 6561px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 605;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 548px;
+  height: 193px;
+  z-index: 604;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 603;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 602;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 599;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 598;
+}
+
+
+
+
+===== D-2（對應 副區-D-2-1.jpg）=====
+（比D-1多：圓標，單顆共用）
+.副區_D_2_1_jpg {
+  position: absolute;
+  left: 7196px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 615;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 412px;
+  height: 154px;
+  z-index: 614;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 613;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 612;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 464.593px;
+  top: 167.846px;
+  z-index: 611;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 450px;
+  top: 101px;
+  width: 120px;
+  height: 121px;
+  z-index: 610;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 291.175px;
+  z-index: 609;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 608;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 607;
+}
+
+
+===== D-3（對應 副區-D-3-1.jpg）=====
+（比D-1多：CTA 圖示版）
+.副區_D_3_1_jpg {
+  position: absolute;
+  left: 7831px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 643;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 476px;
+  height: 154px;
+  z-index: 642;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 641;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 640;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 536px;
+  top: 182px;
+  width: 22px;
+  height: 26px;
+  z-index: 639;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 519px;
+  top: 170px;
+  width: 51px;
+  height: 51px;
+  z-index: 638;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 70.438px;
+  top: 291.175px;
+  z-index: 637;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 75.829px;
+  top: 326.006px;
+  z-index: 636;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 635;
+}
+
+===== D-2（對應 副區-D-2-2.jpg）=====
+.副區_D_2_2_jpg {
+  position: absolute;
+  left: 7196px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 624;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 412px;
+  height: 193px;
+  z-index: 623;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 622;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 621;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 464.593px;
+  top: 167.846px;
+  z-index: 620;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 450px;
+  top: 101px;
+  width: 120px;
+  height: 121px;
+  z-index: 619;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 329.175px;
+  z-index: 618;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 617;
+}
+
+===== D-2（對應 副區-D-2-3.jpg）=====
+.副區_D_2_3_jpg {
+  position: absolute;
+  left: 7196px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 633;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 412px;
+  height: 193px;
+  z-index: 632;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 631;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 630;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 464.593px;
+  top: 167.846px;
+  z-index: 629;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 450px;
+  top: 101px;
+  width: 120px;
+  height: 121px;
+  z-index: 628;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 627;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 626;
+}
+
+===== D-3（對應 副區-D-3-1.jpg）=====
+.副區_D_3_1_jpg {
+  position: absolute;
+  left: 7831px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 643;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 476px;
+  height: 154px;
+  z-index: 642;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 641;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 640;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 536px;
+  top: 182px;
+  width: 22px;
+  height: 26px;
+  z-index: 639;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 519px;
+  top: 170px;
+  width: 51px;
+  height: 51px;
+  z-index: 638;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 70.438px;
+  top: 291.175px;
+  z-index: 637;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 75.829px;
+  top: 326.006px;
+  z-index: 636;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 635;
+}
+
+
+===== D-3（對應 副區-D-3-2.jpg）=====
+.副區_D_3_2_jpg {
+  position: absolute;
+  left: 7831px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 652;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 476px;
+  height: 193px;
+  z-index: 651;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 650;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 649;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 536px;
+  top: 182px;
+  width: 22px;
+  height: 26px;
+  z-index: 648;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 519px;
+  top: 170px;
+  width: 51px;
+  height: 51px;
+  z-index: 647;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 67.687px;
+  top: 329.175px;
+  z-index: 646;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 645;
+}
+
+===== D-3（對應 副區-D-3-3.jpg）=====
+.副區_D_3_3_jpg {
+  position: absolute;
+  left: 7831px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 661;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 26px;
+  top: 87px;
+  width: 476px;
+  height: 193px;
+  z-index: 660;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 659;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 658;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 536px;
+  top: 182px;
+  width: 22px;
+  height: 26px;
+  z-index: 657;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 519px;
+  top: 170px;
+  width: 51px;
+  height: 51px;
+  z-index: 656;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 67.984px;
+  top: 326.006px;
+  z-index: 655;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 654;
+}
+
+
+
+===== D-4（對應 副區-D-4-1.jpg）=====
+.副區_D_4_1_jpg {
+  position: absolute;
+  left: 6561px;
+  top: 2020px;
+  width: 600px;
+  height: 350px;
+  z-index: 670;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 669;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 668;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 667;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 193.175px;
+  z-index: 666;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 273.006px;
+  z-index: 665;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 664;
+}
+
+
+===== D-4（對應 副區-D-4-2.jpg）=====
+.副區_D_4_2_jpg {
+  position: absolute;
+  left: 7196px;
+  top: 2020px;
+  width: 600px;
+  height: 350px;
+  z-index: 679;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 678;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 677;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 676;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  position: absolute;
+  left: 124.593px;
+  top: 150.846px;
+  z-index: 675;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 110px;
+  top: 84px;
+  width: 120px;
+  height: 121px;
+  z-index: 674;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 249.175px;
+  z-index: 673;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 327.006px;
+  z-index: 672;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 671;
+}
+
+
+===== D-4（對應 副區-D-4-3.jpg）=====
+.副區_D_4_3_jpg {
+  position: absolute;
+  left: 7831px;
+  top: 2020px;
+  width: 600px;
+  height: 350px;
+  z-index: 689;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 688;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 687;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 686;
+}
+.CTA_三角形 {
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 162px;
+  top: 268px;
+  width: 22px;
+  height: 26px;
+  z-index: 685;
+}
+.CTA_底圖 {
+  border-radius: 50%;
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 145px;
+  top: 256px;
+  width: 51px;
+  height: 51px;
+  z-index: 684;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 157.175px;
+  z-index: 683;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 237.006px;
+  z-index: 682;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 681;
+}
+
+
+===== D-4（對應 副區-D-4-4.jpg）=====
+.副區_D_4_4_jpg {
+  position: absolute;
+  left: 7831px;
+  top: 2370px;
+  width: 600px;
+  height: 350px;
+  z-index: 700;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 300px;
+  top: 87px;
+  width: 274px;
+  height: 240px;
+  z-index: 699;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 66.437px;
+  top: 63.581px;
+  z-index: 698;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 697;
+}
+.CTA_三角形 {
+  background-color: rgb(254, 254, 254);
+  position: absolute;
+  left: 227px;
+  top: 280px;
+  width: 19px;
+  height: 22px;
+  z-index: 696;
+}
+.CTA {
+  font-size: 42px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(254, 254, 254);
+  line-height: 1;
+  text-align: left;
+  position: absolute;
+  left: 98.531px;
+  top: 312.493px;
+  z-index: 695;
+}
+.CTA_底圖 {
+  background-color: rgb(208, 1, 27);
+  position: absolute;
+  left: 70px;
+  top: 256px;
+  width: 200px;
+  height: 71px;
+  z-index: 694;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 48.688px;
+  top: 157.175px;
+  z-index: 693;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 50.984px;
+  top: 237.006px;
+  z-index: 692;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 691;
+}
+
+
+===== E-1（對應 副區-E-1-1.jpg）=====
+（基本款：底圖/卡片外框、促標、LOGO、左右對半分隔線、左右各一份品名/警語、圓標(左右各一顆)）
+.副區_E_1_1_jpg {
+  position: absolute;
+  left: 8784px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 719;
+}
+.商品範圍_左邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 28px;
+  top: 145px;
+  width: 125px;
+  height: 140px;
+  z-index: 718;
+}
+.商品範圍_右邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 316px;
+  top: 145px;
+  width: 125px;
+  height: 140px;
+  z-index: 717;
+}
+.矩形_662 {
+  background-color: rgb(0, 0, 0);
+  position: absolute;
+  left: 299px;
+  top: 97px;
+  width: 3px;
+  height: 230px;
+  z-index: 716;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 715;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 714;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 713;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 712;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  -moz-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -webkit-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -ms-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  position: absolute;
+  left: 467.144px;
+  top: 217.149px;
+  z-index: 711;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 452px;
+  top: 151px;
+  width: 120px;
+  height: 120px;
+  z-index: 710;
+}
+.品名_右 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 338.688px;
+  top: 131.175px;
+  z-index: 709;
+}
+.品名_左 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 51.688px;
+  top: 131.175px;
+  z-index: 708;
+}
+.警語_右 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 348.984px;
+  top: 327.006px;
+  z-index: 707;
+}
+.警語_左 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 61.984px;
+  top: 327.006px;
+  z-index: 706;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  -moz-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -webkit-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -ms-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  position: absolute;
+  left: 180.144px;
+  top: 217.149px;
+  z-index: 705;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 165px;
+  top: 151px;
+  width: 120px;
+  height: 120px;
+  z-index: 704;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 703;
+}
+
+
+===== E-1（對應 副區-E-1-2.jpg）=====
+.副區_E_1_2_jpg {
+  position: absolute;
+  left: 8784px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 733;
+}
+.商品範圍_右邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 316px;
+  top: 145px;
+  width: 257px;
+  height: 140px;
+  z-index: 732;
+}
+.商品範圍_左邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 28px;
+  top: 145px;
+  width: 257px;
+  height: 140px;
+  z-index: 731;
+}
+.矩形_662 {
+  background-color: rgb(0, 0, 0);
+  position: absolute;
+  left: 299px;
+  top: 97px;
+  width: 3px;
+  height: 230px;
+  z-index: 730;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 729;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 728;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 727;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 726;
+}
+.品名_右 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 338.688px;
+  top: 131.175px;
+  z-index: 725;
+}
+.品名_左 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 51.688px;
+  top: 131.175px;
+  z-index: 724;
+}
+.警語_右 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 348.984px;
+  top: 327.006px;
+  z-index: 723;
+}
+.警語_左 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 61.984px;
+  top: 327.006px;
+  z-index: 722;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 721;
+}
+
+
+===== E-1（對應 副區-E-1-3.jpg）=====
+.副區_E_1_3_jpg {
+  position: absolute;
+  left: 8784px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 745;
+}
+.商品範圍_右邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 316px;
+  top: 145px;
+  width: 257px;
+  height: 181px;
+  z-index: 744;
+}
+.商品範圍_左邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 28px;
+  top: 145px;
+  width: 257px;
+  height: 181px;
+  z-index: 743;
+}
+.矩形_662 {
+  background-color: rgb(0, 0, 0);
+  position: absolute;
+  left: 299px;
+  top: 97px;
+  width: 3px;
+  height: 230px;
+  z-index: 742;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 91.421px;
+  top: 24.412px;
+  z-index: 741;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 68px;
+  top: 19px;
+  width: 142px;
+  height: 49px;
+  z-index: 740;
+}
+.品名_右 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 338.688px;
+  top: 131.175px;
+  z-index: 739;
+}
+.品名_左 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 51.688px;
+  top: 131.175px;
+  z-index: 738;
+}
+.促標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 215.438px;
+  top: 63.581px;
+  z-index: 737;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 736;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 735;
+}
+
+
+
+===== E-2（對應 副區-E-2-1.jpg）=====
+（跟E-1的差異：沒有促標；圓標左右各一顆）
+.副區_E_2_1_jpg {
+  position: absolute;
+  left: 9424px;
+  top: 416px;
+  width: 600px;
+  height: 350px;
+  z-index: 762;
+}
+.商品範圍_左邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 28px;
+  top: 145px;
+  width: 125px;
+  height: 140px;
+  z-index: 761;
+}
+.商品範圍_右邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 316px;
+  top: 145px;
+  width: 125px;
+  height: 140px;
+  z-index: 760;
+}
+.矩形_662 {
+  background-color: rgb(0, 0, 0);
+  position: absolute;
+  left: 299px;
+  top: 97px;
+  width: 3px;
+  height: 230px;
+  z-index: 759;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 253.421px;
+  top: 24.412px;
+  z-index: 758;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 200px;
+  top: 19px;
+  width: 200px;
+  height: 49px;
+  z-index: 757;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 756;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  -moz-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -webkit-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -ms-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  position: absolute;
+  left: 467.144px;
+  top: 217.149px;
+  z-index: 755;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 452px;
+  top: 151px;
+  width: 120px;
+  height: 120px;
+  z-index: 754;
+}
+.品名_右 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 338.688px;
+  top: 131.175px;
+  z-index: 753;
+}
+.品名_左 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 51.688px;
+  top: 131.175px;
+  z-index: 752;
+}
+.警語_右 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 348.984px;
+  top: 327.006px;
+  z-index: 751;
+}
+.警語_左 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 61.984px;
+  top: 327.006px;
+  z-index: 750;
+}
+.圓標 {
+  font-size: 35px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(255, 255, 255);
+  font-weight: bold;
+  line-height: 1.514;
+  text-align: center;
+  -moz-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -webkit-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  -ms-transform: matrix( 1.00026048450117,0,0,1,0,0);
+  position: absolute;
+  left: 180.144px;
+  top: 217.149px;
+  z-index: 749;
+}
+.圓標_底圖 {
+  border-radius: 50%;
+  background-color: rgb(114, 122, 204);
+  position: absolute;
+  left: 165px;
+  top: 151px;
+  width: 120px;
+  height: 120px;
+  z-index: 748;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 747;
+}
+
+
+===== E-2（對應 副區-E-2-2.jpg）=====
+.副區_E_2_2_jpg {
+  position: absolute;
+  left: 9424px;
+  top: 766px;
+  width: 600px;
+  height: 350px;
+  z-index: 775;
+}
+.商品範圍_右邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 316px;
+  top: 145px;
+  width: 257px;
+  height: 140px;
+  z-index: 774;
+}
+.商品範圍_左邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 28px;
+  top: 145px;
+  width: 257px;
+  height: 140px;
+  z-index: 773;
+}
+.矩形_662 {
+  background-color: rgb(0, 0, 0);
+  position: absolute;
+  left: 299px;
+  top: 97px;
+  width: 3px;
+  height: 230px;
+  z-index: 772;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 253.421px;
+  top: 24.412px;
+  z-index: 771;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 200px;
+  top: 19px;
+  width: 200px;
+  height: 49px;
+  z-index: 770;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 769;
+}
+.品名_右 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 338.688px;
+  top: 131.175px;
+  z-index: 768;
+}
+.品名_左 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 51.688px;
+  top: 131.175px;
+  z-index: 767;
+}
+.警語_右 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 348.984px;
+  top: 327.006px;
+  z-index: 766;
+}
+.警語_左 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 61.984px;
+  top: 327.006px;
+  z-index: 765;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 764;
+}
+
+===== E-2（對應 副區-E-2-3.jpg）=====
+.副區_E_2_3_jpg {
+  position: absolute;
+  left: 9424px;
+  top: 1116px;
+  width: 600px;
+  height: 350px;
+  z-index: 786;
+}
+.商品範圍_右邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 316px;
+  top: 145px;
+  width: 257px;
+  height: 181px;
+  z-index: 785;
+}
+.商品範圍_左邊 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 28px;
+  top: 145px;
+  width: 257px;
+  height: 181px;
+  z-index: 784;
+}
+.矩形_662 {
+  background-color: rgb(0, 0, 0);
+  position: absolute;
+  left: 299px;
+  top: 97px;
+  width: 3px;
+  height: 230px;
+  z-index: 783;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 253.421px;
+  top: 24.412px;
+  z-index: 782;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 200px;
+  top: 19px;
+  width: 200px;
+  height: 49px;
+  z-index: 781;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 65px;
+  z-index: 780;
+}
+.品名_右 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 338.688px;
+  top: 131.175px;
+  z-index: 779;
+}
+.品名_左 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 51.688px;
+  top: 131.175px;
+  z-index: 778;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 575px;
+  height: 329px;
+  z-index: 777;
+}
+
+
+===== F-1（對應 副區-F-1-1.jpg）=====
+（基本款：底圖/卡片外框、LOGO、品名、警語 — 最簡單款，無促標/圓標/CTA、商品範圍）
+.副區_F_1_1_jpg {
+  position: absolute;
+  left: 10503px;
+  top: 416px;
+  width: 300px;
+  height: 350px;
+  z-index: 794;
+}
+.商品範圍 {
+  background-color: rgb(255, 0, 0);
+  opacity: 0.2;
+  position: absolute;
+  left: 22px;
+  top: 141px;
+  width: 257px;
+  height: 143px;
+  z-index: 793;
+}
+.LOGO_文字 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgba(0, 0, 0, 0.502);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 102.421px;
+  top: 24.412px;
+  z-index: 792;
+}
+.LOGO_底圖 {
+  border-radius: 23px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 49px;
+  top: 19px;
+  width: 201px;
+  height: 49px;
+  z-index: 791;
+}
+.促標_底圖 {
+  background-color: rgb(79, 159, 162);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 275px;
+  height: 65px;
+  z-index: 790;
+}
+.品名 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(18, 24, 39);
+  line-height: 1.075;
+  text-align: center;
+  position: absolute;
+  left: 49.688px;
+  top: 131.175px;
+  z-index: 789;
+}
+.警語 {
+  font-size: 30px;
+  font-family: "ShopeeNotoSans (content)";
+  color: rgb(116, 116, 116);
+  line-height: 1;
+  text-align: center;
+  position: absolute;
+  left: 59.984px;
+  top: 327.006px;
+  z-index: 788;
+}
+.背景 {
+  border-radius: 15px;
+  background-color: rgb(255, 255, 255);
+  position: absolute;
+  left: 12px;
+  top: 11px;
+  width: 275px;
+  height: 329px;
+  z-index: 787;
+}
+
