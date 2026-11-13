@@ -1145,6 +1145,10 @@ function hasActiveBackgroundImage(){
       .then(function(res){
         var dataH = res[0];
         var dataV = res[1];
+        window._bnBgOrientationSources = {
+          horizontal: dataH || dataV || null,
+          vertical: dataV || dataH || null
+        };
         applySampledCanvasBg(dataH || dataV);
         var iframes = Array.prototype.slice.call(document.querySelectorAll('.preview-block iframe'));
         var states = {};

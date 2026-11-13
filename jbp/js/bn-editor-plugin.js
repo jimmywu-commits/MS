@@ -1078,6 +1078,26 @@
         }
         bgBroadcastAll();
       };
+      /* 懶載入的版位可能錯過先前的背景廣播；版位回報 ready 時只補送
+         自己目前的背景狀態，不重播商品或其他會影響排版的資料。 */
+      window._bnBgReadyCallback = function(id){
+        if(!id) return;
+        var ifrEl = document.getElementById('iframe-' + id);
+        if(!ifrEl || isSearchIconId(id, ifrEl)) return;
+        var st = getBgState(String(id));
+        var sources = window._bnBgOrientationSources || null;
+        if(!st.src && sources){
+          st.src = getBgLayoutOrientation(String(id), ifrEl) === 'vertical'
+            ? (sources.vertical || sources.horizontal)
+            : (sources.horizontal || sources.vertical);
+          if(st.src && !st._initialized){
+            var params = getDefaultBgParamsForLayout(String(id), ifrEl);
+            st.scale = params.scale; st.x = params.x; st.y = params.y; st.fit = params.fit;
+            st._initialized = true;
+          }
+        }
+        bgSendToIframe(ifrEl, String(id));
+      };
       /* 精準同步單一 iframe 背景。下載圖片會用這個，避免廣播全部版位時
          把尚未 ready 或 id 取不到的 iframe 送成 null 背景。 */
       window._bnSendBgToIframe = function(ifrEl, id){
@@ -1592,6 +1612,7 @@
         if(!h && !v) return;
         var single = (h && !v) ? h : ((!h && v) ? v : null);
         window._bgDataUrl = h || v || single || null;
+        window._bnBgOrientationSources = { horizontal:h || v || null, vertical:v || h || null };
         document.querySelectorAll('.preview-block iframe').forEach(function(ifrEl){
           var id = getIfrBnid(ifrEl);
           if(!id || isSearchIconId(id, ifrEl)) return;
@@ -1709,6 +1730,7 @@
           reader.onload = function(e){
             var dataUrl = e.target.result;
             window._bgDataUrl = dataUrl;
+            window._bnBgOrientationSources = { horizontal:dataUrl, vertical:dataUrl };
             /* 把所有版位的 src 都設成這張圖，各自保留自己的 scale/x/y/fit */
             document.querySelectorAll('.preview-block iframe').forEach(function(ifrEl){
               var id = getIfrBnid(ifrEl);
