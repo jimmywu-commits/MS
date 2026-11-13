@@ -5,7 +5,7 @@
    - 只「搬移」既有節點（appendChild／insertBefore），不重建 innerHTML、不複製節點：所有 id、事件監聽、資料綁定原樣保留。
    - 收合只以 hidden 屬性隱藏內容，不移除 DOM、不清空輸入值或圖片；展開／收合不呼叫任何外掛函式。
    - 原區段標題（.s-section）只加上 data-boda-acc-src 標記後由 CSS 隱藏，不刪除（外掛／導覽仍可查到節點）。
-   - 展開狀態存在 localStorage（可失敗），一般編輯、重新渲染或資料更新不會重設。
+   - 預設全部收合；畫布選到商品、代言人、文字等物件時，只展開對應區段。
    - UI-005-B 修正：標題列不帶 role="button"（避免被 BODA 的全選／全消放大規則命中），role／tabindex／aria 放在標題文字。
    ============================================================ */
 (function () {
@@ -15,8 +15,8 @@
   window.__bodaExposureSidebarAcc = true;
 
   var STORE_KEY = 'boda.exposure.sidebar.acc.v1';
-  /* 預設展開：以精簡右側欄為原則，只展開「版位選擇」；其餘收合。 */
-  var DEFAULT_OPEN = { layout: true };
+  /* 進入曝光資源時右欄常態全收合。 */
+  var DEFAULT_OPEN = {};
   var SECTIONS = [
     { key: 'layout',    title: '版位選擇' },
     { key: 'bg',        title: '背景圖' },
@@ -52,9 +52,25 @@
   }
   function toggle(key) {
     var open = !isOpen(key);
-    state[key] = open;
-    saveState();
-    applyOpen(key, open);
+    if (open) openOnly(key, true);
+    else collapseAll(true);
+  }
+  function setOnlyOpen(key, persist) {
+    SECTIONS.forEach(function (section) {
+      var open = !!key && section.key === key;
+      state[section.key] = open;
+      applyOpen(section.key, open);
+    });
+    if (persist) saveState();
+  }
+  function collapseAll(persist) { setOnlyOpen('', persist); }
+  function openOnly(key, persist) {
+    if (!shells[key]) return;
+    var wasOpen = isOpen(key);
+    setOnlyOpen(key, persist);
+    if (!wasOpen && shells[key].head && shells[key].head.scrollIntoView) {
+      try { shells[key].head.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* 舊瀏覽器略過 */ }
+    }
   }
 
   function buildShells(scroll, lvWrap) {
@@ -289,10 +305,44 @@
     } catch (e) { /* 尚未可讀時略過，load 後再試 */ }
   }
   function watchLayoutFrame(frame) {
-    if (!frame || frame.__bodaZoneHintHooked) { injectEmptyZoneStyle(frame); return; }
+    if (!frame || frame.__bodaZoneHintHooked) {
+      injectEmptyZoneStyle(frame);
+      bindCanvasAccordion(frame);
+      return;
+    }
     frame.__bodaZoneHintHooked = true;
-    frame.addEventListener('load', function () { injectEmptyZoneStyle(frame); });
+    frame.addEventListener('load', function () {
+      injectEmptyZoneStyle(frame);
+      bindCanvasAccordion(frame);
+    });
     injectEmptyZoneStyle(frame);
+    bindCanvasAccordion(frame);
+  }
+
+  /* 畫布物件 → 右欄工具。使用 capture，即使畫布的拖曳程式會 stopPropagation 也能正確連動。 */
+  function canvasToolFor(target) {
+    if (!target || target.nodeType !== 1 || !target.closest) return '';
+    if (target.closest('.bn-prod-box')) return 'product';
+    if (target.closest('.bn-endorser-box,.bn-endorser-note')) return 'endorser';
+    if (target.closest('.bn-char-box')) return 'character';
+    /* 部分 Logo img 設了 pointer-events:none，點擊目標會落在 Logo 範圍容器。 */
+    if (target.closest('.bn-logo-box,.bn-ar-logo-box,img.bn-logo-img,[class*="logo範圍"],[class*="LOGO範圍"]')) return 'logo';
+    /* makeEditable() 會先標記 data-bn-edit-bound，點一下文字才展開工具。 */
+    if (target.closest('[data-bn-edit-bound="1"],[contenteditable="true"]')) return 'text';
+    if (target.closest('#\u5e95\u5716,.\u80cc\u666f\u5716,.\u5e95\u5716')) return 'bg';
+    return '';
+  }
+  function bindCanvasAccordion(frame) {
+    try {
+      var doc = frame && (frame.contentDocument || (frame.contentWindow && frame.contentWindow.document));
+      if (!doc || !doc.documentElement || doc.location.href === 'about:blank' || doc.__bodaAccBound) return;
+      doc.__bodaAccBound = true;
+      doc.addEventListener('pointerdown', function (e) {
+        var key = canvasToolFor(e.target);
+        if (key) openOnly(key, false);
+        else collapseAll(false);
+      }, true);
+    } catch (e) { /* 尚未載入或不同來源時，load 後再試 */ }
   }
   function setupEmptyZoneHint() {
     var area = document.getElementById('preview-area');
@@ -420,7 +470,11 @@
     if (!scroll) { if (start.n++ < POLL_MAX) setTimeout(start, POLL_MS); return; }
     renameLevelTitle();
     setupEmptyZoneHint();
+    /* 不沿用舊版「版位選擇預設展開」的儲存狀態。 */
+    state = {};
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* 私密模式等情況略過 */ }
     buildShells(scroll, document.getElementById('lv-wrap'));
+    collapseAll(false);
     var n = 0;
     (function poll() {
       if (tick(scroll)) return;

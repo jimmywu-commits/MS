@@ -1,9 +1,8 @@
 /* ══════════════════════════════════════════════════════════════
    等級 × 版位詳情表外掛（boda-level-plugin.js）
    ──────────────────────────────────────────────────────────────
-   1. 在左側「文字內容」上面加一個「等級」下拉，跟工單生成器連動
-      （共用 localStorage 的 wo_level_v1；被 index.html 用 iframe 內嵌時
-       再加 postMessage 即時互相通知，兩邊改都會同步）。
+   1. 在左側「文字內容」上面顯示目前等級；曝光資源端僅供查看、不可下拉，
+      等級由主工具／工單透過 localStorage 與 postMessage 單向同步進來。
    2. 「排版選擇」依照 MS與BN曝光版位 Google Sheet D 欄名稱、K:W 勾選矩陣過濾。
    3. 曝光人物圖片只允許在商品／人物區內移動，不可拖進文字區或畫布外。
    4. 商品影子顏色移到左側全域色票，一次套用全部商品；單品編輯只保留幾何設定。
@@ -227,9 +226,11 @@
     if (!sel) return;
     sel.innerHTML = LEVELS.map(function (l) { return '<option value="' + l.id + '">' + l.label + '</option>'; }).join('');
     sel.value = currentLevelId;
-    sel.addEventListener('change', function () {
-      applyLevel(sel.value, true);
-    });
+    /* 曝光資源只能查看工單／主工具帶入的活動等級，避免在子頁自行切換後
+       版位清單與工單內容失去一致。程式仍可透過 applyLevel 更新顯示值。 */
+    sel.disabled = true;
+    sel.setAttribute('aria-disabled', 'true');
+    sel.title = '活動等級由工單決定，曝光資源僅供查看';
   }
 
   function applyLevel(id, broadcast) {
@@ -537,6 +538,29 @@
     });
   }
 
+  function enforceLpbnSingleVariant(plan) {
+    var checked = window.checked || (window.checked = {});
+    var logos = window._bnLogos || [];
+    var horizontalMode = logos.length > 1 || (logos.length === 1 && Number(logos[0] && logos[0].ratio) > 1);
+    ['APP', 'PC'].forEach(function (device) {
+      var family = plan.rows.filter(function (r) {
+        var name = String(r.layout && (r.layout.file || r.layout.name) || '').replace(/^.*[\\/]/, '').replace(/\.html$/i, '');
+        return new RegExp('^LPBN_' + device + '(?:$|[方橫横無])', 'i').test(name);
+      });
+      if (!family.length) return;
+      var desired = family.find(function (r) {
+        var name = String(r.layout && (r.layout.file || r.layout.name) || '').replace(/^.*[\\/]/, '').replace(/\.html$/i, '');
+        if (horizontalMode) return /(?:橫|横)(?:式|版)?logo|horizontal|landscape/i.test(name);
+        return new RegExp('^LPBN_' + device + '$', 'i').test(name);
+      });
+      family.forEach(function (r) {
+        var next = !!desired && String(r.layout.id) === String(desired.layout.id) && !workorderBlocksAutoCheck(r.layout);
+        checked[r.layout.id] = next;
+        userTouched[r.layout.id] = true;
+      });
+    });
+  }
+
   function myRenderChecks() {
     updateArTextFieldVisibility();
     paintEmptyText();
@@ -544,26 +568,23 @@
     if (!wrap) return;
     var plan = planForLevel();
     syncChecked(plan);
-
-    if (!plan.rows.length) {
-      wrap.innerHTML = '<div class="no-layouts">這個等級沒有可用的版位</div>';
+    enforceLpbnSingleVariant(plan);
+    var checked = window.checked || {};
+    /* 工單等級沒有、工單未勾選，或 Logo 方／橫尺寸不符的版型都不顯示。
+       plan 仍保留完整可用清單給程式同步，這裡只篩選工具列的可見項目。 */
+    var visibleRows = plan.rows.filter(function (r) {
+      return !!(r.layout && checked[r.layout.id]);
+    });
+    if (!visibleRows.length) {
+      wrap.innerHTML = '<div class="no-layouts">目前工單與 Logo 沒有符合的版位</div>';
       return;
     }
-    var checked = window.checked || {};
     var lastSlot = null;
-    wrap.innerHTML = plan.rows.map(function (r) {
+    wrap.innerHTML = visibleRows.map(function (r) {
       var head = '';
       if (r.slot && r.slot !== lastSlot) {
         lastSlot = r.slot;
         head = '<div class="lc-group">' + esc(r.slot) + '</div>';
-      }
-      if (!r.layout) {
-        return head +
-          '<label class="layout-check-item lc-missing" title="版位詳情表有列到，但目前沒有對應的版型檔">' +
-            '<input type="checkbox" disabled>' +
-            '<span class="lc-name">' + esc(r.slot) + '</span>' +
-            '<span class="lc-tip">尚未提供版型</span>' +
-          '</label>';
       }
       var hasRestored = Object.prototype.hasOwnProperty.call(restoredChecked, String(r.layout.id));
       var on = userTouched[r.layout.id] ? !!checked[r.layout.id] : (hasRestored ? !!restoredChecked[r.layout.id] : !!r.def);
@@ -587,15 +608,19 @@
     var checked = window.checked || (window.checked = {});
     plan.rows.forEach(function (r) {
       if (!r.layout) return;
-      checked[r.layout.id] = !!val;
+      checked[r.layout.id] = !!val && !workorderBlocksAutoCheck(r.layout);
       userTouched[r.layout.id] = true;
-      noteManualCheck(r.layout.id, val);
+      noteManualCheck(r.layout.id, checked[r.layout.id]);
     });
     if (plan.rows.some(function (r) { return r.layout && isLogoVariantLayout(r.layout); })) {
-      _logoVariantManualOverride = true;
+      _logoVariantManualOverride = false;
     }
     myRenderChecks();
     if (typeof window.renderPreviews === 'function') window.renderPreviews();
+    /* 全選也只能回復目前 Logo 尺寸對應的版型，不可把方／橫版同時叫回來。 */
+    if (val && typeof window._bnSyncLogoLayoutSelection === 'function') {
+      try { Promise.resolve(window._bnSyncLogoLayoutSelection()).catch(function () {}); } catch (e) {}
+    }
   }
 
   var _logoVariantManualOverride = false;
@@ -622,6 +647,7 @@
     if (selected && isLogoVariantLayout(selected.layout)) {
       _logoVariantManualOverride = true;
     }
+    myRenderChecks();
     if (typeof window.renderPreviews === 'function') window.renderPreviews();
   }
 
@@ -657,6 +683,29 @@
         var currentVariant = layoutVariant(layout);
         var next = variant === 'none' ? (pair.none ? currentVariant === 'none' : true) :
           (variant === 'all' ? currentVariant !== 'none' : currentVariant === variant);
+        if (checked[layout.id] !== next) { checked[layout.id] = next; changed = true; }
+        userTouched[layout.id] = true;
+      });
+    });
+    /* LPBN 是特例：同一裝置只能留一張。版型的一般 LPBN_APP／LPBN_PC
+       就是方 Logo 或無 Logo 版；只有橫 Logo 才改用「橫LOGO」版。
+       舊的「方LOGO」變體不再另外顯示，避免 APP／PC 同時出現兩張。 */
+    ['APP', 'PC'].forEach(function (device) {
+      var family = rows.map(function (r) { return r.layout; }).filter(function (layout) {
+        var name = String((layout && (layout.name || layout.file)) || '').replace(/^.*[\\/]/, '').replace(/\.html$/i, '');
+        return new RegExp('^LPBN_' + device + '(?:$|[方橫横無])', 'i').test(name);
+      });
+      if (!family.length) return;
+      var horizontal = family.find(function (layout) {
+        return /(?:橫|横)(?:式|版)?logo|horizontal|landscape/i.test(String(layout.name || layout.file || ''));
+      });
+      var normal = family.find(function (layout) {
+        var name = String(layout.name || layout.file || '').replace(/^.*[\\/]/, '').replace(/\.html$/i, '');
+        return new RegExp('^LPBN_' + device + '$', 'i').test(name);
+      });
+      var desired = variant === 'horizontal' ? horizontal : normal;
+      family.forEach(function (layout) {
+        var next = !!desired && String(layout.id) === String(desired.id) && !workorderBlocksAutoCheck(layout);
         if (checked[layout.id] !== next) { checked[layout.id] = next; changed = true; }
         userTouched[layout.id] = true;
       });
@@ -1327,6 +1376,11 @@
       myRenderChecks();
       applyPendingWorkorderExposureSpec();
       if (typeof window.renderPreviews === 'function') window.renderPreviews();
+      /* 等級規則外掛比主編輯器晚載入時，主編輯器第一次 Logo 判斷已經錯過這個橋接。
+         規則就緒後主動補跑一次，確保 LPBN APP／PC 各只留一張。 */
+      if (typeof window._bnSyncLogoLayoutSelection === 'function') {
+        try { Promise.resolve(window._bnSyncLogoLayoutSelection()).catch(function () {}); } catch (e) {}
+      }
     });
   }
 
