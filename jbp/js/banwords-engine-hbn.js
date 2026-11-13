@@ -324,8 +324,8 @@
       });
     }
 
-    // 保護「數字+折/件/組/個...」
-    out = out.replace(/(^|[^\d$,\x00])(\d{1,2})(?=[折件組個入盒包罐台支雙])/g, function(match, prefix, digits){
+    // 保護「數字+折/件/組/個/箱...」；例如「6箱」是數量，不是價格，不能自動變成「$6箱」。
+    out = out.replace(/(^|[^\d$,\x00])(\d{1,2})(?=[折件組個入盒包罐台支雙箱])/g, function(match, prefix, digits){
       const key = makeAlphaToken('SPECIALNUM', protectedMap.length);
       protectedMap.push({ token: key, value: prefix + digits });
       return key;
