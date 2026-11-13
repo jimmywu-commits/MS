@@ -22387,10 +22387,20 @@ function importTextOffsetWithin(el, ancestor) {
   while (node && node !== ancestor) { x += node.offsetLeft || 0; y += node.offsetTop || 0; node = node.offsetParent; }
   return node === ancestor ? { x: x, y: y } : null;
 }
-function focusImportTextLimitIssue(issue) {
+function focusImportTextLimitIssue(issue, navigateToResource) {
   if (!issue || !issue.el || !issue.el.isConnected) return;
-  if (typeof scrollCanvasAreaToElement === 'function') scrollCanvasAreaToElement(issue.el);
-  try { issue.el.focus(); } catch (e) {}
+  /* 從最左側「整包下載」進來時，活動頁畫布可能只是隱藏在畫面外供截圖。
+     使用者按下提醒的「確定」後，要真正切到活動頁資源再定位。 */
+  if (navigateToResource) {
+    if (typeof goToWorkflowStep === 'function') goToWorkflowStep('import');
+    else if (typeof showView === 'function') showView('import');
+  }
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      if (typeof scrollCanvasAreaToElement === 'function') scrollCanvasAreaToElement(issue.el);
+      try { issue.el.focus(); } catch (e) {}
+    });
+  });
 }
 function updateImportTextLimitNotice(issues) {
   var bar = document.getElementById('import-dl-bar');
@@ -24879,7 +24889,7 @@ function validateImportResourceDownload() {
       }).join('\n') +
       (textLimitIssues.length > 10 ? '\n…還有 ' + (textLimitIssues.length - 10) + ' 處' : '') +
       '\n\n多出來的字不會被自動刪掉，請在畫布上自己決定要留哪些字（紅框處）。');
-    focusImportTextLimitIssue(textLimitIssues[0]);
+    focusImportTextLimitIssue(textLimitIssues[0], true);
     appLoadingFinish('已取消下載');
     return false;
   }
@@ -27989,7 +27999,7 @@ var exposureChildLoading = false; /* iframe 內仍在載入字體／畫布時，
    - 樣式檔內所有規則以 html[data-host="boda"] 閘門；獨立開啟 shopee2 不受影響。 */
 var EXPOSURE_THEME_CSS = 'css/exposure-light.css?v=20261112-ui005n';
 /* UI-005：BODA 嵌入模式右側欄重排與收合，於子頁內執行，只搬移既有節點 */
-var EXPOSURE_SIDEBAR_JS = 'JS/boda-exposure-sidebar.js?v=20261112-ui005h2';
+var EXPOSURE_SIDEBAR_JS = 'JS/boda-exposure-sidebar.js?v=20261113-canvas-accordion2';
 function injectExposureThemeStylesheet(frame) {
   try {
     var doc = frame && (frame.contentDocument || frame.contentWindow.document);
@@ -29125,8 +29135,7 @@ ensureBlocksLoaded(function () {
       Promise.all(pending).then(function(){
         /* iframe 的自動存檔可能剛好在這段時間寫回，重新整理前再清一次 */
         clearToolStorage();
-        /* UI-005-J：清除重置後，曝光資源右側欄八個 Accordion 全部收合（寫在最後一次清除之後，重新整理時由
-           BODA/JS/boda-exposure-sidebar.js 讀取；一般重新整理／切換版位仍照使用者自己的展開狀態）。 */
+        /* UI-005-J：清除重置後，曝光資源右側欄八個 Accordion 全部收合。 */
         try{ localStorage.setItem('boda.exposure.sidebar.acc.v1', JSON.stringify({layout:false,bg:false,text:false,color:false,logo:false,product:false,character:false,endorser:false})); }catch(_){}
         try{ history.replaceState(null,'',location.pathname+location.search+'#upload'); }catch(_){}
         location.reload();
