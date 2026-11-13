@@ -13808,7 +13808,6 @@ function applyExposureShadowBackgroundOnce(background) {
       var sourceBase = product.baseSrc || sourceMeta.baseSrc || product.src;
       var sourceRotate = Number(sourceMeta.rotate) || 0;
       var sourceShadowSignature = JSON.stringify(sourceMeta.groundShadow || null);
-      var sourceProductRect = sourceMeta.productRect ? JSON.parse(JSON.stringify(sourceMeta.productRect)) : null;
       var draft = Object.assign({}, product, {
         baseSrc: sourceBase,
         meta: Object.assign({}, sourceMeta, {
@@ -13835,9 +13834,12 @@ function applyExposureShadowBackgroundOnce(background) {
         product.meta.baseSrc = draft.meta && draft.meta.baseSrc;
         product.meta.groundShadow = draft.meta && draft.meta.groundShadow;
         product.meta.rotate = draft.meta && draft.meta.rotate;
-        /* 只換影子顏色：商品本體邊界也沿用換色前的值，
-           避免新一輪像素偵測的 1～2px 誤差被放大成畫布上的閃跳。 */
-        product.meta.productRect = sourceProductRect;
+        /* 外框的位置／大小由畫布原封不動保留；productRect 則必須使用新影子圖
+           的本體座標。若仍拿舊圖的透明邊界座標去對齊新圖，商品本體反而會在
+           同一個外框裡縮放或位移，看起來像跳回預設。 */
+        product.meta.productRect = draft.meta && draft.meta.productRect
+          ? JSON.parse(JSON.stringify(draft.meta.productRect))
+          : (liveMeta.productRect ? JSON.parse(JSON.stringify(liveMeta.productRect)) : null);
         updateExposureProductImageInPlace(win, product);
         changed++;
       })['catch'](function (err) {
