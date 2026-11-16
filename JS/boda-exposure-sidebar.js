@@ -23,7 +23,7 @@
     { key: 'text',      title: '文字內容' },
     { key: 'color',     title: '顏色' },
     { key: 'logo',      title: 'LOGO（最多3張）' },
-    { key: 'product',   title: '商品圖（最多3張）' },
+    { key: 'product',   title: '曝品圖（最多 3品 / 2人 / 1人+2品）' },            /* 2026-11-14：商品＋人物合成一區（人物區塊併進來，見 mergeExposureProductSection） */
     { key: 'character', title: '人物圖（最多2張）' },
     { key: 'endorser',  title: '代言人' }
   ];
@@ -65,6 +65,7 @@
   }
   function collapseAll(persist) { setOnlyOpen('', persist); }
   function openOnly(key, persist) {
+    if ((key === 'character' || key === 'endorser') && productMerged) key = 'product';   /* 人物（代言人）已併進「曝品圖」 */
     if (!shells[key]) return;
     var wasOpen = isOpen(key);
     setOnlyOpen(key, persist);
@@ -445,6 +446,57 @@
     return true;
   }
 
+  /* ── 2026-11-14：「曝品圖」＝商品＋人物一個區塊 ──
+     曝品圖是總稱：商品、人物（代言人照、簽名檔）屬性不同，要分開上傳才能辨識，
+     所以兩個上傳管道都放在「曝品圖」裡、各自一小塊，不再是兩個可以分別收合的區。
+     （目前曝光資源沒有舊的「人物圖」上傳入口，人物就是「代言人」那一區。）只搬既有節點，不重建。 */
+  var productMerged = false;
+  function mergeExposureProductSection() {
+    if (productMerged) return true;
+    var prod = shells.product, person = shells.endorser;
+    if (!prod || !person || !prod.filled || !person.filled) return false;
+    function sub(title, hint, nodes) {
+      var box = document.createElement('div');
+      box.className = 'boda-sub';
+      var h = document.createElement('div');
+      h.className = 'boda-sub-title';
+      h.textContent = title;
+      box.appendChild(h);
+      if (hint) {
+        var p = document.createElement('div');
+        p.className = 'boda-sub-hint';
+        p.textContent = hint;
+        box.appendChild(p);
+      }
+      nodes.forEach(function (n) { box.appendChild(n); });
+      return box;
+    }
+    var prodNodes = Array.prototype.slice.call(prod.body.childNodes);
+    var personNodes = Array.prototype.slice.call(person.body.childNodes);
+    /* 舊版曝光資源若還有「人物圖」上傳入口，一起收進人物這一塊，不另外成一區 */
+    var chr = shells.character;
+    if (chr && chr.filled) personNodes = Array.prototype.slice.call(chr.body.childNodes).concat(personNodes);
+    if (chr) { chr.root.hidden = true; chr.root.classList.add('boda-acc-merged'); }
+    var intro = document.createElement('div');
+    intro.className = 'boda-sub-intro';
+    intro.textContent = '商品和人物要分開上傳。';
+    prod.body.appendChild(intro);
+    prod.body.appendChild(sub('商品', '商品去背圖，會自動加影子。', prodNodes));
+    prod.body.appendChild(sub('人物（代言人照、簽名檔）', '', personNodes));
+    person.root.hidden = true;
+    person.root.classList.add('boda-acc-merged');
+    productMerged = true;
+    return true;
+  }
+  /* 進到曝光資源時預設打開「曝品圖」。主頁每次切到曝光資源也會呼叫這個。 */
+  var defaultOpened = false;
+  window.__bodaExposureOpenDefault = function () {
+    if (!shells.product || !shells.product.filled) return false;
+    openOnly('product', false);
+    defaultOpened = true;
+    return true;
+  };
+
   function renameLevelTitle() {
     var lv = document.getElementById('lv-section');
     if (lv && String(lv.textContent || '').trim() === '等級') lv.textContent = '活動等級';
@@ -462,7 +514,9 @@
     setupCharacterSection();
     tryPluginSection(scroll, 'endorser', '代言人', 'bn-endorser-section');
     setupEndorserNoteDots();
-    return SECTIONS.every(function (s) { return shells[s.key].filled; }) && !!charUi && !!noteUi;
+    mergeExposureProductSection();
+    if (!defaultOpened && productMerged) window.__bodaExposureOpenDefault();
+    return SECTIONS.every(function (s) { return shells[s.key].filled; }) && !!charUi && !!noteUi && productMerged;
   }
 
   function start() {
@@ -484,4 +538,190 @@
   start.n = 0;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
+
+  /* ══ 背景圖調整面板（2026-11-14） ══════════════════════════════
+     背景圖的縮放／移動在「滑鼠移到版位上」時，版位右側出現的「背景圖調整」小面板（← → ↑ ↓）。
+     面板固定出現在版位右側；版位很寬時可能跑出畫面外看不到，這裡把它拉回畫面內（改放版位內側），
+     並在背景圖區塊加一句說明，讓人知道要把滑鼠移到版位上。 */
+  function placeBgPanel(panel) {
+    if (!panel || panel.style.display === 'none') return;
+    var block = panel.closest('.preview-block');
+    if (!block) return;
+    var br = block.getBoundingClientRect();
+    var pw = panel.offsetWidth || 150;
+    var limit = window.innerWidth - 8;   /* 疊在右側工具列上沒關係（面板在最上層），只處理跑出畫面外 */
+    var left = parseFloat(panel.style.left) || 0;
+    if (left + pw <= limit) return;                       /* 右邊放得下就不動 */
+    var inside = Math.min(br.right - pw - 8, limit - pw); /* 改放版位內側右上 */
+    var top = Math.max(br.top + 44, Math.min(parseFloat(panel.style.top) || 0, br.bottom - (panel.offsetHeight || 180) - 8));
+    var nl = Math.round(Math.max(br.left + 8, inside)) + 'px';
+    var nt = Math.round(top) + 'px';
+    if (panel.style.left !== nl) panel.style.left = nl;
+    if (panel.style.top !== nt) panel.style.top = nt;
+  }
+  function watchBgPanels() {
+    var seen = typeof WeakSet === 'function' ? new WeakSet() : null;
+    var mo = new MutationObserver(function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.bn-bg-panel'), function (panel) {
+        if (seen && seen.has(panel)) return;
+        if (seen) seen.add(panel);
+        new MutationObserver(function () { placeBgPanel(panel); })
+          .observe(panel, { attributes: true, attributeFilter: ['style'] });
+        placeBgPanel(panel);
+      });
+    });
+    mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+  }
+  function addBgHint() {
+    var sh = shells.bg;
+    if (!sh || !sh.filled || !sh.body) { if (addBgHint.n++ < 120) setTimeout(addBgHint, 250); return; }
+    if (sh.body.querySelector('.boda-bg-move-hint')) return;
+    var hint = document.createElement('div');
+    hint.className = 'boda-sub-hint boda-bg-move-hint';
+    hint.style.padding = '6px 12px 4px';
+    hint.textContent = '套用背景圖後，滑鼠移到中間的版位上，會出現「背景圖調整」，可縮放、用 ← → ↑ ↓ 移動位置（按住 Shift 一次移 5%）。';
+    sh.body.appendChild(hint);
+  }
+  addBgHint.n = 0;
+  if (document.body) watchBgPanels(); else document.addEventListener('DOMContentLoaded', watchBgPanels);
+  /* 2026-11-14：背景圖區塊的說明文字依需求拿掉（addBgHint 保留不呼叫） */
+
+  /* ══ 版位連動提醒（2026-11-14） ══════════════════════════════
+     曝光資源預設所有版位的商品／人物／代言人小字位置連動。使用者在 A 版位調過，
+     再去 B 版位拖曳時，往往不知道 A 也會跟著動。第一次換到另一張版位操作時先擋下來問：
+     「改為單張編輯」＝取消所有版位連動（之後每張各自調整，可再按版位右上「版位連動」接回）；
+     「維持連動」＝照舊。被擋下的那一下不會生效，選完請再操作一次。
+     2026-11-15：改成每次換到另一張都問；按鈕改成「固定上一張」（先調好的固定，這張繼續帶動其他版位）。 */
+  /* last＝真的被拖動／縮放／旋轉過的版位（收到該版位的位置更新才算，單純點選不算）；
+     pending＝剛按下的版位，等它送出位置更新才記成 last。 */
+  /* 2026-11-15：每次換到「另一張」版位操作時都要問（不再只問一次）。
+     edited＝真的調過的版位（收到位置更新才算），依時間排序；
+     換到 X 操作時，只要有「調過、還在連動、不是同系列」的其他版位，就先擋下來問。
+     allowed＝已經問過、這次可以直接操作的版位；之後在別張調過東西，再回到這張會再問。 */
+  var linkAsk = { edited: [], pending: '', allowed: '', open: false };
+  var LINK_EDIT_TYPES = ['bn-product-layout-update', 'bn-product-rotate', 'bn-character-layout-update',
+    'bn-endorser-rotate', 'bn-endorser-note-layout-update'];
+  window.addEventListener('message', function (e) {
+    var d = e && e.data;
+    if (!d || LINK_EDIT_TYPES.indexOf(d.type) === -1 || d.snapshotOnly) return;
+    if (window._bnExporting || window._bnSuppressProductLayoutWrite) return;
+    var id = d.bnid != null ? String(d.bnid) : '';
+    if (!id || id !== linkAsk.pending) return;
+    var label = layoutLabel(id);   /* 記下名稱：上傳 LOGO 後這張可能換成同系列另一張而從畫面消失 */
+    linkAsk.edited = linkAsk.edited.filter(function (x) { return x.id !== id; });
+    linkAsk.edited.push({ id: id, label: label, family: layoutFamily(label) });
+    if (linkAsk.allowed && linkAsk.allowed !== id) linkAsk.allowed = '';
+  });
+  var LINK_TARGETS = '.bn-prod-box,.bn-char-box,.bn-endorser-note';
+  function frameBnid(ifr) {
+    try { return new URLSearchParams((ifr.getAttribute('src') || '').split('?')[1] || '').get('bnid') || ''; } catch (e) { return ''; }
+  }
+  function layoutIsLinked(id) {
+    /* 首頁LOGO牆、SearchICON_PRODUCT 本來就不參與商品連動 */
+    if (/首頁logo牆|searchicon_product/i.test(layoutLabel(id))) return false;
+    try { return typeof window._bnIsProductLayoutLocked === 'function' ? !!window._bnIsProductLayoutLocked(id) : false; } catch (e) { return false; }
+  }
+  function linkedLayoutIds() {
+    try {
+      return (window.loadLayouts() || []).filter(function (l) { return l && l.enabled !== false; })
+        .map(function (l) { return String(l.id); })
+        .filter(function (id) { return !!document.getElementById('iframe-' + id) && layoutIsLinked(id); });
+    } catch (e) { return []; }
+  }
+  /* 同系列（例如 ddcard方logo／ddcard橫logo／ddcard無logo）算同一種版位，換來換去不算「編輯第二張」 */
+  function layoutFamily(label) {
+    return String(label || '').replace(/[_\s-]*(橫式|方式|橫|方|無)?logo(排版)?$/i, '').toLowerCase();
+  }
+  function layoutLabel(id) {
+    var ifr = document.getElementById('iframe-' + id);
+    var block = ifr && ifr.closest('.preview-block');
+    var n = block && block.querySelector('.pname');
+    return n ? n.textContent.trim() : '前一張版位';
+  }
+  /* 回傳 'keep'（確定全部覆蓋）| 'prev'（僅套用至未完成版位）| 'all'（解除所有連動）| 'cancel'（Esc）
+     2026-11-15：改成「固定上一張」——先調好的那張解除連動、固定下來，正在調的這張繼續帶動其他版位。 */
+  function linkDialog(prevName, curName) {
+    return new Promise(function (resolve) {
+      var wrap = document.createElement('div');
+      wrap.id = 'boda-link-ask';
+      wrap.setAttribute('role', 'dialog');
+      wrap.setAttribute('aria-modal', 'true');
+      wrap.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,22,.45);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+      var btn = 'border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;cursor:pointer;';
+      wrap.innerHTML =
+        '<div style="width:440px;max-width:100%;background:#fff;color:#1f2a28;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.25);padding:22px 22px 18px">' +
+        '<h3 style="margin:0 0 8px;font-size:16px">是否覆蓋已排好的版位？</h3>' +
+        '<p class="b" style="margin:0;font-size:13px;line-height:1.7;color:#4b5a57;white-space:pre-line"></p>' +
+        '<div style="display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:18px">' +
+        /* 2026-11-15 文案（Iona）：主要建議＝僅套用至未完成版位（橘底）、次要＝解除所有連動（橘框）、不建議＝確定全部覆蓋（灰底白字，不起眼） */
+        '<button type="button" data-v="keep" style="' + btn + 'border:1px solid #b8c2c0;background:#b8c2c0;color:#fff">確定全部覆蓋</button>' +
+        '<button type="button" data-v="all" style="' + btn + 'border:1px solid #ee4d2d;background:#fff;color:#ee4d2d;font-weight:700">解除所有連動</button>' +
+        '<button type="button" data-v="prev" style="' + btn + 'border:1px solid #ee4d2d;background:#ee4d2d;color:#fff;font-weight:700">僅套用至未完成版位</button>' +
+        '</div></div>';
+      wrap.querySelector('.b').textContent =
+        '系統預設會同步更新所有版位。為避免辛苦排好的內容被覆蓋，請選擇連動修改範圍：';
+      function close(v) { document.removeEventListener('keydown', onKey, true); wrap.remove(); resolve(v); }
+      /* Esc：什麼都不選、直接關掉（不當成「確定全部覆蓋」），下次操作會再問 */
+      function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); close('cancel'); } }
+      wrap.addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (b) close(b.getAttribute('data-v')); });
+      document.addEventListener('keydown', onKey, true);
+      document.body.appendChild(wrap);
+      try { wrap.querySelector('[data-v="prev"]').focus(); } catch (e) {}
+    });
+  }
+  function unlinkOneLayout(id) {
+    try {
+      if (typeof window._bnSetProductLayoutLock === 'function') window._bnSetProductLayoutLock(id, false);
+      else { window._bnProductLayoutLocks = window._bnProductLayoutLocks || {}; window._bnProductLayoutLocks[id] = false; }
+    } catch (e) {}
+    try { if (typeof window._bnRefreshProductLayoutLockUI === 'function') window._bnRefreshProductLayoutLockUI(); } catch (e) {}
+  }
+  function unlinkAllLayouts() {
+    var ids = linkedLayoutIds();
+    ids.forEach(function (id) {
+      try {
+        if (typeof window._bnSetProductLayoutLock === 'function') window._bnSetProductLayoutLock(id, false);
+        else { window._bnProductLayoutLocks = window._bnProductLayoutLocks || {}; window._bnProductLayoutLocks[id] = false; }
+      } catch (e) {}
+    });
+    try { if (typeof window._bnRefreshProductLayoutLockUI === 'function') window._bnRefreshProductLayoutLockUI(); } catch (e) {}
+  }
+  function onLayoutPointerDown(ifr, e) {
+    var t = e.target;
+    if (!t || !t.closest || !t.closest(LINK_TARGETS)) return;
+    var id = frameBnid(ifr);
+    if (!id) return;
+    if (linkAsk.open) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    linkAsk.pending = id;
+    if (linkAsk.allowed === id || !layoutIsLinked(id)) return;
+    var curLabel = layoutLabel(id), curFamily = layoutFamily(curLabel);
+    /* 會被一起改到的：調過、還在畫面上且仍在連動、不是這張也不是同系列（ddcard 方／橫／無 LOGO 算同一張） */
+    var prevs = linkAsk.edited.filter(function (x) {
+      if (x.id === id || x.family === curFamily) return false;
+      if (!document.getElementById('iframe-' + x.id)) return false;
+      return layoutIsLinked(x.id);
+    });
+    if (!prevs.length || linkedLayoutIds().length < 2) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    linkAsk.open = true;
+    var names = prevs.map(function (x) { return x.label; }).join('」、「');
+    linkDialog(names, curLabel).then(function (v) {
+      linkAsk.open = false;
+      if (v === 'cancel') return;                      /* Esc 關掉：不做任何改變，下次操作再問 */
+      linkAsk.allowed = id;                            /* 選完再操作這張不會再問；去別張調過再回來會再問 */
+      if (v === 'all') unlinkAllLayouts();
+      else if (v === 'prev') prevs.forEach(function (x) { unlinkOneLayout(x.id); });   /* 固定先前調過的；這張繼續連動 */
+    });
+  }
+  function hookLayoutFrames() {
+    Array.prototype.forEach.call(document.querySelectorAll('.preview-block iframe'), function (ifr) {
+      var doc;
+      try { doc = ifr.contentDocument; } catch (e) { return; }
+      if (!doc || !doc.documentElement || ifr.__bodaLinkDoc === doc) return;
+      ifr.__bodaLinkDoc = doc;
+      doc.addEventListener('pointerdown', function (e) { onLayoutPointerDown(ifr, e); }, true);
+    });
+  }
+  setInterval(hookLayoutFrames, 1000);
 })();

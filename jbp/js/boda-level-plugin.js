@@ -44,7 +44,10 @@
     { key: 'fbpost',      test: /^FB_POST/i },
     { key: 'searchicon',  test: /^SearchICON_/i },
     { key: 'searchimage', test: /^Search_Image/i },
-    { key: 'campaigncard', test: /^SCBN_APP/i },
+    /* Campaign Card 和 SCBN 是不同的版位：Campaign Card 還沒有公版（建立後檔名以 Campaign Card 開頭），
+       SCBN 的公版是 SCBN_APP.html。 */
+    { key: 'campaigncard', test: /^Campaign[\s_-]*Card/i },
+    { key: 'scbn',        test: /^SCBN/i },
     { key: 'lpbnapp',     test: /^LPBN_APP/i },
     { key: 'lpbnpc',      test: /^LPBN_PC/i },
     { key: 'lpbn',        test: /^LPBN_/i }
@@ -91,7 +94,8 @@
     if (word('ar')) out.push('ar');
     if (/coin/.test(c)) out.push('coin');
     if (word('ig') || /instagram/.test(c)) out.push('ig');
-    if (/sc[bp]n|campaigncard/.test(c)) out.push('scbn');
+    if (/scbn/.test(c)) out.push('scbn');
+    if (/campaigncard|scpn/.test(c)) out.push('campaigncard');
     if (/sba/.test(c)) out.push('sba');
     if (/searchicon/.test(c)) out.push('searchicon');
     if (/searchimage|searchimg/.test(c)) out.push('searchimage');
@@ -112,6 +116,7 @@
     if (/^coin/.test(f)) return 'coin';
     if (/^ig/.test(f)) return 'ig';
     if (/^scbn/.test(f)) return 'scbn';
+    if (/^campaign_?card/.test(f)) return 'campaigncard';
     if (/^sba/.test(f)) return 'sba';
     if (/^searchicon/.test(f)) return 'searchicon';
     if (/^search_?image/.test(f)) return 'searchimage';
@@ -231,6 +236,24 @@
     sel.disabled = true;
     sel.setAttribute('aria-disabled', 'true');
     sel.title = '活動等級由工單決定，曝光資源僅供查看';
+    /* 不再顯示下拉選單：改成純文字，顯示首頁選好的活動等級（下拉仍留在頁面上給程式同步用，只是藏起來） */
+    sel.style.display = 'none';
+    var shown = document.getElementById('lv-display');
+    if (!shown) {
+      shown = document.createElement('div');
+      shown.id = 'lv-display';
+      shown.title = '活動等級在首頁設定';
+      shown.style.cssText = 'padding:8px 12px;border:1px solid #e3e8e7;border-radius:8px;background:#f5f7f7;' +
+        'font-size:13px;font-weight:700;color:#1f2a28;line-height:1.4;';
+      sel.parentNode.insertBefore(shown, sel.nextSibling);
+    }
+    paintLevelDisplay();
+  }
+  function paintLevelDisplay() {
+    var shown = document.getElementById('lv-display');
+    if (!shown) return;
+    var lv = LEVELS.filter(function (l) { return l.id === currentLevelId; })[0];
+    shown.textContent = lv ? lv.label : '未選擇';
   }
 
   function applyLevel(id, broadcast) {
@@ -247,6 +270,7 @@
     try { localStorage.setItem(LEVEL_KEY, currentLevelId); } catch (e) {}
     var sel = document.getElementById('lv-select');
     if (sel && sel.value !== currentLevelId) sel.value = currentLevelId;
+    paintLevelDisplay();
     /* 同頁的背景圖庫依 A／B 等級切換完整／精簡介面；事件可避免外掛載入順序造成漏同步。 */
     try {
       window.dispatchEvent(new CustomEvent('bn-level-change', { detail: { levelId: currentLevelId } }));
@@ -435,6 +459,7 @@
   }
 
   /* ── 版位名稱 ↔ 排版檔案 ───────────────────────────── */
+  var WORKORDER_ONLY_SLOTS = ['SCBN'];
   function filesForSlot(conf, name, layouts) {
     if (conf.files[name] && conf.files[name].length) {
       var want = conf.files[name].map(function (f) { return normKey(f.replace(/\.html$/i, '')); });
@@ -461,7 +486,8 @@
     var rows = [];
     var usedIds = {};
     var names = conf.order.slice();
-    (conf.conditional || []).forEach(function (name) {
+    /* 等級表（MS與BN曝光版位）沒有 SCBN 這一欄：工單有列 SCBN 才加進來，跟 T:W 的條件版位一樣。 */
+    (conf.conditional || []).concat(WORKORDER_ONLY_SLOTS).forEach(function (name) {
       var requestedByWorkorder = workorderSlotsOfName(name).some(function (slot) { return workorderListsSlot(slot); });
       if (requestedByWorkorder && names.indexOf(name) === -1) names.push(name);
     });

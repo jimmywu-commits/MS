@@ -99,3 +99,9 @@ html.embed-standalone #panel-footer .host-dl-btn:disabled { opacity: .35; cursor
    以 border 縮寫一次設定四邊 1px（覆蓋 border-left 3px），選取狀態改以背景＋框色區分；卡片內容、按鈕、縮圖、欄位、滑桿、排序不動。 */
 html.embed-standalone #panel-scroll .slot-card { border: 1px solid #DDE3E1; border-radius: 6px; background: #EEF3F2; box-shadow: none; outline: none; }
 html.embed-standalone #panel-scroll .slot-card.active { border: 1px solid #357872; background: #E6F2F0; }
+
+/* 2026-11-14：「吸底完成」橘色實心、「單獨下載吸底檔案」橘框橘字（比照曝光資源、活動頁） */
+html.embed-standalone #boda-bottom-done-btn { background: #ee4d2d; border-color: #ee4d2d; color: #FFFFFF; }
+html.embed-standalone #boda-bottom-done-btn:hover { background: #d8401f; border-color: #d8401f; color: #FFFFFF; }
+html.embed-standalone #panel-footer .host-dl-btn { background: #FFFFFF; background-image: none; border: 1px solid #ee4d2d; color: #ee4d2d; }
+html.embed-standalone #panel-footer .host-dl-btn:hover { background: #fff3ef; color: #ee4d2d; opacity: 1; }
