@@ -822,3 +822,22 @@ html[data-host="boda"] #preview-area { align-items: safe center; }
    aria-labelledby、搜尋、分類、清單、按鈕與關閉功能不動。 */
 html[data-host="boda"] #bn-bglib-title { font-size: 0; line-height: 0; }
 html[data-host="boda"] #bn-bglib-title::before { content: "背景圖庫"; font-size: 15px; font-weight: 800; line-height: 1.3; white-space: nowrap; }
+
+/* ── 2026-11-14 ──
+   1. 「曝光資源完成」橘色實心；「單獨下載曝光資源檔案」橘框橘字。
+   2. 展開中的區塊底色稍深，跟收合的區塊分得出來。
+   3. 「曝品圖」裡的人物／商品兩小塊。 */
+html[data-host="boda"] #boda-exposure-done-btn { background: #ee4d2d; border-color: #ee4d2d; color: #FFFFFF; }
+html[data-host="boda"] #boda-exposure-done-btn:hover { background: #d8401f; border-color: #d8401f; }
+html[data-host="boda"] #boda-exposure-done-btn:focus-visible { outline-color: #d8401f; }
+html[data-host="boda"] #bn-dl-all { background: #FFFFFF !important; background-image: none !important; border: 1px solid #ee4d2d !important; color: #ee4d2d !important; }
+html[data-host="boda"] #bn-dl-all:hover { background: #fff3ef !important; }
+html[data-host="boda"] .boda-acc.is-open { background: #eef2f1; }
+html[data-host="boda"] .boda-acc.is-open > .boda-acc-head { background: #e6ecea; }
+html[data-host="boda"] .boda-sub { margin: 8px 12px 6px; padding: 8px 0 6px; background: #FFFFFF; border: 1px solid #e1e8e6; border-radius: 8px; }
+html[data-host="boda"] .boda-sub-title { padding: 0 12px 6px; font-size: 12px; font-weight: 700; color: #357872; }
+html[data-host="boda"] .boda-acc-merged { display: none !important; }
+html[data-host="boda"] .boda-sub > .bn-section { margin-top: 0; }
+html[data-host="boda"] .boda-sub-intro { margin: 8px 12px 0; font-size: 11.5px; color: #5b6b67; line-height: 1.6; }
+html[data-host="boda"] .boda-sub-hint { padding: 0 12px 6px; margin-top: -2px; font-size: 11px; color: #7a8a86; line-height: 1.5; }
+html[data-host="boda"] .boda-sub > #bn-endorser-section { margin: 0; padding: 0 12px; }

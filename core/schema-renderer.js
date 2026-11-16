@@ -826,6 +826,40 @@
     return parts.join(',');
   }
 
+  /* 2026-11-14：MSBN 圓標文字刪光時，圓標底色一起隱藏，文字位置改顯示「＋」可再點回來打字。
+     找出某個圓標底色層對應的圓標文字層（同 badgeColorN／badgeN 編號；只有一組時直接配對；否則取最近的）。 */
+  function isMsbnSchema(opts) {
+    return /^msbn/i.test(String(opts && opts._schemaId || ''));
+  }
+  function badgeTextLayerForBg(bgLayer, opts) {
+    var layers = (opts && opts._schemaLayers) || [];
+    var texts = layers.filter(function (candidate) {
+      return candidate.type === 'text' && themeRoleOf(candidate, opts && opts._schemaId) === 'badgeText';
+    });
+    if (!texts.length) return null;
+    if (texts.length === 1) return texts[0];
+    var bgSuffix = (String(bgLayer && bgLayer.field || '').match(/(\d+)$/) || [])[1] || '';
+    var exact = texts.filter(function (t) {
+      return ((String(t.field || '').match(/(\d+)$/) || [])[1] || '') === bgSuffix;
+    });
+    if (exact.length === 1) return exact[0];
+    var cx = Number(bgLayer.left || 0) + Number(bgLayer.width || 0) / 2;
+    var cy = Number(bgLayer.top || 0) + Number(bgLayer.height || 0) / 2;
+    return texts.reduce(function (best, t) {
+      var dx = Number(t.left || 0) + Number(t.width || 0) / 2 - cx;
+      var dy = Number(t.top || 0) + Number(t.height || 0) / 2 - cy;
+      var d = dx * dx + dy * dy;
+      return !best || d < best.d ? { l: t, d: d } : best;
+    }, null).l;
+  }
+  function badgeTextIsCleared(textLayer, data, fieldPrefix) {
+    if (!textLayer || !data) return false;
+    var key = resolveFieldKey(textLayer, fieldPrefix);
+    if (!key) return false;
+    var raw = data[key];
+    return raw != null && String(raw).trim() === '';   /* 沒有這個欄位（顯示預設字）不算刪光 */
+  }
+
   function badgeBackgroundColorForText(textLayer, opts, data, fieldPrefix) {
     var layers = (opts && opts._schemaLayers) || [];
     var badgeBgs = layers.filter(function (candidate) {
@@ -1281,6 +1315,11 @@
        那個框現在是可以直接拖圖片進來的圖片欄位，字疊在上面反而礙眼。
        保留資料不刪，之後想恢復把這個旗標拿掉就好。 */
     if (layer.hidden) return '';
+
+    /* MSBN 圓標：文字刪光 → 不畫圓標底色（編輯畫面與下載成品都一樣） */
+    if (isMsbnSchema(opts) && layer.type !== 'text' &&
+        themeRoleOf(layer, opts && opts._schemaId) === 'badgeBg' &&
+        badgeTextIsCleared(badgeTextLayerForBg(layer, opts), data, fieldPrefix)) return '';
 
     /* hideIfField：例如 LOGO 佔位文字，一旦 logoImg 欄位有值，這層文字就不畫出來 */
     if (layer.hideIfField) {
@@ -1852,6 +1891,10 @@
             'pointer-events:auto'
           ]
       };
+      /* MSBN 圓標文字刪光：內層顯示「＋」（CSS :empty::before），點下去就能重新打字 */
+      if (isMsbnSchema(opts) && directColorRole === 'badgeText' && badgeTextIsCleared(layer, data, fieldPrefix)) {
+        editableTextInner.attrs += ' data-bn-badge-plus="1" title="點擊輸入圓標文字"';
+      }
       /* 外層不接收滑鼠，避免點擊空白處時把焦點落在不可編輯的容器上；
          內層寬度覆蓋真正文字所需的範圍，實際字面仍由它接收輸入。 */
       style.push('pointer-events:none');
