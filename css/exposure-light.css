@@ -258,10 +258,14 @@ html[data-host="boda"] .bn-bglib-card.selected { border-color: #357872; box-shad
 html[data-host="boda"] .bn-bglib-thumb { background: #F4F6F5; }   /* 縮圖容器底，縮圖本身不變 */
 html[data-host="boda"] .bn-bglib-check { background: #357872; color: #FFFFFF; }
 html[data-host="boda"] .bn-bglib-foot { background: #EEF3F2; border-top-color: #DDE3E1; }
-html[data-host="boda"] .bn-bglib-upload { background: #1F7A44; color: #FFFFFF; }
-html[data-host="boda"] .bn-bglib-slab { background: #357872; color: #FFFFFF; }
-html[data-host="boda"] .bn-bglib-slab:hover { background: #2C6660; }
-html[data-host="boda"] .bn-bglib-apply { background: #357872; color: #FFFFFF; }
+/* 2026-11-16：背景圖庫右下按鈕——「套用選取」橘底白字（主要動作），另外兩顆橘框橘字；圖示改平面線條（見 bn-bg-library-plugin.js） */
+html[data-host="boda"] .bn-bglib-upload,
+html[data-host="boda"] .bn-bglib-slab { background: #FFFFFF; color: #EE4D2D; border: 1.5px solid #EE4D2D; display: inline-flex; align-items: center; gap: 6px; }
+html[data-host="boda"] .bn-bglib-upload:hover,
+html[data-host="boda"] .bn-bglib-slab:hover { background: #FFF1EC; }
+html[data-host="boda"] .bn-bglib-apply { background: #EE4D2D; color: #FFFFFF; border: 1.5px solid #EE4D2D; display: inline-flex; align-items: center; gap: 6px; }
+html[data-host="boda"] .bn-bglib-apply:hover:not(:disabled) { background: #D83E21; border-color: #D83E21; }
+html[data-host="boda"] .bn-bglib-actions svg { width: 15px; height: 15px; flex: 0 0 auto; }
 html[data-host="boda"] .bn-bglib-hint { color: #5B6A67; }
 html[data-host="boda"] .bn-bglib-empty { border-color: #C3CDC9; color: #7A8A86; }
 

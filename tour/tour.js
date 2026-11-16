@@ -38,12 +38,12 @@
     return H.waitFor(function(){ return H.visible(H.$('#upload-level')); }, 3000);
   }
   /* 示範拖檔：拖到時框線變色 */
-  function dropOnto(a, zone, chip){
+  function dropOnto(a, zone, chip, keep){
     var el = H.$(zone);
-    return a.wait(500)
-      .then(function(){ return a.drag({ x: innerWidth - 140, y: 150 }, el, { chip: chip, ms: 1000, after: 0 }); })
-      .then(function(){ if(el) el.classList.add('dragover'); return a.wait(500); })
-      .then(function(){ if(el) el.classList.remove('dragover'); });
+    return a.wait(150)
+      .then(function(){ return a.drag({ x: innerWidth - 140, y: 150 }, el, { chip: chip, ms: 650, after: 0 }); })
+      .then(function(){ if(el) el.classList.add('dragover'); return keep ? null : a.wait(500); })
+      .then(function(){ if(el && !keep) el.classList.remove('dragover'); });
   }
   function clearDrop(){
     ['#import-drop', '#import-img-drop'].forEach(function(s){ var el = H.$(s); if(el) el.classList.remove('dragover'); });
@@ -62,7 +62,7 @@
     if(window.BODA_TOUR_DEMO) return Promise.resolve(window.BODA_TOUR_DEMO);
     return new Promise(function(res){
       var sc = document.createElement('script');
-      sc.src = scriptBase() + 'demo-data.js?v=20261115f';
+      sc.src = scriptBase() + 'demo-data.js?v=20261116c';
       sc.onload = function(){ res(window.BODA_TOUR_DEMO || null); };
       sc.onerror = function(){ res(null); };
       document.head.appendChild(sc);
@@ -123,7 +123,11 @@
   function E$(sel){ var d = expDoc(); return d ? d.querySelector(sel) : null; }
   function frameOffset(el){
     if(!el || el.ownerDocument === document) return { x: 0, y: 0 };
-    var f = expFrame(); if(!f) return { x: 0, y: 0 };
+    var f = expFrame(), doc = el.ownerDocument;
+    if(!f || f.contentDocument !== doc){
+      f = Array.prototype.filter.call(document.querySelectorAll('iframe'), function(x){ try{ return x.contentDocument === doc; }catch(e){ return false; } })[0] || f;
+    }
+    if(!f) return { x: 0, y: 0 };
     var r = f.getBoundingClientRect();
     return { x: r.left + f.clientLeft, y: r.top + f.clientTop };
   }
@@ -220,15 +224,15 @@
     function fire(type, x, y){
       try{ el.dispatchEvent(new win.PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1, isPrimary: true })); }catch(e){}
     }
-    return a.move(p0.x, p0.y, 700).then(function(){
+    return a.move(p0.x, p0.y, 450).then(function(){
       fire('pointerdown', sx, sy);
-      return a.wait(150);
+      return a.wait(100);
     }).then(function(){
-      return a.move(p1.x, p1.y, 1000, function(cx, cy){ var q = m.inn(cx, cy); fire('pointermove', q.x, q.y); });
+      return a.move(p1.x, p1.y, 600, function(cx, cy){ var q = m.inn(cx, cy); fire('pointermove', q.x, q.y); });
     }).then(function(){
       fire('pointerup', tx, ty);
       a.ripple();
-      return a.wait(450);
+      return a.wait(250);
     });
   }
   /* 拖角落把手縮放（以左上角為基準，拉到指定寬度） */
@@ -244,9 +248,9 @@
       try{ tgt.dispatchEvent(new win.PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1, isPrimary: true })); }catch(e){}
     }
     if(!h || Math.abs(dw) < 2) return a.wait(100);
-    return a.move(p0.x, p0.y, 600).then(function(){ fire('pointerdown', sx, sy); return a.wait(150); })
-      .then(function(){ return a.move(p1.x, p1.y, 900, function(cx, cy){ var q = m.inn(cx, cy); fire('pointermove', q.x, q.y); }); })
-      .then(function(){ fire('pointerup', tx, ty); a.ripple(); return a.wait(400); });
+    return a.move(p0.x, p0.y, 400).then(function(){ fire('pointerdown', sx, sy); return a.wait(100); })
+      .then(function(){ return a.move(p1.x, p1.y, 550, function(cx, cy){ var q = m.inn(cx, cy); fire('pointermove', q.x, q.y); }); })
+      .then(function(){ fire('pointerup', tx, ty); a.ripple(); return a.wait(250); });
   }
   /* 圖片裡真正有內容的範圍（去掉透明邊），回傳 0～1 的比例。
      商品圖有沒有被裁掉透明邊，各台電腦的處理結果可能不同，所以每次實際量。 */
@@ -313,8 +317,8 @@
       note:    { left: 0.520, top: 0.373 }
     }
   };
-  /* SCBN 底圖：示範左右移動（往左 5%，再移回來，完成圖跟預設位置一樣） */
-  var BG_FIX = { scbn: { steps: [{ axis: 'x', delta: -5 }, { axis: 'x', delta: 5 }] } };
+  /* SCBN 底圖：按「↓」往下移 3 格（3%） */
+  var BG_FIX = { scbn: { presetY: -111.6, steps: [{ axis: 'y', delta: 3 }], finalY: -108.6 } };
   function arrangeLayout(a, blk, spec){
     var person = blk.box, prod = blk.doc.querySelector('.bn-prod-box');
     return placeVisible(a, blk, person, spec.person)
@@ -373,8 +377,8 @@
     return H.waitFor(function(){ panel = blk.block.querySelector('.bn-bg-panel'); return panel && H.visible(panel) && panel; }, 3000)
       .then(function(){
         if(!panel) return;
-        spot([panel], true);
-        return a.wait(700)
+        return presetBgY(blk, panel, fix.presetY)
+          .then(function(){ return a.wait(500); })
           .then(function(){
             if(fix.scale == null) return;
             var auto = panel.querySelector('[data-fit="auto"]');
@@ -419,9 +423,34 @@
             return (tx != null ? nudgeTo(a, panel, 'x', tx) : Promise.resolve())
               .then(function(){ return ty != null ? nudgeTo(a, panel, 'y', ty) : null; });
           })
-          .then(function(){ return a.wait(400); })
-          .then(function(){ blk.block.dispatchEvent(new win.MouseEvent('mouseleave')); });
+          .then(function(){ return fix.finalY != null ? presetBgY(blk, panel, fix.finalY, true) : null; })
+          .then(function(){ return a.wait(400); });
       });
+  }
+  /* 背景圖垂直位置直接設成指定值（面板顯示的 %，例如 -111.6）。
+     舊式定位先送一次「↓」讓系統換成置中定位，再精準設定，水平位置不變。 */
+  function presetBgY(blk, panel, disp, onlyIfDiff){
+    if(disp == null) return Promise.resolve();
+    var win = blk.block.ownerDocument.defaultView, id = null;
+    try{ id = new URLSearchParams((blk.ifr.getAttribute('src') || '').split('?')[1] || '').get('bnid'); }catch(e){}
+    if(!id || !win._bnGetBgStates || !win._bnSetBgStates) return Promise.resolve();
+    function st(){ var all = win._bnGetBgStates() || {}; return all[id]; }
+    var s0 = st(); if(!s0 || !s0.src) return Promise.resolve();
+    if(onlyIfDiff && Math.abs(Number(s0.y) - 50 - disp) < 0.05) return Promise.resolve();
+    var p = Promise.resolve();
+    if(s0.positionMode !== 'center'){
+      var dn = panel.querySelector('.bg-nudge[data-axis="y"][data-delta="1"]');
+      if(dn) dn.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+      p = H.waitFor(function(){ var s = st(); return s && s.positionMode === 'center'; }, 2500);
+    }
+    return p.then(function(){
+      var all = win._bnGetBgStates() || {}, s = all[id]; if(!s) return;
+      s.positionMode = 'center'; s.y = 50 + disp; s._userEdited = true; s._initialized = true;
+      win._bnSetBgStates(all, id);
+      return H.wait(250).then(function(){
+        var yv = panel.querySelector('.bg-y-val'); if(yv) yv.textContent = Math.round(disp * 10) / 10 + '%';
+      });
+    });
   }
   /* 按箭頭把水平／垂直位置調到目標（面板顯示的 %）；差 5 以上用 Shift 一次 5% */
   function nudgeTo(a, panel, axis, target){
@@ -435,10 +464,17 @@
       if(!btn) return Promise.resolve();
       var big = Math.abs(d) >= 5, win = btn.ownerDocument.defaultView;
       var p = ptOf(btn);
-      return a.move(p.x, p.y, guard === 1 ? 450 : 150).then(function(){
+      return a.move(p.x, p.y, guard === 1 ? 450 : 200).then(function(){
         a.ripple();
+        /* 按下去的樣子：縮一下、變橘色，看得出有點到 */
+        var o = { t: btn.style.transform, bg: btn.style.background, c: btn.style.color, tr: btn.style.transition };
+        btn.style.transition = 'transform .1s, background .1s';
+        btn.style.transform = 'scale(.86)'; btn.style.background = '#EE4D2D'; btn.style.color = '#fff';
         btn.dispatchEvent(new win.MouseEvent('click', { bubbles: true, shiftKey: big }));
-        return a.wait(260);
+        return a.wait(180).then(function(){
+          btn.style.transform = o.t; btn.style.background = o.bg; btn.style.color = o.c;
+          return a.wait(260).then(function(){ btn.style.transition = o.tr; });
+        });
       }).then(step);
     }
     return chain.then(step);
@@ -550,7 +586,7 @@
       /* 一律平順地追上目標：移動到別的元素、或目標本身變大（例如匯入後下方出現狀態）都不會一下子跳過去 */
       if(!proxyFrom) proxyRect = proxyRect || goal;
       else { proxyRect = proxyFrom; proxyFrom = null; }
-      var f = proxyRect, e = 0.32;
+      var f = proxyRect, e = 1;   // 直接對準新位置，不在途中變形（避免 Z 字形移動）
       proxyRect = { l: f.l + (goal.l - f.l) * e, t: f.t + (goal.t - f.t) * e, r: f.r + (goal.r - f.r) * e, b: f.b + (goal.b - f.b) * e };
       proxy.style.left = proxyRect.l + 'px'; proxy.style.top = proxyRect.t + 'px';
       proxy.style.width = (proxyRect.r - proxyRect.l) + 'px'; proxy.style.height = (proxyRect.b - proxyRect.t) + 'px';
@@ -638,17 +674,532 @@
   function demoImageCount(){ return window.BODA_TOUR_DEMO ? window.BODA_TOUR_DEMO.images.length : 0; }
   function demoWorkOrderName(){ return window.BODA_TOUR_DEMO ? window.BODA_TOUR_DEMO.xlsx.name : '工單.xlsx'; }
 
+
+  /* ══════════════════ 活動頁資源 ══════════════════ */
+  function impSlot(i){ return document.querySelector('#import-preview-list .imp-slot[data-col="' + i + '"]'); }
+  function impReady(){
+    return H.waitFor(function(){ return currentView() === 'import' && impSlot(4) && impSlot(4).offsetParent; }, 15000)
+      .then(function(){ return H.wait(300); });
+  }
+  function goImport(){
+    if(currentView() !== 'import' && typeof goToWorkflowStep === 'function') try{ goToWorkflowStep('import'); }catch(e){}
+    return impReady();
+  }
+  /* 第 N 格捲到畫面中間；lock：同時鎖定這一格，右側工具列跟著切到這格 */
+  function showSlot(i, lock){
+    var el = impSlot(i);
+    if(el) try{ el.scrollIntoView({ block: 'center' }); }catch(e){}
+    if(lock && typeof lockImportCol === 'function') try{ lockImportCol(i); }catch(e){}
+    return H.wait(450);
+  }
+  function msbnSlot(){ return impSlot(4); }
+  function signToolRow(){
+    var col = document.querySelector('#import-block-tools .import-band-tool-col[data-col="4"]');
+    var row = col && col.querySelector('.import-image-tool-row[data-key="signImg"]');
+    return row ? (row.closest('.import-image-tool-group') || row) : null;
+  }
+  function colorRow(key){ return document.querySelector('#import-color-list .ic-color-row[data-key="' + key + '"]'); }
+  function setRowHex(key, v){
+    var row = colorRow(key), hex = row && row.querySelector('.icc-hex');
+    if(!hex) return;
+    hex.value = v;
+    hex.dispatchEvent(new Event('input', { bubbles: true }));
+    hex.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  /* 畫布上點色塊會開瀏覽器原生色盤（導覽無法操作），這裡用一個長得像色盤的小框示範輸入色碼 */
+  var fakePick = null;
+  function closeFakePicker(){ if(fakePick){ fakePick.remove(); fakePick = null; } }
+  function openFakePicker(pt, title, from){
+    closeFakePicker();
+    var box = document.createElement('div');
+    box.id = 'boda-tour-fakepick';
+    box.style.cssText = 'position:fixed;z-index:2147479990;width:212px;padding:12px;background:#fff;border-radius:10px;' +
+      'box-shadow:0 10px 30px rgba(0,0,0,.28);font:12px/1.4 sans-serif;color:#1f2937;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;';
+    box.innerHTML = '<div style="font-weight:700;margin-bottom:8px">' + title + '</div>' +
+      '<div class="fp-sw" style="height:72px;border-radius:6px;border:1px solid #e5e7eb;background:' + from + ';transition:background .25s"></div>' +
+      '<div style="display:flex;gap:6px;align-items:center;margin-top:8px"><span style="color:#6b7280">色碼</span>' +
+      '<input class="fp-hex" type="text" value="' + from + '" style="flex:1;min-width:0;height:28px;padding:3px 7px;border:1px solid #d1d5db;border-radius:5px;font:12px monospace"></div>';
+    document.body.appendChild(box);
+    var x = Math.min(innerWidth - 230, Math.max(8, pt.x + 14)), y = Math.min(innerHeight - 150, Math.max(8, pt.y + 14));
+    box.style.left = x + 'px'; box.style.top = y + 'px';
+    var hex = box.querySelector('.fp-hex'), sw = box.querySelector('.fp-sw');
+    hex.addEventListener('input', function(){ if(/^#[0-9a-f]{6}$/i.test(hex.value)) sw.style.background = hex.value; });
+    requestAnimationFrame(function(){ box.style.opacity = '1'; box.style.transform = 'none'; });
+    fakePick = box;
+    return box;
+  }
+  /* 在畫布上的可編輯文字裡一個字一個字打字 */
+  function typeEditable(a, el, text){
+    var p = ptOf(el);
+    return a.move(p.x, p.y, 650).then(function(){
+      a.ripple();
+      el.focus();
+      try{ var r = document.createRange(); r.selectNodeContents(el); r.collapse(false); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }catch(e){}
+      var i = 0;
+      return new Promise(function(res){
+        (function next(){
+          if(i >= text.length) return res();
+          var ch = text.charAt(i++);
+          if(!document.execCommand('insertText', false, ch)){ el.textContent += ch; el.dispatchEvent(new Event('input', { bubbles: true })); }
+          setTimeout(next, 110);
+        })();
+      });
+    }).then(function(){ return a.wait(400); }).then(function(){ el.blur(); return a.wait(500); });
+  }
+
+  /* ── 活動頁畫布：圖片拖曳／縮放、文字刪字（送真的滑鼠事件給畫布，資料會真的改） ── */
+  function impGeo(slot){
+    var m = slot && slot.querySelector('.imp-mount'); if(!m) return null;
+    var r = m.getBoundingClientRect();
+    return { x: r.left, y: r.top, s: r.width / (m.offsetWidth || 1200) };
+  }
+  function impOverlay(){ var o = document.querySelector('.bn-import-transform-overlay'); return o && o.style.display !== 'none' ? o : null; }
+  function impBody(img){ var o = impOverlay(); return o ? o.getBoundingClientRect() : img.getBoundingClientRect(); }
+  function impDeselect(){
+    try{ document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 2, clientY: 2 })); }catch(e){}
+  }
+  /* 點一下圖片：出現四角把手 */
+  function impSelect(a, img){
+    var r = img.getBoundingClientRect();
+    return a.move(r.left + r.width / 2, r.top + r.height / 2, 400).then(function(){
+      a.ripple();
+      img.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      return a.wait(250);
+    });
+  }
+  /* 拉右下角把手縮放到指定寬度（px，畫面上的） */
+  function impResize(a, img, targetW){
+    var o = impOverlay(), h = o && o.querySelector('[data-bn-corner="se"]');
+    if(!h) return a.wait(100);
+    var r = o.getBoundingClientRect(), k = targetW / (r.width || 1);
+    if(Math.abs(k - 1) < 0.02) return a.wait(100);
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2, hx = r.right, hy = r.bottom;
+    var tx = cx + (hx - cx) * k, ty = cy + (hy - cy) * k;
+    function fire(t, x, y){ try{ h.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 0, buttons: t === 'pointerup' ? 0 : 1, isPrimary: true })); }catch(e){} }
+    return a.move(hx, hy, 350).then(function(){ fire('pointerdown', hx, hy); return a.wait(100); })
+      .then(function(){ return a.move(tx, ty, 550, function(x, y){ fire('pointermove', x, y); }); })
+      .then(function(){ fire('pointerup', tx, ty); return a.wait(200); });
+  }
+  /* 按住拖曳：mousedown 在元素上，之後在 document 上移動 */
+  function impDrag(a, el, grabEl, dx, dy, silent){
+    var r = el.getBoundingClientRect(), sx = r.left + r.width / 2, sy = r.top + r.height / 2;
+    function mv(x, y){ document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: x, clientY: y, buttons: 1 })); }
+    function down(){ (grabEl || el).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: sx, clientY: sy, button: 0, buttons: 1 })); }
+    function up(){ document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: sx + dx, clientY: sy + dy })); }
+    if(Math.abs(dx) < 1.5 && Math.abs(dy) < 1.5) return Promise.resolve();
+    if(silent){ down(); for(var i = 1; i <= 6; i++) mv(sx + dx * i / 6, sy + dy * i / 6); up(); return H.wait(120); }
+    return a.move(sx, sy, 400).then(function(){ down(); return a.wait(100); })
+      .then(function(){ return a.move(sx + dx, sy + dy, 600, function(x, y){ mv(x, y); }); })
+      .then(function(){ up(); a.ripple(); return a.wait(250); });
+  }
+  /* 圖片排到指定位置／寬度（spec 是版位原尺寸 1200 寬的座標：left/top/width） */
+  function impPlaceImg(a, slot, img, spec){
+    var g = impGeo(slot); if(!g || !img) return a.wait(100);
+    return impSelect(a, img)
+      .then(function(){ return spec.width ? impResize(a, img, spec.width * g.s) : null; })
+      .then(function(){
+        var r = impBody(img);
+        return impDrag(a, img, img, g.x + spec.left * g.s - r.left, g.y + spec.top * g.s - r.top);
+      })
+      .then(function(){ return H.wait(200); })
+      .then(function(){
+        /* 誤差補正（看不出來的小修） */
+        var r = impBody(img);
+        return impDrag(a, img, img, g.x + spec.left * g.s - r.left, g.y + spec.top * g.s - r.top, true);
+      });
+  }
+  /* 文字／簽名圖：只移動位置 */
+  function impPlaceEl(a, slot, el, grabEl, spec){
+    var g = impGeo(slot); if(!g || !el) return a.wait(100);
+    var r = el.getBoundingClientRect();
+    return impDrag(a, el, grabEl, g.x + spec.left * g.s - r.left, g.y + spec.top * g.s - r.top);
+  }
+  /* 可編輯文字：游標放到某段字後面，往回刪 n 個字（或 n=null 刪到空） */
+  function impDeleteText(a, el, after, n){
+    var node = null, idx = -1, tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), t;
+    while((t = tw.nextNode())){
+      var i = after ? t.nodeValue.indexOf(after) : -1;
+      if(after && i >= 0){ node = t; idx = i + after.length; break; }
+      if(!after){ node = t; idx = t.nodeValue.length; }
+    }
+    if(!node) return a.wait(200);
+    var rg = document.createRange(); rg.setStart(node, Math.max(0, idx - 1)); rg.setEnd(node, idx);
+    var rr = rg.getBoundingClientRect();
+    return a.move(rr.right, rr.top + rr.height / 2, 650).then(function(){
+      a.ripple();
+      el.focus();
+      var c = document.createRange(); c.setStart(node, idx); c.collapse(true);
+      var sel = getSelection(); sel.removeAllRanges(); sel.addRange(c);
+      return a.wait(400);
+    }).then(function(){
+      var k = 0;
+      return new Promise(function(res){
+        (function next(){
+          var left = (el.innerText || '').replace(/\s/g, '');
+          if((n != null && k >= n) || (n == null && !left) || k > 30) return res();
+          k++; document.execCommand('delete');
+          setTimeout(next, 260);
+        })();
+      });
+    }).then(function(){ return a.wait(500); }).then(function(){ el.blur(); return a.wait(700); });
+  }
+  function toolCol(i){ return document.querySelector('#import-block-tools .import-band-tool-col[data-col="' + i + '"]'); }
+  function prodImgs(slot){ return slot ? Array.prototype.slice.call(slot.querySelectorAll('[data-img-field="productImg"] img')) : []; }
+  /* 依參考圖量的擺法（版位原尺寸座標）。MSBN 第二張：人物放大靠左、商品縮小、簽名小字在左側；
+     第三張：商品袋與角色分開擺 */
+  var IMP_ARRANGE = {
+    msbn2: { person: { left: 173, top: 22, width: 295 }, product: { left: 388, top: 65, width: 185 },
+             sign: { left: 49, top: 245 }, note: { left: 55, top: 168 } },
+    msbn3: { bag: { left: 687, top: 22, width: 194 }, chara: { left: 892, top: 131, width: 114 } },
+    msbn3p: { right: { left: 856, top: 79, width: 248 } }
+  };
+  /* 切到某一個製作步驟的頁面 */
+  function goStep(key){
+    if(currentView() !== key && typeof goToWorkflowStep === 'function') try{ goToWorkflowStep(key); }catch(e){}
+    return H.waitFor(function(){ return currentView() === key; }, 8000).then(function(){ return H.wait(400); });
+  }
+  /* 取色工具（iframe）裡的元素 */
+  function C$(sel){
+    var f = document.getElementById('color-frame'), d = null;
+    try{ d = f && f.contentDocument; }catch(e){}
+    return d ? d.querySelector(sel) : null;
+  }
+  /* 不播動畫的「快速動畫器」：同一套拖曳／縮放程式，直接跑完 */
+  function QA(){
+    var x = 0, y = 0;
+    return {
+      move: function(tx, ty, ms, on){
+        if(on){ for(var i = 1; i <= 6; i++) on(x + (tx - x) * i / 6, y + (ty - y) * i / 6); }
+        x = tx; y = ty; return Promise.resolve();
+      },
+      wait: function(ms){ return H.wait(Math.min(ms || 0, 150)); },
+      ripple: function(){}, hide: function(){ return Promise.resolve(); }
+    };
+  }
+  function railStep(key){ return document.querySelector('#nav-rail .nav-step[data-step="' + key + '"]'); }
+  /* 點左側步驟進去 → 按該頁的完成 → 燈亮 */
+  function reconfirm(a, key){
+    if(!demoMode) return H.wait(300);
+    return a.wait(400).then(function(){ return clickIn(a, railStep(key), false, 200); })
+      .then(function(){ return goStep(key); })
+      .then(function(){
+        if(key === 'import') return impReady();
+        return H.waitFor(function(){ return E$('#boda-exposure-done-btn'); }, 15000);
+      })
+      .then(function(){ return H.wait(500); })
+      .then(function(){
+        var btn = key === 'import' ? H.$('#boda-import-done-btn') : E$('#boda-exposure-done-btn');
+        if(!btn) return;
+        try{ btn.scrollIntoView({ block: 'nearest' }); }catch(e){}
+        spot([btn], true);
+        return a.wait(700).then(function(){ return clickIn(a, btn, false, 300); });
+      })
+      .then(function(){ return a.hide(); })
+      .then(function(){
+        if(typeof setWorkflowStepStatus === 'function') setWorkflowStepStatus(key, 'done');
+        spot([railStep(key)], true);
+        return H.wait(1300);
+      });
+  }
+  /* 吸底工具（iframe）裡的元素 */
+  function B$(sel){
+    var f = document.getElementById('bottom-standalone-frame'), d = null;
+    try{ d = f && f.contentDocument; }catch(e){}
+    return d ? d.querySelector(sel) : null;
+  }
+  function bCard(i){ return B$('.slot-card[data-slot-card-index="' + i + '"]'); }
+  function bBtn(re){
+    var f = document.getElementById('bottom-standalone-frame'), d = null;
+    try{ d = f && f.contentDocument; }catch(e){}
+    return d ? Array.prototype.filter.call(d.querySelectorAll('button'), function(b){ return re.test(b.textContent) && b.offsetParent; })[0] : null;
+  }
+  function bottomReady(){
+    return H.waitFor(function(){ var k = B$('#konva-container'); return bCard(0) && k && !k.hidden; }, 30000).then(function(){ return H.wait(500); });
+  }
+  function pickBottomIcon(a, i, name){
+    var c = bCard(i), trig = c && c.querySelector('.icon-trigger');
+    if(!trig) return a.wait(200);
+    try{ c.scrollIntoView({ block: 'nearest' }); }catch(e){}
+    spot([c], true);
+    return a.wait(300).then(function(){ return clickIn(a, trig, true, 500); })
+      .then(function(){
+        var tile = Array.prototype.filter.call((B$('.icon-picker') || document.createElement('i')).querySelectorAll('.icon-tile'), function(t){
+          var n = t.querySelector('.icon-tile-name'); return n && n.textContent === name;
+        })[0];
+        if(!tile) return;
+        try{ tile.scrollIntoView({ block: 'nearest' }); }catch(e){}
+        spot([B$('.icon-picker')], true);
+        return a.wait(400).then(function(){ return clickIn(a, tile, true, 600); });
+      });
+  }
+  /* 打亮範圍要含標題：手風琴（標題列＋內容）、人物區（含上方標題） */
+  function accParts(bodyId){
+    var body = E$('#' + bodyId), sec = body && body.closest('.boda-acc');
+    var head = sec && sec.querySelector('.boda-acc-head');
+    return [head || null, body];
+  }
+  function withTitle(el){
+    if(!el) return [null];
+    var prev = el.previousElementSibling;
+    while(prev && !(prev.textContent || '').trim()) prev = prev.previousElementSibling;
+    return prev && /人物|代言人/.test(prev.textContent || '') ? [prev, el] : [el];
+  }
+  function launchBtn(){
+    return document.getElementById('boda-help-menu') ||
+      Array.prototype.filter.call(document.querySelectorAll('#nav-rail button, #nav-rail a'), function(b){ return /教學/.test(b.textContent || ''); })[0] || null;
+  }
+  /* 說明框內顯示「正在產生下載預覽 xx%」（讀主程式 Loading 的進度） */
+  function showBuildProgress(){
+    var body = document.querySelector('.tg-card .tg-body');
+    if(!body) return function(){};
+    var orig = body.innerHTML, tm = setInterval(tick, 300);
+    function tick(){
+      var n = pkgProgress || 0;
+      body.innerHTML = '正在準備所有圖片的下載預覽，請稍候…' +
+        '<div style="margin-top:8px;height:6px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden">' +
+        '<i style="display:block;height:100%;width:' + Math.max(4, n) + '%;background:#EE4D2D;transition:width .3s"></i></div>' +
+        '<div style="margin-top:4px;font-size:12px;opacity:.8">' + (n ? n + '%' : '準備中…') + '</div>';
+    }
+    tick();
+    return function(){ clearInterval(tm); body.innerHTML = orig; };
+  }
+  function setCardBody(html){ var b = document.querySelector('.tg-card .tg-body'); if(b) b.innerHTML = html; }
+  /* 整包下載：在背後先準備好（工單回填、活動頁／吸底圖片、曝光資源圖片、暫存檔），按下時直接打開檢查畫面 */
+  var pkgPromise = null, pkgProgress = 0;
+  function prebuildPackage(){
+    if(pkgPromise) return pkgPromise;
+    if(typeof downloadImportImage !== 'function' || typeof showPackageDownloadPreview !== 'function') return Promise.reject(new Error('no package api'));
+    var bundle = { timestamp: Date.now(), workOrder: null, images: [], exposureImages: [], snapshot: null, warnings: [] };
+    var importView = document.getElementById('view-import');
+    var off = importView && !importView.classList.contains('active');
+    if(off) importView.classList.add('bn-offscreen-render');
+    pkgProgress = 5;
+    pkgPromise = Promise.resolve()
+      .then(function(){
+        if(typeof currentImportWorkbook === 'undefined' || !currentImportWorkbook || typeof buildImportedWorkOrderXlsxFile !== 'function'){ bundle.warnings.push('工單未輸出：目前不是由原始 .xlsx 工單匯入。'); return; }
+        return Promise.resolve().then(buildImportedWorkOrderXlsxFile).then(function(f){ bundle.workOrder = f; })
+          .catch(function(err){ bundle.warnings.push('工單未輸出：' + (err && err.message ? err.message : err)); });
+      })
+      .then(function(){ pkgProgress = 20; return downloadImportImage({ collectOnly: true }); })
+      .then(function(r){
+        bundle.images = r && r.files ? r.files : [];
+        if(r && r.failures && r.failures.length) bundle.warnings.push('部分獨立版位圖片輸出失敗：' + r.failures.map(function(x){ return x.filename; }).join('、'));
+        (r && r.notes || []).forEach(function(n){ if(n) bundle.warnings.push(n); });
+      }, function(err){ bundle.warnings.push('圖片未輸出：' + (err && err.message ? err.message : err)); })
+      .then(function(){ pkgProgress = 70; return typeof requestExposureExportFiles === 'function' ? requestExposureExportFiles() : null; })
+      .then(function(res){
+        bundle.exposureImages = res && res.files ? res.files : [];
+        if(res && res.note) bundle.warnings.push(res.note);
+      }, function(err){ bundle.warnings.push('曝光資源圖片未輸出：' + (err && err.message ? err.message : err)); })
+      .then(function(){ pkgProgress = 92; return typeof buildImportSnapshot === 'function' ? buildImportSnapshot() : null; })
+      .then(function(snap){
+        bundle.snapshot = snap;
+        pkgProgress = 100;
+        if(off) importView.classList.remove('bn-offscreen-render');
+        try{ if(typeof appLoadingFinish === 'function') appLoadingFinish(''); }catch(e){}
+        return bundle;
+      }, function(err){
+        if(off) importView.classList.remove('bn-offscreen-render');
+        pkgPromise = null; throw err;
+      });
+    return pkgPromise;
+  }
+  /* 用準備好的內容打開檢查畫面；按「確認下載 ZIP」照常下載 */
+  function openPackagePreview(bundle){
+    if(!bundle || H.$('#boda-dl-preview')) return;
+    showPackageDownloadPreview(bundle).then(function(go){
+      if(!go || typeof downloadImportPackageZip !== 'function') return;
+      return downloadImportPackageZip(bundle);
+    });
+  }
+  /* 段落完成的小煙火：從說明框上方炸開，加一個完成小標 */
+  function celebrate(text, big){
+    if(motionOff && motionOff()) return;
+    /* 煙火從說明框的標題（例如「曝光資源完成」）那一行炸開 */
+    /* 煙火放在說明框裡面（跟著說明框移動），位置對準標題那一行 */
+    var card = document.querySelector('.tg-card'), tt = card && card.querySelector('.tg-title');
+    if(!card || !tt) return;
+    var cr = card.getBoundingClientRect(), r = tt.getBoundingClientRect();
+    var tw = r.width;
+    try{ var rg = document.createRange(); rg.selectNodeContents(tt); tw = Math.min(r.width, rg.getBoundingClientRect().width || r.width); }catch(e){}
+    var tx0 = r.left - cr.left, cx = tx0 + tw / 2, cy = r.top - cr.top + r.height / 2;
+    var layer = document.createElement('div');
+    layer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;overflow:visible;';
+    card.appendChild(layer);
+    var COLORS = ['#EE4D2D', '#FFB19F', '#F5A623', '#2BB673', '#4D9B95', '#FFD84D', '#7C6CF2'];
+    function burst(x, y, n, dist, delay){
+      for(var i = 0; i < n; i++){
+        var d = document.createElement('i'), ang = Math.PI * 2 * i / n + Math.random() * 0.3, len = dist * (0.6 + Math.random() * 0.5);
+        var sz = 4 + Math.random() * 4;
+        d.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;' +
+          'background:' + COLORS[i % COLORS.length] + ';opacity:1;transform:translate(-50%,-50%);' +
+          'transition:transform .9s cubic-bezier(.15,.7,.3,1) ' + delay + 'ms,opacity .9s ease ' + (delay + 250) + 'ms;';
+        layer.appendChild(d);
+        (function(el, tx, ty){
+          requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            el.style.transform = 'translate(calc(-50% + ' + tx + 'px), calc(-50% + ' + ty + 'px)) scale(.6)';
+            el.style.opacity = '0';
+          }); });
+        })(d, Math.cos(ang) * len, Math.sin(ang) * len + 30);
+      }
+    }
+    burst(cx, cy, 26, 110, 0);
+    burst(cx - 90, cy + 10, 16, 70, 220);
+    burst(cx + 90, cy + 10, 16, 70, 380);
+    if(big){ burst(cx - 170, cy + 30, 18, 80, 560); burst(cx + 170, cy + 30, 18, 80, 700); }
+    var tag = document.createElement('div');
+    tag.textContent = big ? '🎉 ' + (text || '全部完成！') : '🎉 完成！';
+    tag.style.cssText = 'position:absolute;left:' + (tx0 + tw + 10) + 'px;top:' + cy + 'px;transform:translate(0,-50%) scale(.6);opacity:0;transform-origin:left center;' +
+      'background:#EE4D2D;color:#fff;font:700 14px/1 sans-serif;padding:8px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(238,77,45,.4);' +
+      'transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .3s;white-space:nowrap;';
+    layer.appendChild(tag);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ tag.style.opacity = '1'; tag.style.transform = 'translate(0,-50%) scale(1)'; }); });
+    setTimeout(function(){ tag.style.opacity = '0'; tag.style.transform = 'translate(0,-80%) scale(.9)'; }, 1700);
+    setTimeout(function(){ layer.remove(); }, 2300);
+  }
+  /* ── 分段導覽：可以只看曝光資源／活動頁／取色工具／吸底 ── */
+  var SECTION_KEY = 'boda_tour_section';
+  var SECTIONS = {
+    exposure: { label: '曝光資源', title: '商品自動帶入' },
+    import:   { label: '活動頁資源', title: '商品圖自動套入' },
+    color:    { label: '取色工具', title: '活動頁面配色' },
+    bottom:   { label: '吸底工具', title: '編輯吸底' }
+  };
+  function sectionIndex(key){
+    var t = SECTIONS[key] && SECTIONS[key].title;
+    for(var i = 0; i < STEPS.length; i++) if(STEPS[i].title === t) return i;
+    return 0;
+  }
+  /* 背後匯入示範工單＋圖片、解鎖左側步驟（不播動畫） */
+  function silentPrepare(key){
+    var have = window.uploadImportSummary && uploadImportSummary.activity && typeof uploadedImages !== 'undefined' && uploadedImages.length;
+    return (have ? Promise.resolve() : goUpload())
+      .then(function(){ if(!(window.uploadImportSummary && uploadImportSummary.activity)) return demoImportWorkOrder(); })
+      .then(function(){ if(!(typeof uploadedImages !== 'undefined' && uploadedImages.length)) return demoImportImages(); })
+      .then(function(){
+        if(typeof window.bodaUnlockWorkflow === 'function') window.bodaUnlockWorkflow();
+        uncoverLevel(); hold('wo', false); hold('img', false);
+        if(key === 'exposure') prerenderExposure(true);
+        return H.wait(400);
+      });
+  }
+  function askResetForSection(key){
+    var go = typeof bodaChoiceDialog === 'function'
+      ? bodaChoiceDialog({ title: '要看「' + SECTIONS[key].label + '」的導覽嗎？',
+          body: '示範會先清除目前網頁上的內容，再匯入示範工單。\n要保留的話，請先下載暫存檔。',
+          okText: '清除並開始', cancelText: '先不用' })
+      : Promise.resolve(confirm('示範會先清除目前網頁上的內容，確定要開始嗎？'));
+    return go.then(function(ok){
+      if(!ok){ try{ sessionStorage.removeItem(SECTION_KEY); }catch(e){} return; }
+      try{ sessionStorage.setItem(SECTION_KEY, key); }catch(e){}
+      var btn = document.getElementById('boda-reset-all');
+      if(btn) btn.click();
+      H.waitFor(function(){ autoConfirm(); return false; }, 15000);
+    });
+  }
+  function startSection(key){
+    if(!SECTIONS[key]){ try{ sessionStorage.removeItem(SECTION_KEY); }catch(e){} return tour.start(0); }
+    try{ sessionStorage.setItem(SECTION_KEY, key); }catch(e){}
+    if(hasExistingWork()) return askResetForSection(key);
+    return tour.start(sectionIndex(key));
+  }
+  /* ── 里程進度：說明框上方 5 個圖示（上傳 → 曝光資源 → 活動頁 → 取色 → 吸底） ──
+     完成的填橘色、目前的外圈發亮；看過導覽的人在開場頁可以點圖示，直接從那一段開始。 */
+  var MS_KEYS = ['upload', 'exposure', 'import', 'color', 'bottom'];
+  var MS_FALLBACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="6"/></svg>';
+  var MS_OWN = {
+    /* 取色：吸色滴管（類似 PS 吸色工具；原本選單的定位圖示中間有白點） */
+    color: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>'
+  };
+  function msIcon(key){
+    if(MS_OWN[key]) return MS_OWN[key];
+    var svg = document.querySelector('#nav-rail .nav-step[data-step="' + key + '"] svg');
+    return svg ? svg.outerHTML : MS_FALLBACK;
+  }
+  function stageOf(i){
+    if(i <= 0) return -1;
+    var st = 0;
+    ['exposure', 'import', 'color', 'bottom'].forEach(function(k, n){ if(i >= sectionIndex(k)) st = n + 1; });
+    return st;
+  }
+  (function(){
+    var css = document.createElement('style');
+    css.textContent =
+      '.boda-ms{display:flex;align-items:center;margin:-2px 0 14px;}' +
+      /* 連線：還沒看的段落亮、看完的變暗 */
+      '.boda-ms i.ln{flex:1;height:2px;background:#8a8a96;border-radius:1px;margin:0 4px;transition:background .4s;}' +
+      '.boda-ms i.ln.on{background:#3a3a44;}' +
+      /* 還沒看：亮的外框和圖示 */
+      '.boda-ms b{position:relative;flex:0 0 auto;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+        'border:1.5px solid #c9c9d1;color:#ececf0;background:transparent;transition:all .35s;}' +
+      '.boda-ms b svg{width:15px;height:15px;fill:none!important;stroke:currentColor!important;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}' +
+      '.boda-ms b svg *{fill:none!important;stroke:currentColor!important;}' +
+      /* 看完：變深色 */
+      '.boda-ms b.done{background:#34343c;border-color:#34343c;color:#6e6e78;}' +
+      /* 正在看：亮燈，橘底白圖示 */
+      '.boda-ms b.cur{background:#EE4D2D;border-color:#EE4D2D;color:#fff;box-shadow:0 0 0 4px rgba(238,77,45,.25),0 0 14px rgba(238,77,45,.55);}' +
+      '.boda-ms.pick b{cursor:pointer;}' +
+      '.boda-ms.pick b:not(.cur):hover{border-color:#EE4D2D;color:#fff;background:#EE4D2D;transform:scale(1.12);}' +
+      '.boda-ms.pick b:focus-visible{outline:2px solid #EE4D2D;outline-offset:2px;}';
+    document.head.appendChild(css);
+  })();
+  function renderMilestones(i){
+    var card = document.querySelector('.tg-card'); if(!card) return;
+    var bar = card.querySelector('.boda-ms');
+    if(!bar){
+      bar = document.createElement('div'); bar.className = 'boda-ms';
+      bar.innerHTML = MS_KEYS.map(function(k, n){
+        return (n ? '<i class="ln"></i>' : '') + '<b data-k="' + k + '" role="button" tabindex="-1">' + msIcon(k) + '</b>';
+      }).join('');
+      bar.addEventListener('click', function(e){
+        var b = e.target.closest('b[data-k]');
+        if(!b || !bar.classList.contains('pick') || b.classList.contains('cur')) return;
+        jumpToSection(b.getAttribute('data-k'));
+      });
+      card.insertBefore(bar, card.firstChild);
+    }
+    /* 開場頁：看過的人才可以點；導覽進行中：隨時可以點圖示跳到那一段 */
+    var st = stageOf(i), pick = i === 0 ? seenBefore : true;
+    bar.classList.toggle('pick', pick);
+    Array.prototype.forEach.call(bar.querySelectorAll('b'), function(b, n){
+      b.classList.toggle('done', n < st);
+      b.classList.toggle('cur', n === st);
+      var canGo = pick && n !== st;
+      b.tabIndex = canGo ? 0 : -1;
+      b.title = canGo ? '跳到這一段' : '';
+      b.style.cursor = canGo ? 'pointer' : 'default';
+    });
+    Array.prototype.forEach.call(bar.querySelectorAll('i.ln'), function(l, n){ l.classList.toggle('on', n < st); });
+  }
+  var seenBefore = false;
+  /* 開場頁點圖示：直接從那一段開始（有自己的編輯內容會先清除，示範資料在背後帶入） */
+  function jumpToSection(key){
+    if(key === 'upload'){ tour.go(1); return; }
+    if(needReset){
+      try{ sessionStorage.setItem(SECTION_KEY, key); }catch(e){}
+      resetThenResume();
+      return;
+    }
+    setControls(false);
+    setCardBody('正在準備示範資料，馬上開始…');
+    silentPrepare(key).then(function(){ tour.go(sectionIndex(key)); });
+  }
+  function demoSignFile(){
+    var d = window.BODA_TOUR_DEMO;
+    return d && d.sign ? b64File(d.sign, 'image/png') : null;
+  }
+
   /* ══════════════════ 步驟（要改文字或增減步驟改這裡） ══════════════════
      有動畫的步驟：動畫演完（匯入結果出現）才出現「下一步」，讓人停下來看。 */
   var STEPS = [
     { intro: true,
-      title: '歡迎使用 BOD 版位工具',
-      body: '要用示範工單，帶你走一遍嗎？',
+      title: '歡迎使用\n活動素材製作工具-MS編輯器/BN編輯器',
+      body: '只要 3 分鐘，帶你快速上手所有功能！',
       before: goUpload },
 
     { target: function(){ return proxy; }, place: 'right',
       title: '上傳工單',
-      body: '拖入工單，下方會列出帶入的版位。',
+      body: '拖入工單檔案，下方會自動列出這次需要製作的所有版位。',
       before: function(){
         if(needReset) return resetThenResume();
         return goUpload().then(function(){ spot([cardOf('#import-drop')]); });
@@ -660,23 +1211,24 @@
         /* 1) 先蓋住活動等級、把結果藏起來，背後匯入（畫面靜止時才忙，不會卡動畫）
            2) 匯入完再演拖曳 3) 放開時一次顯示結果 */
         if(demoMode){ coverLevel(before); hold('wo', true); }
+        /* 一開始就演拖曳（不用等）；放開後才在背後匯入，匯入完一次顯示結果 */
         return a.show(innerWidth - 140, 150)
+          .then(function(){ return dropOnto(a, '#import-drop', '📄 ' + demoWorkOrderName(), true); })
+          .then(function(){ return a.hide(); })
           .then(demoImportWorkOrder)
-          .then(function(){ if(demoMode) setCoverTarget(); return a.wait(250); })
-          .then(function(){ return dropOnto(a, '#import-drop', '📄 ' + demoWorkOrderName()); })
-          .then(function(){ hold('wo', false); return a.hide(); })
+          .then(function(){ clearDrop(); if(demoMode) setCoverTarget(); hold('wo', false); return H.wait(250); })
           .then(function(){ return H.wait(500); });
       } },
 
     { target: '#upload-level', place: 'bottom',
-      title: '活動等級自動帶入',
-      body: '依工單的活動，自動換成對應等級。',
+      title: '自動帶入活動等級',
+      body: '系統會根據工單內容，自動切換成對應的活動等級。',
       after: uncoverLevel,
       anim: function(){ return H.wait(600).then(rollLevel).then(function(){ return H.wait(300); }); } },
 
     { target: function(){ return proxy; }, place: 'left',
-      title: '放入圖片素材',
-      body: '拖入圖片資料夾，下方會顯示配對結果。',
+      title: '上傳圖片素材',
+      body: '直接拖入整個圖片資料夾，下方會立刻顯示素材的配對結果。',
       before: function(){
         spot([cardOf('#import-img-drop')]);
       },
@@ -686,10 +1238,10 @@
         if(demoMode && typeof uploadedImages !== 'undefined' && uploadedImages.length) return H.wait(300);
         if(demoMode) hold('img', true);
         return a.show(innerWidth - 140, 150)
+          .then(function(){ return dropOnto(a, '#import-img-drop', '📁 圖片素材' + (n ? '（' + n + ' 張）' : ''), true); })
+          .then(function(){ return a.hide(); })
           .then(demoImportImages)
-          .then(function(){ return a.wait(250); })
-          .then(function(){ return dropOnto(a, '#import-img-drop', '📁 圖片素材' + (n ? '（' + n + ' 張）' : '')); })
-          .then(function(){ hold('img', false); return a.hide(); })
+          .then(function(){ clearDrop(); hold('img', false); return H.wait(250); })
           .then(function(){ return H.wait(500); })
           /* 結果出現、停下來看的時候，曝光資源才在背後先畫好 */
           .then(function(){ if(demoMode) prerenderExposure(true); });
@@ -697,7 +1249,7 @@
 
     { target: function(){ return proxy; }, place: 'right', pad: 8,
       title: '開始編輯',
-      body: '按下後，左側的製作步驟就會開啟。',
+      body: '點擊「開始編輯」，啟動左側展開製作步驟清單。',
       before: function(){ spot([H.$('#btn-upload-start')]); },
       anim: function(a){
         var btn = H.$('#btn-upload-start');
@@ -719,7 +1271,7 @@
     /* ═════════ 曝光資源 ═════════ */
     { target: function(){ return proxy; }, place: 'left',
       title: '商品自動帶入',
-      body: '工單列的商品圖，會自動放進商品區。',
+      body: '工單裡列出的商品圖，系統會自動幫你放進「商品區」。',
       before: function(){
         return goExposure().then(function(){ return openAcc('boda-acc-body-product'); })
           .then(function(){ var l = E$('#bn-prod-list'); if(l) l.scrollIntoView({ block: 'center' }); spot([l]); });
@@ -727,7 +1279,7 @@
 
     { target: function(){ return proxy; }, place: 'left',
       title: '代言人放到人物區',
-      body: '人物照要分開放：從商品移除，改傳到人物。',
+      body: '因素材功能限制，人物照與商品需要分開上傳。',
       before: function(){ spot([E$('#bn-prod-list')]); },
       anim: function(a){
         var row = prodRow('代言人照');
@@ -738,7 +1290,7 @@
           .then(function(){ return expIdle(); })
           .then(function(){
             var sec = E$('#bn-endorser-section');
-            spot([sec], true);
+            spot(withTitle(sec), true);
             return a.wait(500);
           })
           .then(function(){ return clickIn(a, E$('#bn-endorser-photo-btn'), false, 200); })
@@ -749,11 +1301,11 @@
 
     { target: function(){ return proxy; }, place: 'left',
       title: '上傳 LOGO',
-      body: '拖入品牌 LOGO，各版位會一起套用。',
+      body: '拖入品牌 LOGO，所有版位都會同步套用。',
       before: function(){
         return openAcc('boda-acc-body-logo').then(function(){
           var s0 = E$('#boda-acc-body-logo'); if(s0) s0.scrollIntoView({ block: 'center' });
-          spot([E$('#boda-acc-body-logo')]);
+          spot(accParts('boda-acc-body-logo'));
         });
       },
       anim: function(a){
@@ -765,16 +1317,17 @@
           .then(function(){ return H.wait(600); });
       } },
 
-    { target: function(){ return proxy; }, place: 'left',
+    { target: function(){ return proxy; }, place: 'right',
       title: '選背景圖',
-      body: '在背景圖庫選類別、點一張圖，各版位自動套用。',
+      body: '到背景圖庫挑喜歡的視覺，各版位就會自動套用。',
       before: function(){
         return openAcc('boda-acc-body-bg').then(function(){
           var b = E$('#boda-acc-body-bg'); if(b) b.scrollIntoView({ block: 'center' });
-          spot([E$('#boda-acc-body-bg')]);
+          spot(accParts('boda-acc-body-bg'));
         });
       },
       after: function(){
+        document.documentElement.classList.remove('boda-tour-card-up');
         var m = E$('#bnBgLibModal'); var c = m && m.classList.contains('open') && m.querySelector('.bn-bglib-close');
         if(c) c.click();
       },
@@ -784,6 +1337,7 @@
           .then(function(){ return H.waitFor(function(){ var m = E$('#bnBgLibModal'); return m && m.classList.contains('open') && m.querySelector('.bn-bglib-card'); }, 8000); })
           .then(function(){
             var m = E$('#bnBgLibModal .bn-bglib-modal');
+            document.documentElement.classList.add('boda-tour-card-up');   /* 說明框往上，不擋「套用」 */
             spot([m], true);
             return a.wait(700);
           })
@@ -797,7 +1351,7 @@
           })
           .then(function(){ return clickIn(a, E$('#bnBgLibModal .bn-bglib-card'), true, 500); })
           .then(function(){ return clickIn(a, E$('#bnBgLibModal .bn-bglib-apply'), true, 400); })
-          .then(function(){ return a.hide(); })
+          .then(function(){ document.documentElement.classList.remove('boda-tour-card-up'); return a.hide(); })
           .then(function(){ return expIdle(); })
           .then(function(){
             /* 套用後打亮第一張版位，看背景換好的樣子 */
@@ -808,9 +1362,9 @@
           });
       } },
 
-    { target: function(){ return proxy; }, place: 'left',
-      title: '拖曳調整位置',
-      body: '直接在畫布上拖曳、拉角落縮放，調整人物和商品。',
+    { target: function(){ return proxy; }, place: 'right',
+      title: '商品編輯',
+      body: '直接在畫布上拖曳移動、拉動四角縮放。',
       before: function(){
         var blk = firstEndorserBlock();
         if(blk) try{ blk.block.scrollIntoView({ block: 'start' }); }catch(e){}
@@ -825,69 +1379,103 @@
       } },
 
     { target: function(){ return proxy; }, place: 'right',
-      title: '換一張調整，會先提醒',
-      body: '調過的版位還在連動時，換到別張操作會先跳出提醒，看清楚再選。',
-      before: function(){
-        var blk = hbnBlock();
-        if(blk) try{ blk.block.scrollIntoView({ block: 'center' }); }catch(e){}
-        return H.wait(400).then(function(){ spot([blk ? blk.block : null], true); });
-      },
-      anim: function(a){
-        var blk = hbnBlock();
-        if(!demoMode || !blk || E$('#boda-link-ask')) return H.wait(300);
-        return a.wait(600).then(function(){ return openLinkAsk(a, blk); })
-          .then(function(dlg){ if(dlg) spot([dlg.firstElementChild || dlg], true); return a.hide(); })
-          .then(function(){ return H.wait(500); });
-      } },
-
-    { target: function(){ return proxy; }, place: 'left',
-      title: '僅套用至未完成版位',
-      body: '選「僅套用至未完成版位」，排好的 DD Card 不會被覆蓋，再來調 HBN。',
+      title: '完成的版位被重新修改時，會出現警示',
+      body: '建議選「僅套用至未完成版位」，避免已完成的版位連動調整，其他版位也能繼續連動。',
       before: function(){
         var dlg = E$('#boda-link-ask');
-        if(dlg) spot([dlg.firstElementChild || dlg]);
-        else { var blk = hbnBlock(); spot([blk ? blk.block : null]); }
+        if(dlg){ spot([dlg.firstElementChild || dlg]); return; }
+        var blk = hbnBlock();
+        if(!blk){ spot([null]); return; }
+        try{ blk.block.scrollIntoView({ block: 'center' }); }catch(e){}
+        /* 說明框和警示視窗一起出現：先在 HBN 上按一下打開警示 */
+        return H.wait(400).then(function(){
+          if(demoMode){
+            var win = blk.doc.defaultView, br = blk.box.getBoundingClientRect();
+            var x = br.left + br.width / 2, y = br.top + Math.min(br.height / 2, 40);
+            ['pointerdown', 'pointerup'].forEach(function(t){
+              try{ blk.box.dispatchEvent(new win.PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', button: 0, buttons: t === 'pointerdown' ? 1 : 0, isPrimary: true })); }catch(e){}
+            });
+          }
+          return H.waitFor(function(){ return E$('#boda-link-ask'); }, 2500);
+        }).then(function(d){ spot([d ? (d.firstElementChild || d) : blk.block]); });
+      },
+      /* 先讓人看完說明，按「下一步」後才示範按「僅套用至未完成版位」 */ },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '連動編輯',
+      body: '連動的版位將會同步修改素材。',
+      before: function(){
+        var dlg = E$('#boda-link-ask');
+        if(dlg){ spot([dlg.firstElementChild || dlg]); return; }
+        var blk = hbnBlock(); spot([blk ? blk.block : null]);
       },
       anim: function(a){
         var blk = hbnBlock();
         if(!demoMode || !blk) return H.wait(300);
         var dlg = E$('#boda-link-ask');
-        return (dlg ? a.wait(700).then(function(){ return clickIn(a, dlg.querySelector('[data-v="prev"]'), true, 600); }) : H.wait(100))
-          .then(function(){ spot([blk.block], true); return a.wait(700); })
+        return (dlg ? a.wait(300).then(function(){ return clickIn(a, dlg.querySelector('[data-v="prev"]'), true, 500); }) : a.wait(300))
+          .then(function(){ blk = hbnBlock() || blk; spot([blk.block], true); return a.wait(400); })
           .then(function(){ return arrangeLayout(a, blk, ARRANGE.hbn); })
           .then(function(){ return a.hide(); })
           .then(function(){ return expIdle(); })
-          .then(function(){ return H.wait(500); });
+          .then(function(){ return H.wait(400); });
       } },
 
-    { target: function(){ return proxy; }, place: 'left',
-      title: '特殊版位：先解除連動',
-      body: 'SCBN 這類特殊版位，先按右上角解除連動，再調整底圖和商品位置。',
+    /* ── SCBN：三步，打亮範圍與說明框都固定在版位下方，不擋右側背景面板 ── */
+    { target: function(){ return proxy; }, place: 'bottom',
+      title: '特殊版位先取消連動',
+      body: '遇到像 SCBN 這類特殊版位，請先點擊右上角「取消連動」，再進行個別微調。',
       before: function(){
         var d = expDoc(), b = null;
         if(d) Array.prototype.forEach.call(d.querySelectorAll('.preview-block'), function(x){ if(!b && /SCBN/i.test((x.querySelector('.pname') || {}).textContent || '')) b = x; });
         if(b) try{ b.scrollIntoView({ block: 'center', behavior: 'smooth' }); }catch(e){}
         return H.wait(700).then(function(){ return H.waitFor(function(){ return blockByName(/SCBN/i); }, 8000); })
-          .then(function(){ var blk = blockByName(/SCBN/i); spot([blk ? blk.block : b], true); });
+          .then(function(){ var blk = blockByName(/SCBN/i); spot([blk ? blk.block : b]); });
+      },
+      anim: function(a){
+        var blk = blockByName(/SCBN/i);
+        if(!demoMode || !blk) return H.wait(300);
+        var btn = blk.block.querySelector('.bn-layout-lock');
+        if(!btn || !btn.classList.contains('is-linked')) return H.wait(300);
+        return a.wait(500).then(function(){ return clickIn(a, btn, true, 600); }).then(function(){ return a.hide(); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'bottom',
+      title: '調整背景圖',
+      body: '調整右側的背景面板，點擊方向箭頭就能移動底圖位置。',
+      before: function(){
+        var blk = blockByName(/SCBN/i); if(!blk){ spot([null]); return; }
+        var win = blk.block.ownerDocument.defaultView;
+        blk.block.dispatchEvent(new win.MouseEvent('mouseenter'));
+        return H.waitFor(function(){ var pn = blk.block.querySelector('.bn-bg-panel'); return pn && H.visible(pn) && pn; }, 3000)
+          .then(function(pn){ spot([blk.block, pn || null]); });
       },
       after: function(){ var blk = blockByName(/SCBN/i); if(blk) blk.block.dispatchEvent(new (blk.block.ownerDocument.defaultView.MouseEvent)('mouseleave')); },
       anim: function(a){
         var blk = blockByName(/SCBN/i);
         if(!demoMode || !blk) return H.wait(300);
-        return unlinkByLock(a, blk)
-          .then(function(){ return adjustBg(a, blk, BG_FIX.scbn); })
-          .then(function(){ spot([blk.block], true); return a.wait(500); })
+        return adjustBg(a, blk, BG_FIX.scbn).then(function(){ return a.hide(); }).then(function(){ return H.wait(300); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'bottom',
+      title: '商品編輯',
+      body: '直接在畫布上拖曳移動、拉動四角縮放。',
+      before: function(){ var blk = blockByName(/SCBN/i); spot([blk ? blk.block : null]); },
+      anim: function(a){
+        var blk = blockByName(/SCBN/i);
+        if(!demoMode || !blk) return H.wait(300);
+        return a.wait(300)
           .then(function(){ return arrangeLayout(a, blk, ARRANGE.scbn); })
           .then(function(){ return a.hide(); })
           /* LPBN PC／APP 不示範，在背後直接排好（照 Iona 的完成圖） */
           .then(function(){ return arrangeSilently([/LPBN_PC橫/i, /LPBN_APP橫/i]); })
           .then(function(){ return expIdle(); })
-          .then(function(){ return H.wait(500); });
+          .then(function(){ return H.wait(400); });
       } },
 
     { target: function(){ return proxy; }, place: 'left',
-      title: '曝光資源完成',
-      body: '都調好後，按「曝光資源完成」，左側會打勾，接著到活動頁。',
+      title: '確認完成',
+      body: '按下「曝光資源完成」，左側清單會打勾，頁面跳轉「活動頁」。',
       before: function(){
         var btn = E$('#boda-exposure-done-btn');
         if(btn) try{ btn.scrollIntoView({ block: 'nearest' }); }catch(e){}
@@ -903,6 +1491,7 @@
             /* 先標成完成，打亮左側「曝光資源」看到打勾，再換到活動頁 */
             if(typeof setWorkflowStepStatus === 'function') setWorkflowStepStatus('exposure', 'done');
             spot([document.querySelector('#nav-rail .nav-step[data-step="exposure"]')], true);
+            celebrate('曝光資源完成！');
             return H.wait(1500);
           })
           .then(function(){
@@ -913,7 +1502,393 @@
             spot([document.querySelector('#nav-rail .nav-step[data-step="import"]')], true);
             return H.wait(900);
           });
-      } }
+      } },
+    /* ═════════ 活動頁資源 ═════════ */
+    { target: function(){ return proxy; }, place: 'left',
+      title: '商品圖自動套入',
+      body: '工單帶入的商品圖會自動放進對應版位中。',
+      before: function(){
+        return goImport().then(function(){
+          var c = document.getElementById('import-canvas-main');
+          if(c) try{ c.scrollTop = 0; }catch(e){}
+          var s0 = impSlot(0); if(s0) try{ s0.scrollIntoView({ block: 'start' }); }catch(e){}
+          return H.wait(300);
+        }).then(function(){ spot([H.$('#import-canvas-area')], true); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'bottom',
+      title: '超規警示',
+      body: '文字超過版位上限時會出現紅字提醒，需精簡後再下載。',
+      before: function(){
+        return showSlot(2).then(function(){
+          spot([impSlot(2), document.querySelector('#imp-text-limit-layer .bn-text-limit-bubble')], true);
+        });
+      },
+      anim: function(a){
+        var el = impSlot(2) && impSlot(2).querySelector('[data-field="name"]');
+        if(!demoMode || !el || (el.innerText || '').indexOf('/餅乾') < 0) return H.wait(300);
+        /* 先看一下紅字，再刪掉「/餅乾」讓紅字消失 */
+        return a.wait(1500).then(function(){ return impDeleteText(a, el, '/餅乾', 3); })
+          .then(function(){ spot([impSlot(2)], true); return a.hide(); })
+          .then(function(){ return H.wait(400); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '調整配色',
+      body: '打開右側「顏色」欄位編輯，所有版位都會同步更新。',
+      before: function(){
+        var sec = H.$('#import-color-section');
+        if(sec) try{ sec.scrollIntoView({ block: 'nearest' }); }catch(e){}
+        return H.wait(300).then(function(){ spot([H.$('#import-color-head')], true); });
+      },
+      anim: function(a){
+        if(!demoMode) return H.wait(300);
+        var head = H.$('#import-color-head'), sec = H.$('#import-color-section');
+        function typeRow(key, val){
+          var row = colorRow(key);
+          if(!row) return Promise.resolve();
+          try{ row.scrollIntoView({ block: 'nearest' }); }catch(e){}
+          spot([row], true);
+          return a.wait(450).then(function(){ return a.type(row.querySelector('.icc-hex'), val, { speed: 110 }); })
+            .then(function(){ var h = colorRow(key) && colorRow(key).querySelector('.icc-hex'); if(h) h.blur(); return a.wait(800); });
+        }
+        var open = sec && sec.classList.contains('is-open') ? a.wait(300) : a.wait(400).then(function(){ return a.click(head, { real: true, after: 500 }); });
+        return open
+          .then(function(){ return typeRow('promoBg', '#d07c06'); })     /* 促標底色 */
+          .then(function(){ return typeRow('promoText', '#ffffff'); })   /* 往下一格：促標字色 */
+          .then(function(){ spot([colorRow('promoBg'), colorRow('promoText')], true); return a.hide(); })
+          .then(function(){ return H.wait(300); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '特殊狀況-上傳簽名檔1',
+      body: '簽名檔請從指定欄位上傳。',
+      before: function(){
+        return showSlot(4, true).then(function(){ return H.wait(300); }).then(function(){
+          var g = signToolRow(); if(g) try{ g.scrollIntoView({ block: 'center' }); }catch(e){}
+          return H.wait(250);
+        }).then(function(){ spot([signToolRow()], true); });
+      },
+      anim: function(a){
+        var g = signToolRow(), f = demoSignFile();
+        if(!demoMode || !g || !f || typeof applyPickedImportFieldImage !== 'function') return H.wait(300);
+        var btn = Array.prototype.filter.call(g.querySelectorAll('button'), function(b){ return /補圖|新增|換圖/.test(b.textContent); })[0] || g;
+        return a.wait(500)
+          .then(function(){ return a.click(btn, { after: 200 }); })
+          .then(function(){
+            /* 示範時不開檔案視窗，直接放入示範簽名檔 */
+            window.importFieldPickTarget = { idx: 4, key: 'signImg', imageIndex: 0, ctxName: 'import', append: false };
+            applyPickedImportFieldImage(f);
+            return H.waitFor(function(){ var s = msbnSlot(); return s && s.querySelector('[data-img-field="signImg"] img'); }, 6000);
+          })
+          .then(function(){ return H.wait(500); })
+          .then(function(){
+            /* 停在右側欄位：簽名那一列已有圖 */
+            var g2 = signToolRow(); if(g2) try{ g2.scrollIntoView({ block: 'nearest' }); }catch(e){}
+            spot([g2], true); return a.hide();
+          })
+          .then(function(){ return H.wait(900); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'right',
+      title: '特殊狀況-上傳簽名檔2',
+      body: '簽名檔上傳後，系統會自動開啟代言人文案的輸入框。',
+      before: function(){
+        return showSlot(4).then(function(){ spot([msbnSlot()], true); });
+      },
+      anim: function(a){
+        var s = msbnSlot(), note = s && s.querySelector('[data-field="signNote"]');
+        if(!demoMode || !note) return H.wait(300);
+        if((note.innerText || '').trim()) return H.wait(300);
+        return a.wait(400).then(function(){ return typeEditable(a, note, '品牌代言人 黃沐妍'); })
+          .then(function(){ return a.hide(); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'right',
+      title: '微調素材排版',
+      body: '點擊圖片四角縮放大小，按住不放移動位置。',
+      before: function(){ return showSlot(4).then(function(){ spot([msbnSlot()], true); }); },
+      anim: function(a){
+        var s = msbnSlot(), imgs = prodImgs(s), A = IMP_ARRANGE.msbn2;
+        if(!demoMode || imgs.length < 2) return H.wait(300);
+        return a.wait(400)
+          .then(function(){ return impPlaceImg(a, s, imgs[0], A.person); })
+          .then(function(){ return impPlaceImg(a, s, imgs[1], A.product); })
+          .then(function(){ impDeselect(); return a.wait(200); })
+          .then(function(){
+            var si = s.querySelector('[data-img-field="signImg"] img');
+            return si ? impPlaceEl(a, s, si, si, A.sign) : null;
+          })
+          .then(function(){
+            var n = s.querySelector('[data-field="signNote"]'), box = n && n.closest('[data-movable-canvas-text]');
+            return box ? impPlaceEl(a, s, box, n, A.note) : null;
+          })
+          .then(function(){ impDeselect(); try{ var sel = getSelection(); sel && sel.removeAllRanges(); }catch(e){} return a.hide(); })
+          .then(function(){ return H.wait(400); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'right',
+      title: '特殊狀況-調整圖片前後順序',
+      body: '到右側圖層清單按「↑」，就能把圖層往上移一層。',
+      before: function(){
+        /* 這張先直接排好（不播動畫），只示範前後順序 */
+        return showSlot(5, true).then(function(){
+          var s5 = impSlot(5), imgs = prodImgs(s5), A = IMP_ARRANGE.msbn3;
+          if(!demoMode || imgs.length < 2 || s5.__bodaTourArranged) return;
+          s5.__bodaTourArranged = true;
+          return impPlaceImg(QA(), s5, imgs[0], A.bag)
+            .then(function(){ return impPlaceImg(QA(), s5, imgs[1], A.chara); })
+            .then(function(){ impDeselect(); return H.wait(300); });
+        }).then(function(){ spot([impSlot(5)], true); });
+      },
+      anim: function(a){
+        var s5 = impSlot(5), imgs = prodImgs(s5);
+        var c = toolCol(5), row = c && c.querySelector('.import-image-tool-row[data-key="productImg"][data-image-index="1"]');
+        var btn = row && Array.prototype.filter.call(row.querySelectorAll('button'), function(b){ return /往前一層/.test(b.title || ''); })[0];
+        if(!demoMode || !btn || btn.disabled || !imgs[0]) return H.wait(300);
+        return a.wait(400)
+          /* 1) 框選商品袋：看到它的陰影壓在角色上 */
+          .then(function(){ return impSelect(a, imgs[0]); })
+          .then(function(){ var o = impOverlay(); spot([impSlot(5)], true); return a.wait(1400); })
+          /* 2) 到右側清單，角色那一列按 ↑ */
+          .then(function(){
+            var g = row.closest('.import-image-tool-group') || row;
+            try{ g.scrollIntoView({ block: 'nearest' }); }catch(e){}
+            spot([g], true);
+            return a.wait(500);
+          })
+          .then(function(){ return a.click(btn, { real: true, after: 300 }); })
+          .then(function(){ impDeselect(); return a.hide(); })
+          /* 按完會重畫畫布與右側清單：等重畫完、捲回這一格，再重新打亮（舊的元素已被換掉） */
+          .then(function(){ return H.wait(900); })
+          .then(function(){ return showSlot(5, true); })
+          .then(function(){ spot([impSlot(5)], true); return H.wait(800); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'top',
+      title: '特殊狀況-圓標移除',
+      body: '圓標沒有文字時，底色會自動隱藏（按「＋」可隨時加回來）。',
+      before: function(){
+        if(typeof unlockImportCol === 'function') try{ unlockImportCol(); }catch(e){}
+        var last = impSlot(8);
+        if(last) try{ last.scrollIntoView({ block: 'end' }); }catch(e){}
+        return H.wait(500).then(function(){ spot([impSlot(8)], true); });
+      },
+      anim: function(a){
+        var s = impSlot(8), el = s && s.querySelector('[data-field="badge3"]');
+        if(!demoMode || !el || !(el.innerText || '').trim()) return H.wait(300);
+        return a.wait(400).then(function(){ return impDeleteText(a, el, null, null); })
+          .then(function(){
+            /* 「＋」出現的位置：游標移過去指一下 */
+            var s2 = impSlot(8), plus = s2 && Array.prototype.filter.call(s2.querySelectorAll('button, [role="button"]'), function(b){ return /＋|\+/.test(b.textContent) && b.offsetParent; }).pop();
+            if(!plus) return a.wait(300);
+            var r = plus.getBoundingClientRect();
+            return a.move(r.left + r.width / 2, r.top + r.height / 2, 700).then(function(){ return a.wait(900); });
+          })
+          .then(function(){
+            /* 圓標拿掉後空間變大：把右邊商品拉大 */
+            var s3 = impSlot(8), img = s3 && s3.querySelector('[data-img-field="productImg3"] img');
+            return img ? impPlaceImg(a, s3, img, IMP_ARRANGE.msbn3p.right) : null;
+          })
+          .then(function(){ impDeselect(); return a.hide(); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '確認完成',
+      body: '按下「活動頁完成」，左側清單打勾，繼續製作「活動頁面配色」。',
+      before: function(){
+        var btn = H.$('#boda-import-done-btn');
+        if(btn) try{ btn.scrollIntoView({ block: 'nearest' }); }catch(e){}
+        spot([btn], true);
+      },
+      anim: function(a){
+        var btn = H.$('#boda-import-done-btn');
+        if(!demoMode || !btn) return H.wait(300);
+        return a.wait(500)
+          .then(function(){ return a.click(btn, { after: 300 }); })
+          .then(function(){ return a.hide(); })
+          .then(function(){
+            if(typeof setWorkflowStepStatus === 'function') setWorkflowStepStatus('import', 'done');
+            spot([document.querySelector('#nav-rail .nav-step[data-step="import"]')], true);
+            celebrate('活動頁完成！');
+            return H.wait(1500);
+          })
+          .then(function(){
+            if(typeof finishCurrentWorkflowStep === 'function' && currentView() === 'import') finishCurrentWorkflowStep('done');
+            return H.wait(800);
+          })
+          .then(function(){
+            spot([document.querySelector('#nav-rail .nav-step[data-step="color"]')], true);
+            return H.wait(900);
+          });
+      } },
+
+    /* ═════════ 取色工具 ═════════ */
+    { target: function(){ return proxy; }, place: 'left',
+      title: '活動頁面配色',
+      body: '這裡會顯示設計完成的配色結果，簡單瀏覽確認即可。',
+      before: function(){
+        return goStep('color').then(function(){ return H.waitFor(function(){ return C$('#simRoles .role[data-key="ctabg"]'); }, 15000); })
+          .then(function(){ return H.wait(400); })
+          .then(function(){ spot([H.$('#color-wrap')], true); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '確認完成',
+      body: '按下「取色工具完成」，左側清單打勾，繼續製作「吸底」。',
+      before: function(){
+        var b = C$('#bodaColorDone');
+        if(b) try{ b.scrollIntoView({ block: 'nearest' }); }catch(e){}
+        return H.wait(200).then(function(){ spot([b], true); });
+      },
+      anim: function(a){
+        var b = C$('#bodaColorDone');
+        if(!demoMode || !b) return H.wait(300);
+        return a.wait(400).then(function(){ return clickIn(a, b, false, 300); })
+          .then(function(){ return a.hide(); })
+          .then(function(){
+            if(typeof setWorkflowStepStatus === 'function') setWorkflowStepStatus('color', 'done');
+            spot([railStep('color')], true);
+            celebrate('取色工具完成！');
+            return H.wait(1300);
+          });
+      } },
+
+    /* ═════════ 吸底工具 ═════════ */
+    { target: function(){ return proxy; }, place: 'left',
+      title: '編輯吸底',
+      body: '工單上的吸底文字已經自動帶入，依照對應的版位上傳 icon。',
+      before: function(){
+        return goStep('bottom').then(bottomReady)
+          .then(function(){ spot([H.$('#view-bottom')], true); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '上傳素材',
+      body: '上傳素材提供 icon 跟 Logo 選項，請依照素材屬性選擇。',
+      before: function(){
+        return bottomReady().then(function(){
+          var c = bCard(1); if(c) try{ c.scrollIntoView({ block: 'nearest' }); }catch(e){}
+          return H.wait(250).then(function(){ spot([c], true); });
+        });
+      },
+      anim: function(a){
+        var c = bCard(1), d = window.BODA_TOUR_DEMO, inp = c && c.querySelector('input[type=file]');
+        var up = c && Array.prototype.filter.call(c.querySelectorAll('button'), function(b){ return /上傳/.test(b.textContent); })[0];
+        if(!demoMode || !inp || !d || !d.bottomIcon) return H.wait(300);
+        return a.wait(400).then(function(){ return clickIn(a, up, false, 300); })
+          .then(function(){
+            /* 示範時不開檔案視窗，直接放入示範 icon */
+            setFiles(inp, [b64File(d.bottomIcon, 'image/png')]);
+            return H.waitFor(function(){ return bBtn(/加為一般 icon/); }, 4000);
+          })
+          .then(function(btn){
+            if(!btn) return;
+            spot([bCard(1)], true);
+            return a.wait(900).then(function(){ return clickIn(a, btn, true, 900); });
+          })
+          .then(function(){ spot([bCard(1)], true); return a.hide(); })
+          .then(function(){ return H.wait(400); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '從資料庫選素材',
+      body: '提供內建資料庫挑選常用 icon。',
+      before: function(){
+        var c = bCard(2); if(c) try{ c.scrollIntoView({ block: 'nearest' }); }catch(e){}
+        return H.wait(250).then(function(){ spot([c], true); });
+      },
+      anim: function(a){
+        if(!demoMode || !bCard(2)) return H.wait(300);
+        var picks = ['dunbbell', 'new badge', 'fire'], ch = a.wait(300);
+        picks.forEach(function(name, k){
+          ch = ch.then(function(){ return pickBottomIcon(a, k + 2, name); });
+        });
+        return ch.then(function(){ var bp = B$('#panel'); spot([B$('#stage-wrap') || bp], true); return a.hide(); })
+          .then(function(){ return H.wait(800); })
+          /* 吸底都設定好了：趁看說明的時候，在背後先把整包下載的圖片準備好 */
+          .then(function(){ prebuildPackage(); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '確認完成',
+      body: '按下「吸底完成」，若所有項目皆已完成，系統會詢問是否要整包下載。',
+      before: function(){
+        var b = B$('#boda-bottom-done-btn');
+        if(b) try{ b.scrollIntoView({ block: 'nearest' }); }catch(e){}
+        return H.wait(200).then(function(){ spot([b], true); });
+      },
+      anim: function(a){
+        var b = B$('#boda-bottom-done-btn');
+        if(!demoMode || !b) return H.wait(300);
+        prebuildPackage();
+        return a.wait(400).then(function(){ return clickIn(a, b, true, 300); })
+          .then(function(){ celebrate(); return H.wait(1600); })
+          .then(function(){ return H.waitFor(function(){ return H.$('#boda-choice-dialog'); }, 5000); })
+          .then(function(dlg){
+            if(!dlg) return;
+            spot([dlg.querySelector('.bcd-panel') || dlg], true);
+            return a.wait(2200).then(function(){ return clickIn(a, dlg.querySelector('[data-v="1"]'), false, 300); })
+              .then(function(){
+                /* 圖片已在背後準備好：關掉詢問視窗，直接打開檢查視窗（不重新產生） */
+                var c = dlg.querySelector('[data-v="0"]'); if(c) c.click();
+              });
+          })
+          .then(function(){ return a.hide(); })
+          .then(function(){
+            spot([H.$('#nav-rail')], true);
+            var stop = showBuildProgress();
+            return prebuildPackage().then(function(bundle){ stop(); openPackagePreview(bundle); }, function(){ stop(); });
+          })
+          .then(function(){ return H.waitFor(function(){ return H.$('#boda-dl-preview .bdp-panel'); }, 10000); })
+          .then(function(p){
+            if(p) spot([p], true);
+            setCardBody('所有要下載的內容，都可以在這裡預覽。');
+            return H.wait(400);
+          });
+      } },
+
+    { target: function(){ return proxy; }, place: 'left',
+      title: '確認完成',
+      body: '點擊圖片逐張檢查，確認沒問題就按下「確認下載 ZIP」。',
+      before: function(){
+        if(!H.$('#boda-dl-preview') && demoMode) prebuildPackage().then(openPackagePreview);
+        return H.waitFor(function(){ return H.$('#boda-dl-preview .bdp-panel'); }, 180000)
+          .then(function(p){ spot([p], true); });
+      },
+      anim: function(a){
+        var pnl = H.$('#boda-dl-preview .bdp-panel');
+        if(!demoMode || !pnl) return H.wait(300);
+        var fig = pnl.querySelector('figure');
+        return a.wait(600)
+          .then(function(){ return fig ? clickIn(a, fig, true, 500) : null; })
+          .then(function(){
+            var box = H.$('#boda-dl-lightbox');
+            if(!box) return;
+            spot([box], true);
+            return a.wait(1200)
+              .then(function(){ return clickIn(a, box.querySelector('.bdl-next'), true, 1000); })
+              .then(function(){ return clickIn(a, box.querySelector('.bdl-next'), true, 1000); })
+              .then(function(){ return clickIn(a, box.querySelector('.bdl-close'), true, 400); });
+          })
+          .then(function(){
+            var ok = H.$('#boda-dl-preview [data-v="1"]');
+            spot([ok], true);
+            /* 示範只指一下，不真的下載 */
+            return a.wait(500).then(function(){ return ok ? clickIn(a, ok, false, 400) : null; });
+          })
+          .then(function(){ return a.hide(); });
+      } },
+
+    { target: function(){ return proxy; }, place: 'right',
+      title: '導覽結束',
+      body: '<span style="font-size:12px;opacity:.8">隨時想複習，只要點擊左下角「教學」→「導覽」，就能重新播放這份說明。</span>',
+      before: function(){
+        try{ var lb = document.querySelector('#boda-dl-lightbox .bdl-close'); if(lb) lb.click(); }catch(e){}
+        /* 停在下載檢查畫面，打亮「教學」 */
+        return H.wait(300).then(function(){ spot([launchBtn()], true); });
+      },
+      anim: function(){ return H.wait(250).then(function(){ celebrate('恭喜完成導覽！', true); return H.wait(1800); }); } }
   ];
 
 
@@ -969,7 +1944,10 @@
       '#view-exposure.boda-tour-prerender{display:block!important;position:fixed!important;inset:0!important;' +
       'opacity:0!important;pointer-events:none!important;z-index:-1!important;}' +
       '.tg-root{--tg-backdrop:rgba(18,24,28,.45)!important;}' +
-      '.tg-root:has(.tg-card.tg-intro){--tg-backdrop:rgba(18,24,28,.22)!important;}';
+      '.tg-root:has(.tg-card.tg-intro){--tg-backdrop:rgba(18,24,28,.22)!important;}' +
+      'html.boda-tour-card-up .tg-card{margin-top:-160px!important;}' +
+      /* 開場標題較長：只在空格、「-」、「/」處換行，不把「編輯器」拆開 */
+      '.tg-card.tg-intro .tg-title{word-break:keep-all;white-space:pre-line;}';
     document.head.appendChild(st);
   })();
   var tour = TourGuide.create({
@@ -990,17 +1968,28 @@
       /* 導覽中不顯示 Loading 遮罩（匯入照常在背景跑，步驟會等它跑完才出現「下一步」） */
       document.documentElement.classList.add('boda-tour-on');
       startView = currentView();
-      var resumed = false;
+      var resumed = false, section = '';
       try{ resumed = sessionStorage.getItem(RESUME_KEY) === '1'; sessionStorage.removeItem(RESUME_KEY); }catch(e){}
+      try{ section = sessionStorage.getItem(SECTION_KEY) || ''; sessionStorage.removeItem(SECTION_KEY); }catch(e){}
+      /* 只看某一段：先在背後匯入示範工單與圖片，再從那一段開始 */
+      if(section && SECTIONS[section]){
+        needReset = false; demoMode = true;
+        return loadDemoData().then(function(d){
+          if(!d){ demoMode = false; return; }
+          return silentPrepare(section);
+        });
+      }
       /* 有編輯中的內容：開場先說明會清除，按「開始導覽」才重置；按「先不用」什麼都不動 */
       needReset = !resumed && hasExistingWork();
-      STEPS[0].body = needReset
+      seenBefore = tour.hasSeen() && !/[?&]tour=first\b/.test(location.search);
+      STEPS[0].body = (needReset
         ? '示範會先清除目前網頁上的內容，再匯入示範工單。<br>要保留的話，請先下載暫存檔。'
-        : '要用示範工單，帶你走一遍嗎？';
+        : '只要 3 分鐘，帶你快速上手所有功能！');
       demoMode = true;
       return loadDemoData().then(function(d){ if(!d){ demoMode = false; needReset = false; } });
     },
     onStep: function(i, step){
+      renderMilestones(i);
       document.querySelector('.tg-next').disabled = false;
       setControls(!(step.anim && !motionOff()));
     },
@@ -1010,6 +1999,11 @@
       spotOff();
       uncoverLevel();
       hold('wo', false); hold('img', false);
+      closeFakePicker(); impDeselect();
+      document.documentElement.classList.remove('boda-tour-card-up');
+      /* 停在下載檢查視窗時結束：導覽只示範，不真的下載 */
+      try{ var lb = document.querySelector('#boda-dl-lightbox .bdl-close'); if(lb) lb.click(); }catch(e){}
+      try{ if(typeof unlockImportCol === 'function' && typeof IMPORT_SYNC !== 'undefined' && IMPORT_SYNC.lockedIndex >= 0) unlockImportCol(); }catch(e){}
       /* 導覽停在提醒視窗時結束：照導覽示範的選「僅套用至未完成版位」關掉 */
       try{ var ask = E$('#boda-link-ask'); if(ask){ var pv = ask.querySelector('[data-v="prev"]'); if(pv) pv.click(); } }catch(e){}
       prerenderExposure(false);
@@ -1053,12 +2047,26 @@
 
   /* 第一次開啟（或網址有 ?tour）：等工具載入完成再開始 */
   var forced = /[?&]tour(=|&|$)/.test(location.search);
-  var resume = false;
+  var urlSection = (location.search.match(/[?&]tour=(exposure|import|color|bottom)\b/) || [])[1] || '';
+  var resume = false, pendingSection = '';
   try{ resume = sessionStorage.getItem(RESUME_KEY) === '1'; }catch(e){}
-  if(resume || forced || !tour.hasSeen()){
+  try{ pendingSection = sessionStorage.getItem(SECTION_KEY) || ''; }catch(e){}
+  if(urlSection && !pendingSection){ pendingSection = urlSection; try{ sessionStorage.setItem(SECTION_KEY, urlSection); }catch(e){} }
+  if(pendingSection || resume || forced || !tour.hasSeen()){
     H.waitFor(function(){ return !appBusy() && H.$('#upload-level'); }, 60000).then(function(ok){
-      if(ok) setTimeout(function(){ if(!appBusy()) tour.start(resume ? 1 : 0); }, 400);
+      if(!ok) return;
+      setTimeout(function(){
+        if(appBusy()) return;
+        if(pendingSection && SECTIONS[pendingSection]){
+          /* 指定段落但有自己的編輯內容：先問、清除後再從那一段開始 */
+          if(hasExistingWork() && !resume) return askResetForSection(pendingSection);
+          return tour.start(sectionIndex(pendingSection));
+        }
+        tour.start(resume ? 1 : 0);
+      }, 400);
     });
   }
+
+
 
 })();
