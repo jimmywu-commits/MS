@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>版位排版工具</title>
+<title>活動素材製作工具 - MS編輯器</title>
 <style id="boda-tour-styles">
 /* BODA 操作導覽。所有樣式皆以 bdt / boda-tour 命名，避免影響版位與匯出。 */
 .boda-tour-launch,.boda-tour-home,#boda-tour-root,#boda-tour-waiting{--bdt-accent:#ee4d2d;--bdt-accent-hover:#d83e21;--bdt-accent-light:#ffb19f;--bdt-accent-soft:rgba(238,77,45,.12);--bdt-glow:rgba(238,77,45,.22);--bdt-deep:#1b1b1f;--bdt-soft:#26262c;--bdt-line:#3a3a44;--bdt-line-strong:#555562;--bdt-text:#f2f2f4;--bdt-muted:#9a9aa4;--bdt-on-accent:#ffffff;--bdt-dim:rgba(0,0,0,.62);}
@@ -828,6 +828,21 @@ html,body{height:100%;background:var(--bg);color:var(--ink);
 .import-image-tool-row:first-child{margin-top:0;}
 .import-image-tool-row .import-image-tool-label{flex:1;min-width:0;margin:0;font-weight:600;color:var(--ink3);}
 .import-image-tool-actions{display:flex;gap:3px;flex-shrink:0;}
+.import-icon-empty-slot{outline:2px dashed rgba(25,111,216,.78);outline-offset:-4px;background:rgba(255,255,255,.34);}
+.import-missing-icon-pick{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;display:flex;align-items:center;justify-content:center;gap:6px;min-width:86px;max-width:calc(100% - 16px);padding:8px 10px;border:1px dashed rgba(25,111,216,.9);border-radius:10px;background:rgba(255,255,255,.92);color:#196fd8;font:800 13px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 8px 20px rgba(15,35,70,.16);cursor:pointer;pointer-events:auto;white-space:nowrap;}
+.import-missing-icon-pick:hover{background:#edf5ff;border-style:solid;box-shadow:0 10px 24px rgba(25,111,216,.22);}
+.import-icon-picker{position:absolute;z-index:99990;width:292px;max-width:calc(100vw - 24px);padding:10px;border:1px solid rgba(31,51,83,.18);border-radius:12px;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.25);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#182338;}
+.import-icon-picker[hidden]{display:none!important;}
+.import-icon-picker-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:14px;font-weight:800;}
+.import-icon-picker-close{width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:#516071;font-size:20px;line-height:1;cursor:pointer;}
+.import-icon-picker-close:hover{background:#f1f5f9;color:#0f172a;}
+.import-icon-picker-search{width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border:1px solid #d5dce7;border-radius:8px;font:600 12px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;}
+.import-icon-picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;max-height:236px;overflow:auto;padding:1px;}
+.import-icon-picker-item{appearance:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:58px;padding:6px;border:1px solid #dbe3ef;border-radius:9px;background:#fff;cursor:pointer;color:#344154;font:700 10px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center;}
+.import-icon-picker-item:hover,.import-icon-picker-item:focus-visible{border-color:#196fd8;background:#edf5ff;outline:none;}
+.import-icon-picker-item img{width:34px;height:34px;object-fit:contain;display:block;}
+.import-icon-picker-empty{grid-column:1/-1;padding:18px 8px;text-align:center;color:#7b8794;font-size:12px;}
+.import-icon-picker-note{margin-top:8px;color:#7b8794;font-size:11px;line-height:1.4;}
 .import-tool-mini-preview{width:26px;height:26px;flex:0 0 26px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--ink3);font-size:8px;line-height:1;text-align:center;}
 .import-tool-mini-preview img{display:block;width:100%;height:100%;object-fit:contain;}
 .import-logo-bg-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:-2px 0 8px 32px;font-size:10.5px;color:var(--ink2);}
@@ -15096,6 +15111,7 @@ function auditImportShadowCanvasAssets() {
         if (!key) return part;
         result.checked++;
         var asset = importShadowAssetForCanvasValue(key);
+        if (importNoShadowAssetUrls[key] || (asset && asset.skipShadow)) return part;
         var location = String(col.header || def.name || col.blockId) + '／' + String(field.label || field.key);
         function trackShadowBase(item, geometry) {
           if (!item.shadowGeom) item.shadowGeom = geometry;
@@ -15429,7 +15445,13 @@ function reapplyImportShadowToUploads(commit) {
     if (!def || !col.data) return;
     (def.fields || []).forEach(function (field) {
       if (field.type !== 'image' || !isImportShadowFieldKey(field.key)) return;
-      splitImageList(col.data[field.key] || '').forEach(function (part) { productUsed[String(part || '').trim()] = true; });
+      splitImageList(col.data[field.key] || '').forEach(function (part) {
+        var key = String(part || '').trim();
+        if (!key || importNoShadowAssetUrls[key]) return;
+        var asset = importShadowAssetForCanvasValue(key);
+        if (asset && asset.skipShadow) return;
+        productUsed[key] = true;
+      });
     });
   });
   /* 編輯過的素材可能已換成新的 dataURL；用同一素材名稱再比一次，不能因此漏掉重烘。
@@ -15447,6 +15469,7 @@ function reapplyImportShadowToUploads(commit) {
   });
   var seenBases = new Set();
   var list = (uploadedImages || []).filter(function (img) {
+    if (img && img.skipShadow) return false;
     if (!(img && img.url && img.baseUrl)) return false;
     if (productUsed[img.url] || productUsed[img.baseUrl] || (img.logoUrl && productUsed[img.logoUrl])) return true;
     return usedNameUrls.has(img.url) || usedNameUrls.has(img.baseUrl);
@@ -16353,10 +16376,12 @@ function importLogoRefresh() {
 function importUploadStateFields(img) {
   var out = {};
   ['logoBg', 'logoUrl', 'logoMode', 'logoAuto', 'logoKey', 'shadowGeom', 'shadowKey'].forEach(function (k) { if (img[k]) out[k] = img[k]; });
+  if (img.skipShadow) out.skipShadow = true;
   return out;
 }
 function importUploadFromState(img) {
   var out = Object.assign({ name: img.name, url: img.url, baseUrl: img.baseUrl || '' }, importUploadStateFields(img));
+  if (out.skipShadow && out.url) importNoShadowAssetUrls[out.url] = true;
   importShadowGeometryFromState(out);
   return out;
 }
@@ -16372,6 +16397,7 @@ function importUploadsForBottomPersist() {
 }
 function importUploadFromPersist(img) {
   var out = Object.assign({ name: img.name, url: img.shadowUrl || img.url, baseUrl: img.orig ? img.url : '' }, importUploadStateFields(img));
+  if (out.skipShadow && out.url) importNoShadowAssetUrls[out.url] = true;
   importShadowGeometryFromState(out);
   return out;
 }
@@ -17421,6 +17447,463 @@ function isUsableImageValue(v) {
   return splitImageList(v).some(function (p) { return /^(data:|https?:|blob:)/i.test(p); });
 }
 
+var IMPORT_ICON_PICKER_FILES = [
+  'icon/icon_全站優惠券.png',
+  'icon/icon_免運.png',
+  'icon/icon_折扣_紅.png',
+  'icon/icon_折扣_黃.png',
+  'icon/icon_折扣_綠.png',
+  'icon/icon_折扣_橘.png',
+  'icon/icon_折扣_藍.png',
+  'icon/icon_店家券_紅.png',
+  'icon/icon_店家券_橘.png',
+  'icon/icon_直播_紅.png',
+  'icon/icon_直播_黃.png',
+  'icon/icon_直播_綠.png',
+  'icon/icon_直播_橘.png',
+  'icon/icon_直播_藍.png',
+  'icon/icon_商城優惠券.png',
+  'icon/icon_蝦幣.png',
+  'icon/icon_優惠券_紅.png',
+  'icon/icon_優惠券_黃.png',
+  'icon/icon_優惠券_綠.png',
+  'icon/icon_優惠券_橘.png',
+  'icon/icon_優惠券_藍.png',
+  'icon/icon_點數.png',
+  'icon/icon_禮物_紅.png',
+  'icon/icon_禮物_黃.png',
+  'icon/icon_禮物_綠.png',
+  'icon/icon_禮物_橘.png',
+  'icon/icon_禮物_藍.png',
+  'icon/icon_關注_紅.png',
+  'icon/icon_關注_黃.png',
+  'icon/icon_關注_綠.png',
+  'icon/icon_關注_橘.png',
+  'icon/icon_關注_藍.png'
+];
+var importIconPickerTarget = null;
+var importIconDataUrlCache = {};
+var importNoShadowAssetUrls = {};
+
+function importIconNameFromPath(path) {
+  var name = String(path || '').split('/').pop() || '';
+  try { name = decodeURIComponent(name); } catch (_) {}
+  return name.replace(/\.[^.]+$/, '').replace(/^icon_/, '').replace(/_/g, ' ');
+}
+function importIconFieldCanUsePicker(key, label) {
+  var text = (String(key || '') + ' ' + String(label || '')).toLowerCase();
+  if (/logo|代言|人物|簽名|endorser|signature/.test(text)) return false;
+  return true;
+}
+function firstImportIconReplaceIndex(raw) {
+  var parts = splitImageList(raw || '');
+  if (!parts.length) return 0;
+  for (var i = 0; i < parts.length; i++) {
+    if (!isUsableImageValue(parts[i])) return i;
+  }
+  return 0;
+}
+function iconFileToDataUrl(path) {
+  if (importIconDataUrlCache[path]) return Promise.resolve(importIconDataUrlCache[path]);
+  return fetch(path, { cache: 'no-store' })
+    .then(function (response) {
+      if (!response.ok) throw new Error('找不到 icon 圖片：' + path);
+      return response.blob();
+    })
+    .then(function (blob) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          importIconDataUrlCache[path] = reader.result;
+          resolve(reader.result);
+        };
+        reader.onerror = function () { reject(reader.error || new Error('icon 圖片讀取失敗')); };
+        reader.readAsDataURL(blob);
+      });
+    }).catch(function () {
+      return new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.onload = function () {
+          try {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            var dataUrl = canvas.toDataURL('image/png');
+            importIconDataUrlCache[path] = dataUrl;
+            resolve(dataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = function () { reject(new Error('icon 圖片讀取失敗：' + path)); };
+        img.src = path;
+      });
+    });
+}
+function placeImportIconPicker(el, anchor) {
+  if (!el || !anchor || !anchor.getBoundingClientRect) return;
+  var rect = anchor.getBoundingClientRect();
+  var margin = 10;
+  var width = el.offsetWidth || 292;
+  var height = el.offsetHeight || 360;
+  var left = rect.left + rect.width / 2 - width / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+  var top = rect.bottom + margin;
+  if (top + height > window.innerHeight - margin) top = Math.max(margin, rect.top - height - margin);
+  el.style.left = Math.round(left + window.scrollX) + 'px';
+  el.style.top = Math.round(top + window.scrollY) + 'px';
+}
+function renderImportIconPickerGrid(filterText) {
+  var picker = document.getElementById('import-icon-picker');
+  var grid = picker && picker.querySelector('.import-icon-picker-grid');
+  if (!grid) return;
+  var query = String(filterText || '').trim().toLowerCase();
+  var files = IMPORT_ICON_PICKER_FILES.filter(function (path) {
+    return !query || importIconNameFromPath(path).toLowerCase().indexOf(query) !== -1;
+  });
+  grid.innerHTML = files.length ? files.map(function (path) {
+    var name = importIconNameFromPath(path);
+    return '<button type="button" class="import-icon-picker-item" data-icon-path="' + esc(path) + '" title="' + esc(name) + '">' +
+      '<img src="' + esc(path) + '" alt="">' +
+      '<span>' + esc(name) + '</span>' +
+    '</button>';
+  }).join('') : '<div class="import-icon-picker-empty">沒有符合的 icon</div>';
+  grid.querySelectorAll('.import-icon-picker-item[data-icon-path]').forEach(function (btn) {
+    btn.addEventListener('click', function () { applyImportIconPickerChoice(btn.getAttribute('data-icon-path')); });
+  });
+}
+function ensureImportIconPicker() {
+  var picker = document.getElementById('import-icon-picker');
+  if (picker) return picker;
+  picker = document.createElement('div');
+  picker.id = 'import-icon-picker';
+  picker.className = 'import-icon-picker';
+  picker.hidden = true;
+  picker.innerHTML =
+    '<div class="import-icon-picker-head"><span>選擇 ICON</span><button type="button" class="import-icon-picker-close" aria-label="關閉">×</button></div>' +
+    '<input class="import-icon-picker-search" type="search" placeholder="搜尋 icon">' +
+    '<div class="import-icon-picker-grid"></div>' +
+    '<div class="import-icon-picker-note">來源：主程式 icon 資料夾。選好後會比照一般商品圖，可移動、縮放、更換與刪除。</div>';
+  document.body.appendChild(picker);
+  picker.querySelector('.import-icon-picker-close').addEventListener('click', closeImportIconPicker);
+  picker.querySelector('.import-icon-picker-search').addEventListener('input', function (e) {
+    renderImportIconPickerGrid(e.target.value);
+  });
+  return picker;
+}
+function closeImportIconPicker() {
+  var picker = document.getElementById('import-icon-picker');
+  if (picker) picker.hidden = true;
+  importIconPickerTarget = null;
+}
+function openImportIconPicker(target, anchor) {
+  importIconPickerTarget = target;
+  var picker = ensureImportIconPicker();
+  var search = picker.querySelector('.import-icon-picker-search');
+  if (search) search.value = '';
+  renderImportIconPickerGrid('');
+  picker.hidden = false;
+  placeImportIconPicker(picker, anchor);
+  setTimeout(function () { if (search) search.focus(); }, 0);
+}
+function applyImportIconPickerChoice(path) {
+  var target = importIconPickerTarget;
+  if (!target || !path) return;
+  iconFileToDataUrl(path).then(function (dataUrl) {
+    var ctx = canvasCtx(target.ctxName || 'import');
+    var col = ctx.columns()[target.idx];
+    if (!col) return;
+    var key = target.key;
+    var parts = splitImageList(col.data[key] || '');
+    if (!parts.length) parts = [''];
+    var imageIndex = Number(target.imageIndex);
+    if (!isFinite(imageIndex) || imageIndex < 0) imageIndex = firstImportIconReplaceIndex(col.data[key] || '');
+    imageIndex = Math.floor(imageIndex);
+    while (parts.length <= imageIndex) parts.push('');
+    parts[imageIndex] = dataUrl;
+    var name = importIconNameFromPath(path) + '.png';
+    importNoShadowAssetUrls[dataUrl] = true;
+    if (!uploadedImages.some(function (img) { return img.url === dataUrl; })) {
+      uploadedImages.push({ name: name, url: dataUrl, baseUrl: dataUrl, skipShadow: true });
+      renderImageGallery();
+    }
+    closeImportIconPicker();
+    setImportFieldImages(target.idx, key, parts, target.ctxName || 'import');
+  }).catch(function (err) {
+    alert('icon 圖片讀取失敗：' + (err && err.message ? err.message : err));
+  });
+}
+function importIsNoShadowIconUrl(url) {
+  var key = String(url || '').trim();
+  if (!key) return false;
+  if (importNoShadowAssetUrls[key]) return true;
+  var asset = importShadowAssetForCanvasValue(key);
+  return !!(asset && asset.skipShadow);
+}
+function importRootLocalRect(root, el) {
+  if (!root || !el || !root.getBoundingClientRect || !el.getBoundingClientRect) return null;
+  var rootRect = root.getBoundingClientRect();
+  var rect = el.getBoundingClientRect();
+  var rootW = root.offsetWidth || parseFloat(root.style && root.style.width) || rootRect.width || 0;
+  var rootH = root.offsetHeight || parseFloat(root.style && root.style.height) || rootRect.height || 0;
+  var sx = rootRect.width ? rootW / rootRect.width : 1;
+  var sy = rootRect.height ? rootH / rootRect.height : 1;
+  if (!isFinite(sx) || sx <= 0) sx = 1;
+  if (!isFinite(sy) || sy <= 0) sy = 1;
+  var left = (rect.left - rootRect.left) * sx;
+  var top = (rect.top - rootRect.top) * sy;
+  var width = rect.width * sx;
+  var height = rect.height * sy;
+  if (!(width > 0) || !(height > 0)) return null;
+  return { left: left, top: top, right: left + width, bottom: top + height, width: width, height: height };
+}
+function importVisibleLocalRect(root, el) {
+  if (!el) return null;
+  if (window.getComputedStyle) {
+    var cs = window.getComputedStyle(el);
+    if (!cs || cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return null;
+  }
+  return importRootLocalRect(root, el);
+}
+function importSafeRectInset(rect, margin) {
+  if (!rect) return null;
+  return {
+    left: rect.left + margin,
+    top: rect.top + margin,
+    right: rect.right - margin,
+    bottom: rect.bottom - margin,
+    width: Math.max(0, rect.width - margin * 2),
+    height: Math.max(0, rect.height - margin * 2)
+  };
+}
+function importRectsOverlapY(a, b) {
+  return !!(a && b && a.bottom > b.top && a.top < b.bottom);
+}
+function importSetSubareaIconImageFit(box) {
+  if (!box) return;
+  var group = box.querySelector && box.querySelector('.bn-imggroup');
+  if (group) {
+    group.style.width = '100%';
+    group.style.height = '100%';
+    group.style.alignItems = 'center';
+    group.style.justifyContent = 'center';
+    group.style.overflow = 'visible';
+  }
+  Array.prototype.forEach.call(box.querySelectorAll('img.bn-imggroup-img'), function (img) {
+    if (!importIsNoShadowIconUrl(img.getAttribute('src') || img.src)) return;
+    img.setAttribute('data-import-icon-asset', '1');
+    img.style.objectFit = 'contain';
+  });
+}
+function importSubareaIconCtaObstacles(root, box) {
+  if (!root || !root.querySelectorAll) return [];
+  var rootW = root.offsetWidth || parseFloat(root.style && root.style.width) || 0;
+  var list = [];
+  function add(el) {
+    if (!el || el === box || (box && box.contains(el)) || list.indexOf(el) !== -1) return;
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect || rect.width < 8 || rect.height < 8) return;
+    list.push(el);
+  }
+  Array.prototype.forEach.call(root.querySelectorAll('[data-theme-color-role], [data-color-field], [data-field], [data-text-field]'), function (el) {
+    var key = [
+      el.getAttribute('data-theme-color-role'),
+      el.getAttribute('data-color-field'),
+      el.getAttribute('data-field'),
+      el.getAttribute('data-text-field')
+    ].join(' ');
+    if (/cta/i.test(key)) add(el);
+  });
+  Array.prototype.forEach.call(root.children || [], function (el) {
+    if (el === box || (box && box.contains(el))) return;
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect) return;
+    var cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
+    var clip = cs ? String(cs.clipPath || '') : String(el.style && el.style.clipPath || '');
+    var radius = cs ? Math.max(
+      parseFloat(cs.borderTopLeftRadius) || 0,
+      parseFloat(cs.borderTopRightRadius) || 0,
+      parseFloat(cs.borderBottomRightRadius) || 0,
+      parseFloat(cs.borderBottomLeftRadius) || 0
+    ) : 0;
+    var centerX = (rect.left + rect.right) / 2;
+    var isRightSide = rootW ? centerX > rootW * 0.52 : true;
+    var looksLikeCtaTriangle = /polygon/i.test(clip) && isRightSide && rect.width <= 80 && rect.height <= 80;
+    var looksLikeCtaCircle = isRightSide && rect.width >= 18 && rect.width <= 92 && rect.height >= 18 && rect.height <= 92 &&
+      Math.abs(rect.width - rect.height) <= 24 && radius >= Math.min(rect.width, rect.height) * 0.35;
+    if (looksLikeCtaTriangle || looksLikeCtaCircle) add(el);
+  });
+  return list;
+}
+function importRectIntersects(a, b, gap) {
+  gap = Number(gap) || 0;
+  return !!(a && b && a.right + gap > b.left && a.left - gap < b.right && a.bottom + gap > b.top && a.top - gap < b.bottom);
+}
+function fitSubareaIconAwayFromCta(box) {
+  if (!box) return;
+  var root = box.closest && box.closest('[data-bn-schema-id]');
+  if (!root) return;
+  var obstacles = importSubareaIconCtaObstacles(root, box);
+  if (!obstacles.length) return;
+  Array.prototype.forEach.call(box.querySelectorAll('img.bn-imggroup-img[data-import-icon-asset="1"]'), function (img) {
+    if (!img || !img.getBoundingClientRect) return;
+    var currentTransform = img.style.transform || '';
+    if (img.dataset.importIconCtaFitApplied === '1' && currentTransform === (img.dataset.importIconCtaFitTransform || '')) {
+      currentTransform = img.dataset.importIconCtaFitBaseTransform || '';
+      img.style.transform = currentTransform;
+    }
+    var imgRect = img.getBoundingClientRect();
+    if (!imgRect.width || !imgRect.height) return;
+    var cx = imgRect.left + imgRect.width / 2;
+    var cy = imgRect.top + imgRect.height / 2;
+    var factor = 1;
+    obstacles.forEach(function (obstacle) {
+      var obRect = obstacle.getBoundingClientRect();
+      if (!obRect.width || !obRect.height || !importRectIntersects(imgRect, obRect, 3)) return;
+      var limits = [];
+      if (obRect.left >= cx) limits.push((obRect.left - 3 - cx) / (imgRect.width / 2));
+      else if (obRect.right <= cx) limits.push((cx - obRect.right - 3) / (imgRect.width / 2));
+      if (obRect.top >= cy) limits.push((obRect.top - 3 - cy) / (imgRect.height / 2));
+      else if (obRect.bottom <= cy) limits.push((cy - obRect.bottom - 3) / (imgRect.height / 2));
+      limits = limits.filter(function (v) { return isFinite(v) && v > 0; });
+      if (limits.length) factor = Math.min(factor, Math.max(0.05, Math.min.apply(Math, limits)));
+      else factor = Math.min(factor, 0.78);
+    });
+    if (factor < 0.995) {
+      factor = Math.max(0.05, Math.min(1, factor));
+      var nextTransform = (currentTransform ? currentTransform + ' ' : '') + 'scale(' + (Math.floor(factor * 10000) / 10000) + ')';
+      img.style.transformOrigin = 'center center';
+      img.style.transform = nextTransform;
+      img.dataset.importIconCtaFitApplied = '1';
+      img.dataset.importIconCtaFitBaseTransform = currentTransform;
+      img.dataset.importIconCtaFitTransform = nextTransform;
+    } else {
+      delete img.dataset.importIconCtaFitApplied;
+      delete img.dataset.importIconCtaFitBaseTransform;
+      delete img.dataset.importIconCtaFitTransform;
+    }
+  });
+}
+function scheduleSubareaIconCtaFit(box) {
+  if (!box) return;
+  var run = function () { fitSubareaIconAwayFromCta(box); };
+  if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(run); });
+  else setTimeout(run, 32);
+}
+function refreshSubareaIconLayout(box) {
+  if (!box || !window.BNImageLayout || typeof BNImageLayout.refreshEditedImage !== 'function') return;
+  Array.prototype.forEach.call(box.querySelectorAll('img.bn-imggroup-img[data-import-icon-asset="1"]'), function (img) {
+    var refresh = function () {
+      BNImageLayout.refreshEditedImage(img, { reflow: true, resetSlots: true });
+      if (typeof BNImageLayout.refreshTransformControls === 'function') BNImageLayout.refreshTransformControls();
+      scheduleSubareaIconCtaFit(box);
+    };
+    if (img.complete && img.naturalWidth) refresh();
+    else img.addEventListener('load', refresh, { once: true });
+  });
+}
+function applySubareaIconPlacementZone(box) {
+  if (!box) return;
+  var root = box.closest && box.closest('[data-bn-schema-id]');
+  if (!root) return;
+  var rootW = root.offsetWidth || parseFloat(root.style && root.style.width) || 0;
+  var rootH = root.offsetHeight || parseFloat(root.style && root.style.height) || 0;
+  if (!(rootW > 0) || !(rootH > 0)) return;
+  var margin = Math.max(6, Math.min(12, Math.round(Math.min(rootW, rootH) * 0.025)));
+  var card = root.querySelector('[data-color-field="bgColor"]') || root.querySelector('[data-color-field*="card"]');
+  var baseRect = importVisibleLocalRect(root, card) || { left: 0, top: 0, right: rootW, bottom: rootH, width: rootW, height: rootH };
+  var safe = importSafeRectInset(baseRect, margin) || baseRect;
+  var contentEls = Array.prototype.slice.call(root.querySelectorAll('[data-field], [data-text-field], [data-color-field]'));
+  contentEls.forEach(function (el) {
+    if (box.contains(el)) return;
+    var key = String(el.getAttribute('data-field') || el.getAttribute('data-text-field') || el.getAttribute('data-color-field') || '');
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect) return;
+    if (/(promo|title|headline|heading|logo)/i.test(key) && rect.top < rootH * 0.42) {
+      safe.top = Math.max(safe.top, rect.bottom + margin);
+    }
+    if (/(name|warn|desc|description|subtitle|note|notice|caption)/i.test(key) && rect.top > rootH * 0.42) {
+      safe.bottom = Math.min(safe.bottom, rect.top - margin);
+    }
+  });
+  var verticalBand = { top: safe.top, bottom: safe.bottom };
+  contentEls.forEach(function (el) {
+    if (box.contains(el)) return;
+    var key = String(el.getAttribute('data-field') || el.getAttribute('data-text-field') || el.getAttribute('data-color-field') || '');
+    if (!/(badge|circle|round|sticker|coupon|tag)/i.test(key)) return;
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect || !importRectsOverlapY(verticalBand, rect)) return;
+    if ((rect.left + rect.right) / 2 < (safe.left + safe.right) / 2) safe.left = Math.max(safe.left, rect.right + margin);
+    else safe.right = Math.min(safe.right, rect.left - margin);
+  });
+  if (!(safe.right - safe.left > 24) || !(safe.bottom - safe.top > 24)) {
+    safe = importSafeRectInset(baseRect, margin) || baseRect;
+  }
+  box.setAttribute('data-image-boundary', 'own');
+  box.setAttribute('data-import-icon-zone', 'subarea-center');
+  box.style.left = Math.round(safe.left) + 'px';
+  box.style.top = Math.round(safe.top) + 'px';
+  box.style.width = Math.max(24, Math.round(safe.right - safe.left)) + 'px';
+  box.style.height = Math.max(24, Math.round(safe.bottom - safe.top)) + 'px';
+  box.style.background = 'transparent';
+  box.style.overflow = 'visible';
+  box.style.clipPath = 'none';
+  importSetSubareaIconImageFit(box);
+  refreshSubareaIconLayout(box);
+}
+function decorateImportPlacedIconImages(mountEl, col, ctxName) {
+  if (!mountEl || !col || !col.data || ctxName !== 'import') return;
+  var isSubarea = /^subarea_/i.test(String(col.blockId || ''));
+  Array.prototype.forEach.call(mountEl.querySelectorAll('[data-img-field]'), function (box) {
+    var imgs = Array.prototype.slice.call(box.querySelectorAll('img.bn-imggroup-img'));
+    if (!imgs.length) return;
+    var hasIcon = imgs.some(function (img) {
+      return importIsNoShadowIconUrl(img.getAttribute('src') || img.src);
+    });
+    if (!hasIcon) return;
+    box.setAttribute('data-import-icon-asset', '1');
+    imgs.forEach(function (img) {
+      if (importIsNoShadowIconUrl(img.getAttribute('src') || img.src)) img.setAttribute('data-import-icon-asset', '1');
+    });
+    if (isSubarea) applySubareaIconPlacementZone(box);
+  });
+}
+function decorateImportMissingIconPickers(mountEl, col, idx, ctxName) {
+  if (!mountEl || !col || !col.data || ctxName !== 'import') return;
+  decorateImportPlacedIconImages(mountEl, col, ctxName);
+  var def = BNCore.getBlock(col.blockId);
+  var fieldLabels = {};
+  (def && def.fields || []).forEach(function (f) { if (f.type === 'image') fieldLabels[f.key] = f.label || f.key; });
+  mountEl.querySelectorAll('.import-missing-icon-pick').forEach(function (btn) { btn.remove(); });
+  mountEl.querySelectorAll('.import-icon-empty-slot').forEach(function (box) { box.classList.remove('import-icon-empty-slot'); });
+  Array.prototype.forEach.call(mountEl.querySelectorAll('[data-img-field]'), function (box) {
+    if (box.hasAttribute('data-bn-boundary-only')) return;
+    var key = box.getAttribute('data-img-field') || '';
+    if (!key || !(key in fieldLabels)) return;
+    if (!importIconFieldCanUsePicker(key, fieldLabels[key])) return;
+    var raw = col.data[key] || '';
+    if (isUsableImageValue(raw) || box.querySelector('img.bn-imggroup-img')) return;
+    box.classList.add('import-icon-empty-slot');
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'import-missing-icon-pick';
+    btn.innerHTML = lineIcon('image') + '<span>選擇 ICON</span>';
+    btn.title = '從 icon 資料夾選一張圖放進這個欄位';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openImportIconPicker({
+        idx: idx,
+        key: key,
+        imageIndex: firstImportIconReplaceIndex(raw),
+        ctxName: ctxName
+      }, box);
+    });
+    box.appendChild(btn);
+  });
+}
+
 /* 圖片欄位的「✏️ 編輯」：
    找到畫布上目前實際渲染出來的<img>，交給外掛編輯器(JS/editor-plugin.js)處理
    （裁切／去背／擦除／影子）。外掛編輯完成後會直接把新結果寫進那個<img>的
@@ -17809,6 +18292,7 @@ function rerenderCanvasMount(ctxName, idx) {
   if (ctxName === 'maint') applyDynamicStageSize(mount, col);
   if (ctxName === 'preview') resizePreviewAllMount(mount, col, idx);
   bindCanvasInteractions(mount, col, idx, ctxName);
+  decorateImportMissingIconPickers(mount, col, idx, ctxName);
   return mount;
 }
 
@@ -21261,6 +21745,7 @@ function renderImportColumns(columns, skipPreviewRerender) {
     if (mountEl) {
       mountEl.innerHTML = BNCore.renderInstance(col.blockId, col.data, importRenderOpts(true, 'import', col));
       bindCanvasInteractions(mountEl, col, idx, 'import');
+      decorateImportMissingIconPickers(mountEl, col, idx, 'import');
     }
   });
 
