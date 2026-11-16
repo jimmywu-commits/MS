@@ -1435,7 +1435,7 @@
       },
       /* 先讓人看完說明，按「下一步」後才示範按「僅套用至未完成版位」 */ },
 
-    { target: function(){ return proxy; }, place: 'left',
+    { target: function(){ return proxy; }, place: 'right',
       title: '連動編輯',
       body: '連動的版位將會同步修改素材。',
       before: function(){
