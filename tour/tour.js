@@ -92,6 +92,20 @@
     H.waitFor(function(){ autoConfirm(); return false; }, 15000);
     return new Promise(function(){});   // 不 resolve：等頁面重新整理
   }
+  /* 2026-11-16：導覽匯入過示範資料，結束時（看完或中途略過）自動清除全部、回到首頁。
+     沒匯入示範資料（例如有自己的內容、開場按「先不用」）就什麼都不動。 */
+  var demoTouched = false;
+  function resetAfterTour(){
+    try{ sessionStorage.removeItem(RESUME_KEY); sessionStorage.removeItem(SECTION_KEY); }catch(e){}
+    /* 網址拿掉 ?tour，重新整理後才不會又開始導覽 */
+    try{ history.replaceState(null, '', location.pathname + '#upload'); }catch(e){}
+    /* 自動按的確認框不顯示出來 */
+    document.documentElement.classList.add('boda-tour-autoreset');
+    var btn = document.getElementById('boda-reset-all');
+    if(!btn){ location.reload(); return; }
+    btn.click();
+    H.waitFor(function(){ autoConfirm(); return false; }, 15000);
+  }
   function busyNow(){ return !!(window.APP_LOADING && window.APP_LOADING.active === true); }
   /* 匯入時若跳出「要覆蓋原先活動嗎？」之類的確認框，導覽替你按「是」 */
   function autoConfirm(){
@@ -104,12 +118,14 @@
   function demoImportWorkOrder(){
     if(!demoMode || typeof handleImportFile !== 'function') return Promise.resolve();
     var d = window.BODA_TOUR_DEMO;
+    demoTouched = true;
     handleImportFile(b64File(d.xlsx, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'));
     return waitIdle(function(){ return window.uploadImportSummary && uploadImportSummary.activity; }, 60000);
   }
   function demoImportImages(){
     if(!demoMode || typeof handleImageFiles !== 'function') return Promise.resolve();
     var d = window.BODA_TOUR_DEMO;
+    demoTouched = true;
     handleImageFiles(d.images.map(function(it){ return b64File(it, 'image/png'); }));
     return H.wait(400).then(function(){ return waitIdle(null, 60000); });
   }
@@ -1070,6 +1086,24 @@
     for(var i = 0; i < STEPS.length; i++) if(STEPS[i].title === t) return i;
     return 0;
   }
+  /* 第 4 格 MSBN：人物、商品、簽名、代言人文案排好位置（原「微調素材排版」的動作） */
+  function arrangeMsbn2(a){
+    var s = msbnSlot(), imgs = prodImgs(s), A = IMP_ARRANGE.msbn2;
+    if(!demoMode || !s || imgs.length < 2) return H.wait(300);
+    return a.wait(400)
+      .then(function(){ return impPlaceImg(a, s, imgs[0], A.person); })
+      .then(function(){ return impPlaceImg(a, s, imgs[1], A.product); })
+      .then(function(){ impDeselect(); return a.wait(200); })
+      .then(function(){
+        var si = s.querySelector('[data-img-field="signImg"] img');
+        return si ? impPlaceEl(a, s, si, si, A.sign) : null;
+      })
+      .then(function(){
+        var n = s.querySelector('[data-field="signNote"]'), box = n && n.closest('[data-movable-canvas-text]');
+        return box ? impPlaceEl(a, s, box, n, A.note) : null;
+      })
+      .then(function(){ impDeselect(); try{ var sel = getSelection(); sel && sel.removeAllRanges(); }catch(e){} return H.wait(400); });
+  }
   /* 背後匯入示範工單＋圖片、解鎖左側步驟（不播動畫） */
   function silentPrepare(key){
     var have = window.uploadImportSummary && uploadImportSummary.activity && typeof uploadedImages !== 'undefined' && uploadedImages.length;
@@ -1599,32 +1633,11 @@
       anim: function(a){
         var s = msbnSlot(), note = s && s.querySelector('[data-field="signNote"]');
         if(!demoMode || !note) return H.wait(300);
-        if((note.innerText || '').trim()) return H.wait(300);
-        return a.wait(400).then(function(){ return typeEditable(a, note, '品牌代言人 黃沐妍'); })
+        var typed = (note.innerText || '').trim() ? a.wait(300)
+          : a.wait(400).then(function(){ return typeEditable(a, note, '品牌代言人 黃沐妍'); });
+        /* 2026-11-16：原「微調素材排版」併進這一步，只演動作、不另外出說明框 */
+        return typed.then(function(){ return arrangeMsbn2(a); })
           .then(function(){ return a.hide(); });
-      } },
-
-    { target: function(){ return proxy; }, place: 'right',
-      title: '微調素材排版',
-      body: '點擊圖片四角縮放大小，按住不放移動位置。',
-      before: function(){ return showSlot(4).then(function(){ spot([msbnSlot()], true); }); },
-      anim: function(a){
-        var s = msbnSlot(), imgs = prodImgs(s), A = IMP_ARRANGE.msbn2;
-        if(!demoMode || imgs.length < 2) return H.wait(300);
-        return a.wait(400)
-          .then(function(){ return impPlaceImg(a, s, imgs[0], A.person); })
-          .then(function(){ return impPlaceImg(a, s, imgs[1], A.product); })
-          .then(function(){ impDeselect(); return a.wait(200); })
-          .then(function(){
-            var si = s.querySelector('[data-img-field="signImg"] img');
-            return si ? impPlaceEl(a, s, si, si, A.sign) : null;
-          })
-          .then(function(){
-            var n = s.querySelector('[data-field="signNote"]'), box = n && n.closest('[data-movable-canvas-text]');
-            return box ? impPlaceEl(a, s, box, n, A.note) : null;
-          })
-          .then(function(){ impDeselect(); try{ var sel = getSelection(); sel && sel.removeAllRanges(); }catch(e){} return a.hide(); })
-          .then(function(){ return H.wait(400); });
       } },
 
     { target: function(){ return proxy; }, place: 'right',
@@ -1947,7 +1960,8 @@
       '.tg-root:has(.tg-card.tg-intro){--tg-backdrop:rgba(18,24,28,.22)!important;}' +
       'html.boda-tour-card-up .tg-card{margin-top:-160px!important;}' +
       /* 開場標題較長：只在空格、「-」、「/」處換行，不把「編輯器」拆開 */
-      '.tg-card.tg-intro .tg-title{word-break:keep-all;white-space:pre-line;}';
+      '.tg-card.tg-intro .tg-title{word-break:keep-all;white-space:pre-line;}' +
+      'html.boda-tour-autoreset #boda-choice-dialog{opacity:0!important;}';
     document.head.appendChild(st);
   })();
   var tour = TourGuide.create({
@@ -2011,6 +2025,7 @@
       H.wait(500).then(function(){ return H.waitFor(function(){ return !busyNow(); }, 30000); }).then(function(){
         setTimeout(function(){ document.documentElement.classList.remove('boda-tour-on'); }, 400);
       });
+      if(demoTouched){ demoTouched = false; resetAfterTour(); return; }
       /* 看完最後一步按「完成」：進到曝光資源 */
       if(reason === 'done' && demoMode && currentView() === 'upload' && typeof goToWorkflowStep === 'function' && typeof uploadCanStart === 'function' && uploadCanStart()){
         if(typeof window.bodaUnlockWorkflow === 'function') window.bodaUnlockWorkflow();
