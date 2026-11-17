@@ -31279,6 +31279,7 @@ ensureBlocksLoaded(function () {
 #boda-help-flyout{position:fixed;z-index:100001;min-width:132px;padding:6px;border-radius:10px;background:#1b1f1e;border:1px solid #3a4441;
   box-shadow:0 10px 28px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:2px;}
 #boda-help-flyout[hidden]{display:none;}
+#boda-help-flyout .boda-help-soon{margin-left:auto;padding-left:8px;font-size:11px;color:#9aa5a1;white-space:nowrap;}
 #boda-help-flyout button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:7px;background:transparent;
   color:#e8eeec;font:inherit;font-size:13px;cursor:pointer;text-align:left;}
 #boda-help-flyout button:hover,#boda-help-flyout button:focus-visible{background:rgba(255,255,255,.08);outline:none;}
@@ -31312,16 +31313,16 @@ ensureBlocksLoaded(function () {
   guideButton.parentNode.insertBefore(helpMenu,guideButton);
   var flyout=document.createElement('div');
   flyout.id='boda-help-flyout';flyout.setAttribute('role','menu');flyout.hidden=true;
-  function flyItem(label,svgFrom,target){
+  function flyItem(label,svgFrom,target,note){
     var b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');
     var src=svgFrom&&svgFrom.querySelector('svg');
-    b.innerHTML=(src?src.outerHTML:HELP_ICON)+'<span>'+label+'</span>';
+    b.innerHTML=(src?src.outerHTML:HELP_ICON)+'<span>'+label+'</span>'+(note?'<small class="boda-help-soon">'+note+'</small>':'');
     b.addEventListener('click',function(){closeHelpMenu();var t=target();if(t)t.click();});
     flyout.appendChild(b);
   }
   flyItem('導覽',null,function(){return document.getElementById('boda-tour-launch')||document.querySelector('[data-tour-launch]');});
   flyItem('手冊',guideButton,function(){return guideButton;});
-  flyItem('影片',videoButton,function(){return videoButton;});
+  flyItem('影片',videoButton,function(){return videoButton;},videoUrl?'':'(11/19上架)'); /* 2026-11-17：影片還沒上線前，選單旁小字註明上架日；填了 videoUrl 就自動消失 */
   document.body.appendChild(flyout);
   function placeHelpMenu(){
     var r=helpMenu.getBoundingClientRect();
