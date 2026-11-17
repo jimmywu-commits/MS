@@ -1640,6 +1640,10 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 #upload-workorder-head .upload-required-tag[hidden],.upload-required-note[hidden],#upload-start-note[hidden]{display:none;}
 .upload-required-note{margin:0 0 8px;font-size:12px;color:#c2410c;}
 #import-drop.is-required{border-color:#f0a37a;}
+/* 首頁：沒有活動頁的等級，工單與圖片可略（樣式比照「必填」） */
+.upload-card-head .upload-optional-tag{margin-left:8px;padding:1px 8px;border-radius:9px;background:#e6f2ef;color:#2f7a70;font-size:11px;font-weight:700;vertical-align:middle;}
+.upload-card-head .upload-optional-tag[hidden],.upload-optional-note[hidden]{display:none;}
+.upload-optional-note{margin:0 0 8px;font-size:12px;color:#2f7a70;}
 .nav-step.is-locked:hover{opacity:.55;}
 .nav-step.is-locked .step-badge{display:grid;background:transparent;color:inherit;font-size:10px;}
 .nav-step.is-locked .step-badge::before{content:'🔒';}
@@ -29916,6 +29920,32 @@ function refreshUploadStartState() {
     if (warn) warn.hidden = !needWorkorder;
     if (drop) drop.classList.toggle('is-required', needWorkorder);
   }
+  /* 2026-11-17：沒有活動頁的等級（例如 AD單買(BN Only)），曝光資源可直接製作——
+     「02 工單匯入」「03 圖片素材」標「可略」，樣式比照「必填」。 */
+  var optional = chosen && !activityPageRequired() && !uploadReady.snapshot;
+  [['upload-workorder-head', 'upload-workorder-optional'], ['import-img-head', 'upload-img-optional']].forEach(function (pair) {
+    var h = document.getElementById(pair[0]);
+    if (!h) return;
+    var t = document.getElementById(pair[1]);
+    if (!t) {
+      t = document.createElement('span');
+      t.id = pair[1];
+      t.className = 'upload-optional-tag';
+      t.textContent = '可略';
+      h.appendChild(t);
+    }
+    t.hidden = !optional;
+  });
+  var wDrop = document.getElementById('import-drop');
+  var oNote = document.getElementById('upload-workorder-optional-note');
+  if (!oNote && wDrop) {
+    oNote = document.createElement('div');
+    oNote.id = 'upload-workorder-optional-note';
+    oNote.className = 'upload-optional-note';
+    oNote.textContent = '這個活動等級沒有活動頁，曝光資源可直接製作；匯入工單可自動帶入內容，但非必須。';
+    wDrop.parentNode.insertBefore(oNote, wDrop);
+  }
+  if (oNote) oNote.hidden = !optional;
 }
 /* 製作步驟還沒按「完成」就切到別頁：先問做完了沒。
    確認完成＝標 ✓ 再前往；還沒＝留在這一頁繼續做。回傳 true 表示已經接手（等使用者回答）。 */
