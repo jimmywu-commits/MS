@@ -19063,6 +19063,35 @@ function rememberExposureAssetSig(sig) {
   _exposureOverviewAssetSentSig = sig;
   try { if (sig) localStorage.setItem(EXPOSURE_ASSET_SIG_KEY, sig); else localStorage.removeItem(EXPOSURE_ASSET_SIG_KEY); } catch (e) {}
 }
+function exposureOverviewAssetSigPart(asset) {
+  if (!asset) return '';
+  return [
+    asset.name || '',
+    importShadowFingerprint(asset.src || ''),
+    importShadowFingerprint(asset.baseSrc || ''),
+    importShadowFingerprint(asset.logoSrc || ''),
+    asset.logoBg || ''
+  ].join('|');
+}
+function exposureOverviewAssetSigPartsFromStored(raw) {
+  if (!raw) return null;
+  try {
+    var parsed = JSON.parse(raw);
+    if (parsed && parsed.v === 2) return parsed;
+    /* 舊版簽章格式：
+       [logoNames, logoAssets.length, productNames, productAssets.length, endorserNames, endorserAssets.length, endorserNote]
+       轉成分類簽章，讓新版第一次重送 LOGO 時，不會誤判商品也變了而覆蓋商品位置。 */
+    if (Array.isArray(parsed)) {
+      return {
+        v: 2,
+        logo: JSON.stringify([parsed[0] || [], parsed[1] || 0]),
+        product: JSON.stringify([parsed[2] || [], parsed[3] || 0]),
+        endorser: JSON.stringify([parsed[4] || [], parsed[5] || 0, parsed[6] || ''])
+      };
+    }
+  } catch (e) {}
+  return null;
+}
 function pushExposureOverviewAssets(payload, force) {
   payload = payload || readSharedExposureOverviewText();
   if (!payload) return false;
@@ -19074,8 +19103,19 @@ function pushExposureOverviewAssets(payload, force) {
   var endorserNote = String(payload.endorserNote == null ? '' : payload.endorserNote).trim();
   if (!logoNames.length && !productNames.length && !endorserNames.length && !endorserNote) return false;
   var endorserAssets = exposureEndorserAssets(endorserNames);
-  var sentSig = JSON.stringify([logoNames, logoAssets.length, productNames, productAssets.length,
-    endorserNames, endorserAssets.length, endorserNote]);
+  /* 2026-11-17 修正：曝光 LOGO 同步不能只看「檔名＋數量」。
+     例如工單總覽寫「順發」、圖片資料夾後來才讀到順發.png，或暫存／舊狀態曾記過同名同數量時，
+     只用數量會被判定已送過，導致曝光資源沒有重新套用真正的 LOGO 圖。
+     LOGO 改成簽章包含實際圖片內容指紋；檔名相同但圖片內容補齊／改變時會重新推送。
+     商品則維持「檔名＋找到幾張」判斷，避免換背景重烘影子時又整組重送商品、覆蓋使用者已調整的位置大小。 */
+  var logoSig = JSON.stringify([logoNames, logoAssets.map(exposureOverviewAssetSigPart)]);
+  var productSig = JSON.stringify([productNames, productAssets.length]);
+  var endorserSig = JSON.stringify([endorserNames, endorserAssets.length, endorserNote]);
+  var sentSig = JSON.stringify({ v: 2, logo: logoSig, product: productSig, endorser: endorserSig });
+  var oldSigParts = exposureOverviewAssetSigPartsFromStored(_exposureOverviewAssetSentSig);
+  var logoChanged = force || !oldSigParts || oldSigParts.logo !== logoSig;
+  var productChanged = force || !oldSigParts || oldSigParts.product !== productSig;
+  var endorserChanged = force || !oldSigParts || oldSigParts.endorser !== endorserSig;
   if (!force && sentSig === _exposureOverviewAssetSentSig) return false;
   if (!_exposureFrameReadyForAssets) return false;   /* 曝光資源載入後會再呼叫一次 */
   rememberExposureAssetSig(sentSig);
@@ -19088,14 +19128,14 @@ function pushExposureOverviewAssets(payload, force) {
       }),
       products: productAssets,
       /* LOGO 仍等工單列出的檔案全數讀完才取代，避免載入中途暫時清空。 */
-      replaceLogos: logoNames.length > 0 && logoAssets.length === logoNames.length,
+      replaceLogos: logoChanged && logoNames.length > 0 && logoAssets.length === logoNames.length,
       /* 工單可列 1～3 品，但使用者可能只上傳其中幾張。只要有成功命中的商品就先送進曝光資源；
          其他圖片後續讀完時 handleImageFiles 會再推送完整清單。 */
-      replaceProducts: productNames.length > 0 && productAssets.length > 0,
+      replaceProducts: productChanged && productNames.length > 0 && productAssets.length > 0,
       /* 代言人照＋簽名檔：照工單欄位順序送，曝光資源再依檔名／圖片內容分辨哪張是照片、哪張是簽名。
          只找到其中一張也先送；另一張讀完後簽章不同會再套一次。 */
       endorsers: endorserAssets,
-      replaceEndorser: endorserAssets.length > 0,
+      replaceEndorser: endorserChanged && endorserAssets.length > 0,
       endorserNote: endorserNote
     }
   };
