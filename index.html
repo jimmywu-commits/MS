@@ -1779,7 +1779,7 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
     <div id="view-home" class="view">
       <div id="home-wrap">
         <div id="home-head">
-          <h1><svg class="home-title-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4Z"/><path d="m4 7.4 8 4.6 8-4.6M12 12v9.2"/></svg>Mircosite編輯器</h1>
+          <h1><svg class="home-title-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4Z"/><path d="m4 7.4 8 4.6 8-4.6M12 12v9.2"/></svg>活動素材製作工具 - MS編輯器</h1>
           <p>選一個入口開始</p>
         </div>
         <div id="home-workflow" aria-label="工作流程入口">
@@ -24516,6 +24516,122 @@ function parseLargeJsonBlob(blob, onProgress, chunkSize) {
   if (!size) return Promise.reject(new Error('暫存檔是空的（0 位元組）'));
   return readNext();
 }
+/* 匯入新的 xlsx 工單前先做一次「不重新整理頁面」的乾淨重置。
+   使用者明確要求：工單匯入時，先重置，再載入工單資料。
+   注意：這只套用 xlsx 工單；上傳 wo_import_snapshot 暫存檔時不能先清，否則會把要還原的內容洗掉。 */
+var WORKORDER_IMPORT_RESET_KEEP_KEYS = { 'bn-layouts': 1, 'bn-layout-selection-version': 1, 'bn_feedback_draft_v2': 1, 'jbp_whatsnew_seen': 1 };
+var WORKORDER_IMPORT_RESET_IDB = ['boda-import-persist', 'boda-bottom-persist', 'bn_editor_state_db', 'hbn-color-tool'];
+function isWorkorderImportResetToolKey(key) {
+  return /^(wo_|bn|boda|hbn-)/i.test(String(key || ''));
+}
+function clearWorkorderImportBrowserStorage() {
+  [window.localStorage, window.sessionStorage].forEach(function (store) {
+    if (!store) return;
+    try {
+      Object.keys(store).forEach(function (key) {
+        if (isWorkorderImportResetToolKey(key) && !WORKORDER_IMPORT_RESET_KEEP_KEYS[key]) store.removeItem(key);
+      });
+    } catch (e) {}
+  });
+  /* 版位清單保留 id／檔名對照；只清掉使用者勾選結果，避免舊暫存勾選蓋過新工單。 */
+  try {
+    var raw = localStorage.getItem('bn-layouts');
+    if (raw) {
+      var list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        list.forEach(function (layout) { if (layout && Object.prototype.hasOwnProperty.call(layout, 'checked')) delete layout.checked; });
+        localStorage.setItem('bn-layouts', JSON.stringify(list));
+      }
+    }
+  } catch (e) {}
+}
+function deleteWorkorderImportDatabase(name) {
+  return new Promise(function (done) {
+    try {
+      var req = indexedDB.deleteDatabase(name);
+      req.onsuccess = req.onerror = req.onblocked = function () { done(); };
+    } catch (e) { done(); }
+  });
+}
+function resetBeforeWorkorderImport() {
+  appLoadingUpdate(28, 'LOADING · 匯入工單', '正在重置上一份工單與各工具暫存…', 38);
+  try { window.__bodaResetting = true; } catch (e) {}
+  try { importPersistDisabled = true; } catch (e) {}
+  try { clearTimeout(importStateSaveTimer); } catch (e) {}
+  try { clearTimeout(bottomPersistTimer); } catch (e) {}
+  try {
+    var exposureFrame = document.getElementById('exposure-frame');
+    var exposureWin = exposureFrame && exposureFrame.contentWindow;
+    if (exposureWin) {
+      exposureWin._bnClearingState = true;
+      clearTimeout(exposureWin._bnSaveTimer);
+    }
+    /* 若曝光資源已載入，先卸下 iframe，關閉它對 IndexedDB 的連線；下一次進曝光頁會重新載入。 */
+    if (exposureFrame && exposureFrame.getAttribute('src')) exposureFrame.src = 'about:blank';
+    exposureLoaded = false;
+    _exposureFrameReadyForAssets = false;
+  } catch (e) {}
+  try {
+    var colorFrame = document.getElementById('color-frame');
+    if (colorFrame && colorFrame.getAttribute('src')) colorFrame.src = 'about:blank';
+    colorToolLoaded = false;
+  } catch (e) {}
+
+  clearWorkorderImportBrowserStorage();
+  return Promise.all(WORKORDER_IMPORT_RESET_IDB.map(deleteWorkorderImportDatabase)).then(function () {
+    clearWorkorderImportBrowserStorage();
+    currentImportColumns = [];
+    uploadedImages = [];
+    currentImportWorkbook = null;
+    currentImportWorkbookName = '';
+    currentImportActivityName = '';
+    currentImportSource = '';
+    currentGeneratorSignature = '';
+    currentImportedWorkOrderSpec = null;
+    currentImportHasBottomWorkOrder = false;
+    latestBottomWorkOrder = null;
+    importBottomPreviewResult = null;
+    bottomSharedStateJson = '';
+    bottomLastEditedStateJson = '';
+    bottomGeneratorStateJson = '';
+    bottomStandaloneStateJson = '';
+    try { if (typeof rememberExposureAssetSig === 'function') rememberExposureAssetSig(''); } catch (e) {}
+    try { if (window.BNImageLayout && typeof BNImageLayout.hideTransformControls === 'function') BNImageLayout.hideTransformControls(); } catch (e) {}
+    try { if (window.BNImageLayout && typeof BNImageLayout.setWeights === 'function') BNImageLayout.setWeights({}); } catch (e) {}
+    try { if (window.BNImageLayout && typeof BNImageLayout.setOffsets === 'function') BNImageLayout.setOffsets({}); } catch (e) {}
+    try { beginImportImageLayoutDocument(false); } catch (e) {}
+    IMPORT_COLOR_ITEMS.forEach(function (it) { importTheme[it.key] = ''; });
+    importTheme.endorserText = '';
+    importTheme.bgAuto = false;
+    try { resetWorkflowStatus(); } catch (e) {}
+    try { if (typeof window.bodaResetUploadLevelChoice === 'function') window.bodaResetUploadLevelChoice(); } catch (e) {}
+    try { if (typeof window.bodaMarkUploadReady === 'function') { window.bodaMarkUploadReady('workorder', false); window.bodaMarkUploadReady('snapshot', false); } } catch (e) {}
+    try { setUploadStepState('import-drop', 'idle', ''); } catch (e) {}
+    try { setUploadStepState('import-img-drop', 'idle', ''); } catch (e) {}
+    try { renderImportColumns(currentImportColumns); } catch (e) {}
+    try { renderImageGallery(); } catch (e) {}
+    try { renderUploadExposurePlacementStatus(null, null); } catch (e) {}
+    try { hideImportBottomPreview(); } catch (e) {}
+    try { broadcastBottomImageAssets(); } catch (e) {}
+    try {
+      var frame = document.getElementById('exposure-frame');
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage({
+          type: 'wo-workorder-overview-assets',
+          assets: { logos: [], products: [], endorsers: [], endorserNote: '', replaceLogos: true, replaceProducts: true, replaceEndorser: true }
+        }, '*');
+      }
+    } catch (e) {}
+    importPersistDisabled = false;
+    window.__bodaResetting = false;
+    appLoadingUpdate(38, 'LOADING · 匯入工單', '重置完成，正在解析新工單…', 45);
+  }, function () {
+    importPersistDisabled = false;
+    window.__bodaResetting = false;
+    appLoadingUpdate(38, 'LOADING · 匯入工單', '重置完成，正在解析新工單…', 45);
+  });
+}
+
 /* 讀進來的 JSON：匯入暫存檔就還原，否則當作本工具的 JSON 工單。 */
 function applyImportedJsonValue(parsed) {
   currentImportWorkbook = null;
@@ -24571,7 +24687,9 @@ function handleImportFile(file) {
       } else {
         /* 同一份工單也交給吸底工具原本的 WorkOrderImporter；如果使用者尚未開啟
            「吸底」頁簽，先暫存在記憶體，第一次開啟時再自動帶入。 */
-        parseImportXlsx(reader.result, { filename: file.name }).then(function (raw) {
+        resetBeforeWorkorderImport().then(function () {
+          return parseImportXlsx(reader.result, { filename: file.name });
+        }).then(function (raw) {
           /* 成功與否由 afterImportParsed 顯示（有沒有讀到版位）。 */
           /* 新工單＝新的一輪製作流程：左側各步驟的完成／略過狀態重設。 */
           if (typeof resetWorkflowStatus === 'function') resetWorkflowStatus();
@@ -24629,7 +24747,156 @@ function inlineBlobUrls(value) {
   })).then(function (converted) { return converted.join(','); });
 }
 
+var exposureSnapshotRequestSeq = 0;
+var exposureSnapshotRequestWaiters = {};
+var exposureSnapshotApplySeq = 0;
+var pendingExposureSnapshotState = null;
+var pendingExposureSnapshotApplyAttempts = 0;
+function exposureFrameWindowForSnapshot() {
+  var frame = document.getElementById('exposure-frame');
+  return frame && frame.contentWindow ? frame.contentWindow : null;
+}
+function collectExposureStateFromFrameDirect(win) {
+  var plugin = null;
+  try { plugin = win && win._bnStatePlugin; } catch (e) { plugin = null; }
+  if (!plugin || typeof plugin.collect !== 'function') return null;
+  var syncPromise = Promise.resolve();
+  try {
+    if (typeof win._bnSyncLayoutSnapshot === 'function') syncPromise = win._bnSyncLayoutSnapshot(900);
+  } catch (e) { syncPromise = Promise.resolve(); }
+  return Promise.resolve(syncPromise).then(function () {
+    return plugin.collect();
+  }).catch(function (err) {
+    console.warn('[BODA] 曝光資源暫存收集失敗：', err);
+    return null;
+  });
+}
+function requestExposureStateForSnapshot() {
+  if (pendingExposureSnapshotState) return Promise.resolve(pendingExposureSnapshotState);
+  var win = exposureFrameWindowForSnapshot();
+  if (!exposureLoaded || !win) return Promise.resolve(null);
+  var direct = collectExposureStateFromFrameDirect(win);
+  if (direct) return direct;
+  return new Promise(function (resolve) {
+    var requestId = 'exposure-snapshot-' + Date.now().toString(36) + '-' + (++exposureSnapshotRequestSeq);
+    var timer = setTimeout(function () {
+      if (!exposureSnapshotRequestWaiters[requestId]) return;
+      delete exposureSnapshotRequestWaiters[requestId];
+      resolve(null);
+    }, 6500);
+    exposureSnapshotRequestWaiters[requestId] = {
+      resolve: function (state) {
+        clearTimeout(timer);
+        resolve(state || null);
+      }
+    };
+    try {
+      win.postMessage({ source: 'BODA_PARENT', type: 'BODA_EXPOSURE_STATE_REQUEST', requestId: requestId }, '*');
+    } catch (e) {
+      clearTimeout(timer);
+      delete exposureSnapshotRequestWaiters[requestId];
+      resolve(null);
+    }
+  });
+}
+function schedulePendingExposureSnapshotStateApply(delay) {
+  setTimeout(tryApplyPendingExposureSnapshotState, Math.max(0, Number(delay) || 0));
+}
+function queueExposureSnapshotStateApply(state, reason) {
+  if (!state || typeof state !== 'object') return;
+  pendingExposureSnapshotState = state;
+  pendingExposureSnapshotApplyAttempts = 0;
+  [0, 700, 1700, 3200].forEach(schedulePendingExposureSnapshotStateApply);
+}
+function tryApplyPendingExposureSnapshotState() {
+  if (!pendingExposureSnapshotState) return false;
+  var win = exposureFrameWindowForSnapshot();
+  if (!win) return false;
+  pendingExposureSnapshotApplyAttempts++;
+  try {
+    var plugin = win._bnStatePlugin;
+    if (plugin && typeof plugin.apply === 'function') {
+      plugin.apply(pendingExposureSnapshotState, { source: 'upload', forceColors: true });
+      if (typeof plugin.save === 'function') setTimeout(plugin.save, 2300);
+      pendingExposureSnapshotState = null;
+      pendingExposureSnapshotApplyAttempts = 0;
+      return true;
+    }
+  } catch (e) { /* 跨來源時改走 postMessage */ }
+  try {
+    win.postMessage({
+      source: 'BODA_PARENT',
+      type: 'BODA_EXPOSURE_STATE_APPLY',
+      requestId: 'exposure-apply-' + Date.now().toString(36) + '-' + (++exposureSnapshotApplySeq),
+      state: pendingExposureSnapshotState
+    }, '*');
+    if (pendingExposureSnapshotState && pendingExposureSnapshotApplyAttempts < 6) {
+      schedulePendingExposureSnapshotStateApply(1200);
+    }
+    return true;
+  } catch (err) {
+    if (pendingExposureSnapshotApplyAttempts < 6) schedulePendingExposureSnapshotStateApply(1200);
+    return false;
+  }
+}
+window.addEventListener('message', function (event) {
+  var msg = event && event.data || {};
+  if (!msg || msg.source !== 'BODA_EXPOSURE') return;
+  var frame = document.getElementById('exposure-frame');
+  if (frame && frame.contentWindow && event.source !== frame.contentWindow) return;
+  if (msg.type === 'BODA_EXPOSURE_STATE_RESPONSE') {
+    var waiter = exposureSnapshotRequestWaiters[msg.requestId || ''];
+    if (!waiter) return;
+    delete exposureSnapshotRequestWaiters[msg.requestId || ''];
+    waiter.resolve(msg.ok ? msg.state : null);
+  } else if (msg.type === 'BODA_EXPOSURE_STATE_APPLIED') {
+    if (msg.ok) {
+      pendingExposureSnapshotState = null;
+      pendingExposureSnapshotApplyAttempts = 0;
+    } else if (pendingExposureSnapshotState && pendingExposureSnapshotApplyAttempts < 6) {
+      schedulePendingExposureSnapshotStateApply(1200);
+    }
+  }
+});
+function syncImportIconDomStateToColumns() {
+  if (!currentImportColumns || !currentImportColumns.length) return;
+  var addedAsset = false;
+  Array.prototype.forEach.call(document.querySelectorAll('[id^="imp-mount-"]'), function (mount) {
+    var m = /^imp-mount-(\d+)$/i.exec(mount.id || '');
+    var idx = m ? Number(m[1]) : NaN;
+    var col = Number.isFinite(idx) ? currentImportColumns[idx] : null;
+    if (!col || !col.data) return;
+    Array.prototype.forEach.call(mount.querySelectorAll('[data-img-field]'), function (box) {
+      var key = box.getAttribute('data-img-field') || '';
+      if (!key) return;
+      var imgs = Array.prototype.slice.call(box.querySelectorAll('img.bn-imggroup-img'));
+      var iconImgs = imgs.filter(function (img) {
+        return img.getAttribute('data-import-icon-asset') === '1' ||
+          importIsNoShadowIconUrl(img.getAttribute('src') || img.src);
+      });
+      if (!iconImgs.length) return;
+      var urls = imgs.map(function (img) { return img.getAttribute('src') || img.src || ''; })
+        .filter(Boolean);
+      if (!urls.length) return;
+      iconImgs.forEach(function (img) {
+        var url = img.getAttribute('src') || img.src || '';
+        if (!url) return;
+        importNoShadowAssetUrls[url] = true;
+        if (!uploadedImages.some(function (asset) { return asset && sameImageAsset(asset.url, url); })) {
+          uploadedImages.push({ name: img.getAttribute('alt') || img.getAttribute('title') || 'ICON.png', url: url, baseUrl: url, skipShadow: true });
+          addedAsset = true;
+        }
+      });
+      var current = splitImageList(col.data[key] || '').join(',');
+      var next = urls.join(',');
+      if (next && next !== current) col.data[key] = next;
+    });
+  });
+  if (addedAsset) renderImageGallery();
+}
+
 function buildImportSnapshot() {
+  try { syncImportIconDomStateToColumns(); } catch (e) { console.warn('[BODA] ICON 暫存回寫失敗：', e); }
   appLoadingUpdate(84, 'LOADING · 建立暫存檔', '正在轉換圖片與欄位資料…');
   var columnJobs = currentImportColumns.map(function (col) {
     var dataCopy = {};
@@ -24656,11 +24923,12 @@ function buildImportSnapshot() {
     return (img.url.indexOf('blob:') === 0 ? urlToDataUrl(img.url).catch(function () { return img.url; }) : Promise.resolve(img.url))
       .then(function (u) { return Object.assign({ name: img.name, url: u, baseUrl: img.baseUrl || '' }, importUploadStateFields(img)); }); /* baseUrl＝編輯前的原圖，之後再編輯可以從原圖重來 */
   });
-  return Promise.all([Promise.all(columnJobs), Promise.all(imageJobs)]).then(function (res) {
+  var exposureStateJob = requestExposureStateForSnapshot();
+  return Promise.all([Promise.all(columnJobs), Promise.all(imageJobs), exposureStateJob]).then(function (res) {
     appLoadingUpdate(94, 'LOADING · 建立暫存檔', '資料整理完成，正在輸出暫存檔…');
     return {
       type: 'wo_import_snapshot',
-      version: 2,
+      version: 3,
       savedAt: new Date().toISOString(),
       source: currentImportSource,
       generatorSignature: currentGeneratorSignature,
@@ -24682,6 +24950,8 @@ function buildImportSnapshot() {
         });
         return out;
       })(),
+      /* 曝光資源完整狀態（版位勾選、商品/LOGO/背景/文字/位置/裁切）一起存，避免上傳暫存後曝光資源空白。 */
+      exposureState: res[2] || null,
       imageZoomWeights: (window.BNImageLayout && BNImageLayout.getWeights) ? BNImageLayout.getWeights() : {},
       imageOffsets: (window.BNImageLayout && BNImageLayout.getOffsets) ? BNImageLayout.getOffsets() : {}, /* 每張圖被拖曳過的位置 */
       /* 吸底編輯現況（含自訂 LOGO）也一起存，上傳暫存檔時吸底一起還原 */
@@ -25161,6 +25431,8 @@ function restoreImportSnapshot(snap) {
   appLoadingUpdate(55, 'LOADING · 還原暫存檔', '正在整理圖片與版位資料…');
   hideImportBottomPreview();
   currentImportHasBottomWorkOrder = false;
+  pendingExposureSnapshotState = null;
+  pendingExposureSnapshotApplyAttempts = 0;
   if (snap.bottomState) {
     /* 暫存檔帶著吸底：沒有 xlsx 原檔，直接以存下來的吸底 state 為準 */
     latestBottomWorkOrder = null;
@@ -25173,6 +25445,9 @@ function restoreImportSnapshot(snap) {
     syncBottomAfterImportAction('snapshot-restore');
     if (bottomPreviewBridgeReady) dispatchBottomPreviewForExport();
     queueBottomPersist();
+  }
+  if (snap.exposureState && typeof snap.exposureState === 'object') {
+    queueExposureSnapshotStateApply(snap.exposureState, 'snapshot-restore');
   }
   var importLog = document.getElementById('import-log');
   uploadedImages = (snap.uploadedImages || []).map(importUploadFromState)
@@ -25243,6 +25518,11 @@ function restoreImportSnapshot(snap) {
        圖片大小、位置與商品編輯狀態（依圖片網址對應）就都對不回存檔時的樣子。 */
     return Promise.resolve(restoredColumns).then(function () {
       currentImportColumns = restoredColumns;
+      setUploadStepState('import-drop', 'done',
+        '已從暫存檔還原 ' + currentImportColumns.length + ' 格（含編輯結果）');
+      uploadImportSummary.activity = countUploadActivityResources(currentImportColumns, currentImportHasBottomWorkOrder);
+      renderUploadImportSummary();
+      if (typeof window.bodaUnlockWorkflow === 'function') window.bodaUnlockWorkflow();
       beginImportImageLayoutDocument(true);
       saveImportImageLayout();
       renderImportColumns(currentImportColumns);
@@ -25276,6 +25556,11 @@ function restoreImportSnapshot(snap) {
         data: c.data || {}
       };
     });
+    setUploadStepState('import-drop', 'done',
+      '已從暫存檔還原 ' + currentImportColumns.length + ' 格（含編輯結果）');
+    uploadImportSummary.activity = countUploadActivityResources(currentImportColumns, currentImportHasBottomWorkOrder);
+    renderUploadImportSummary();
+    if (typeof window.bodaUnlockWorkflow === 'function') window.bodaUnlockWorkflow();
     renderImportColumns(currentImportColumns);
     importLog.innerHTML = '<span class="ok">' + lineIcon('done') + ' 已從暫存檔還原 ' + currentImportColumns.length + ' 格（含編輯結果）</span>' +
       (hasDeadBlob ? '<br><span class="err">' + lineIcon('warning') + ' 這個暫存檔是舊版本存的，部分圖片連結已失效，請重新上傳那些圖片素材後再存一次新的暫存檔。</span>' : '');
@@ -27189,6 +27474,8 @@ function ensureStandaloneBottomLoaded(forceReload) {
       }
       if (standaloneBottomBridgeReady && latestBottomWorkOrder) {
         sendLatestWorkOrderToStandaloneBottom('standalone-loaded');
+      } else if (standaloneBottomBridgeReady && getBottomStateForSync()) {
+        postToStandaloneBottom({ source: 'BODA_PARENT', type: 'BOTTOM_STATE', state: getBottomStateForSync() });
       } else if (standaloneBottomBridgeReady) {
         postToStandaloneBottom({
           source: 'BODA_PARENT', type: 'NO_WORKORDER',
@@ -28670,6 +28957,12 @@ function applyCanvasZoom(el) {
   /* 首頁「開始編輯」要知道等級選了沒（上傳頁顯示「未選擇」時＝還沒選）、選的是哪個等級 */
   window.bodaUploadLevelChosen = function () { return uploadLevelChosen; };
   window.bodaCurrentLevelId = function () { return currentLevelId; };
+  window.bodaResetUploadLevelChoice = function () {
+    uploadLevelChosen = false;
+    syncLevelSelects();
+    paintHint();
+    if (typeof refreshUploadStartState === 'function') refreshUploadStartState();
+  };
   /* 等級決定左側「活動頁資源／吸底工具」要不要做（規則在製作流程那段 ACTIVITY_PAGE_RULES）。
      製作流程的程式比這裡晚載入時，先記下來，載入後補套。 */
   function notifyActivityPageRule(levelId, source) {
@@ -29475,6 +29768,10 @@ function ensureExposureLoaded(options) {
         }, 2500);
       }
       syncExposureShadowBackgroundSoon(resolvedImportBg(), 900);
+      if (pendingExposureSnapshotState) {
+        pendingExposureSnapshotApplyAttempts = 0;
+        [200, 950, 1900, 3300].forEach(schedulePendingExposureSnapshotStateApply);
+      }
       if (!exposureChildLoading) appLoadingFinish('曝光資源已載入');
     }, 400);
   });
