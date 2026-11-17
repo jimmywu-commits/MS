@@ -1996,9 +1996,7 @@
       /* 有編輯中的內容：開場先說明會清除，按「開始導覽」才重置；按「先不用」什麼都不動 */
       needReset = !resumed && hasExistingWork();
       seenBefore = tour.hasSeen() && !/[?&]tour=first\b/.test(location.search);
-      STEPS[0].body = (needReset
-        ? '示範會先清除目前網頁上的內容，再匯入示範工單。<br>要保留的話，請先下載暫存檔。'
-        : '只要 3 分鐘，帶你快速上手所有功能！');
+      STEPS[0].body = '只要 3 分鐘，帶你快速上手所有功能！';  /* 2026-11-17：有編輯內容時也用同一句開場文案 */
       demoMode = true;
       return loadDemoData().then(function(d){ if(!d){ demoMode = false; needReset = false; } });
     },
