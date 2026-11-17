@@ -268,6 +268,14 @@ main section .step-b ul.sm li.red::before{content:none}
 .dm-menu{background:#1a1d2a;border:1px solid #2e3347;border-radius:8px;padding:5px;display:flex;flex-direction:column;gap:4px;box-shadow:0 6px 16px rgba(0,0,0,.25)}
 .dm-menu span{font-size:11.5px;font-weight:600;color:#dde3f0;background:#242942;border:1px solid #3a4160;border-radius:6px;padding:4px 10px;white-space:nowrap}
 .dm-menu span:first-child{border-color:#7a86c0}
+/* 左側品牌 */
+.toc-mark .ic{width:16px;height:16px;stroke-width:1.8}
+.toc-name{display:flex;flex-direction:column;line-height:1.3}
+.toc-name small{font-size:12px;color:#4A5552;font-weight:500;margin-top:2px}
+:root[data-theme="dark"] .toc-name small{color:var(--ink-dim)}
+main .or{color:#EE4D2D;font-weight:700}
+.ov-tips figure.shot{margin:8px 0 14px}
+.ov-tips figure.shot img{max-width:330px}
 /* 製作內容／流程 */
 .cover .lede{max-width:852px}
 .cover{margin-bottom:26px}
@@ -279,7 +287,11 @@ main section .step-b ul.sm li.red::before{content:none}
 .flow-nav i{font-size:16px}
 @media (max-width:980px){.flow.flow-nav{flex-wrap:wrap}}
 /* 製作範圍示意圖 */
-.ov{display:flex;flex-direction:column;gap:10px;margin:6px 0 10px;max-width:520px}
+.ov{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin:6px 0 10px}
+.ov-col{display:flex;flex-direction:column;gap:10px}
+.ov-col .ov-card{flex:1}
+.hbn-img{position:relative;margin-top:18px}
+.hbn-img img{display:block;width:100%;height:auto;border-radius:6px}
 .ov-line{margin:12px 0 0;font-size:14.5px}
 .ov-line .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--head);margin-right:8px;vertical-align:middle}
 .bn-grid.mini{margin-top:12px}
@@ -328,30 +340,30 @@ main section .step-b ul.sm li.red::before{content:none}
 <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
 </defs></svg><div class="shell">
 <aside class="toc">
-  <div class="toc-brand"><span class="toc-mark">BOD</span><b>活動素材製作工具</b></div>
+  <div class="toc-brand"><span class="toc-mark"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-image"/></svg></span><div class="toc-name"><b>活動素材製作工具</b><small>BN編輯器／MS編輯器</small></div></div>
   <nav>
-    <div class="tg"><a class="tg-link" href="#overview">製作內容與流程</a></div>
-        <details class="tg" open><summary><span>首頁</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <div class="tg"><a class="tg-link" href="#overview">編輯器介紹與說明</a></div>
+        <details class="tg"><summary><span>首頁</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
     <a href="#home-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
     <a href="#home-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
     </details>
-    <details class="tg" open><summary><span>曝光資源</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <details class="tg"><summary><span>曝光資源</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
     <a href="#ex-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
     <a href="#ex-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
     </details>
-    <details class="tg" open><summary><span>活動頁</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <details class="tg"><summary><span>活動頁</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
     <a href="#ms-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
     <a href="#ms-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
     </details>
-    <details class="tg" open><summary><span>活動頁面配色</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <details class="tg"><summary><span>活動頁面配色</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
     <a href="#color-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
     <a href="#color-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
     </details>
-    <details class="tg" open><summary><span>吸底</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <details class="tg"><summary><span>吸底</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
     <a href="#bt-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
     <a href="#bt-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
     </details>
-    <details class="tg" open><summary><span>下載</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <details class="tg"><summary><span>下載</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
     <a href="#dl-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
     <a href="#dl-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
     </details>
@@ -366,17 +378,15 @@ main section .step-b ul.sm li.red::before{content:none}
   <h3 class="ov-title">製作內容</h3>
   <p>一檔活動分成兩大塊製作：</p>
   <div class="ov">
+    <div class="ov-col">
     <p class="ov-line"><span class="dot"></span><strong>曝光資源</strong>：投放到各處的廣告 Banner。</p>
     <div class="ov-card">
       <div class="ov-h"><b>曝光資源</b><span>（DD Card、HBN、IG 等套用同一套視覺）</span></div>
-      <div class="hbn">
-        <div class="hbn-txt"><span class="hbn-logo">LOGO</span><span class="l2">副標最多7個字</span><span class="l1">主標最多8個字</span><span class="l3">活動日期</span></div>
-        <div class="hbn-art">商品／人物圖區</div>
-        <span class="hbn-cta">CTA ▸</span>
-        <span class="hbn-tag">HBN</span>
-      </div>
+      <div class="hbn-img"><img src="img/v6-hbn-sample.jpg" width="1200" height="360" alt="HBN 版位範例"><span class="hbn-tag">HBN</span></div>
       <div class="bn-grid mini"><div class="bn" style="width:72px;height:33px">LPBN</div><div class="bn" style="width:44px;height:44px">DD Card</div><div class="bn" style="width:44px;height:44px">IG</div><div class="bn" style="width:66px;height:35px">FB_POST</div><div class="bn" style="width:86px;height:26px">Coin_pageBN</div><div class="bn" style="width:80px;height:24px">SCBN</div><div class="bn" style="width:58px;height:29px">AMS</div><div class="bn" style="width:64px;height:22px">SBA</div><div class="bn" style="width:66px;height:30px">活動總覽</div></div>
     </div>
+    </div>
+    <div class="ov-col">
     <p class="ov-line"><span class="dot"></span><strong>活動頁</strong>：點擊後進入的活動頁面。</p>
     <div class="ov-card">
       <div class="ov-h"><b>活動頁</b><span>（副區、MSBN、吸底）</span></div>
@@ -398,20 +408,21 @@ main section .step-b ul.sm li.red::before{content:none}
         </div>
       </div>
     </div>
+    </div>
   </div>
   <h3 class="ov-title">製作流程</h3>
   <p>系統會引導您依照以下流程完成製作，避免活動素材缺漏。</p>
   <div class="flow flow-nav"><a href="#cat-home">首頁</a><i>➔</i><a href="#cat-ex">曝光資源</a><i>➔</i><a href="#cat-ms">活動頁</a><i>➔</i><a href="#cat-color">活動頁配色</a><i>➔</i><a href="#cat-bt">吸底</a><i>➔</i><a href="#cat-dl">下載</a></div>
-<ul class="ov-tips"><li><strong>新手導覽</strong>：第一次開啟自動播放；重看請按左下「教學」→「導覽」。</li><li><strong>清除重置</strong>：清空全部暫存，無法復原，請先整包下載備份。</li></ul>
+<ul class="ov-tips"><li><strong>新手導覽</strong>：第一次開啟自動播放；重看請按左下「教學」→「導覽」。<figure class="shot"><a class="zoom" href="img/v6-help.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-help.png" width="186" height="147" alt="" loading="lazy"></a></figure></li><li><strong>清除重置</strong>：清空全部暫存，無法復原，請先整包下載備份。<figure class="shot"><a class="zoom" href="img/v6-reset.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-reset.png" width="412" height="315" alt="" loading="lazy"></a></figure></li></ul>
 </section>
 <!-- ============ 1 首頁 ============ -->
 <div class="cat" id="cat-home"><h2>一、首頁</h2></div>
 <section id="home-edit">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
-  <div class="step"><div class="step-h"><span class="callout">1</span>上傳工單</div><div class="step-b"><ul class="sm"><li>拖進「工單匯入」虛線框，或點擊選檔（<code>.xlsx</code>／暫存檔 <code>.json</code>）</li></ul><div class="tab-row"><div class="xl-mini"><div class="xl-tabs" role="img" aria-label="Excel 工單下方的分頁標籤"><span class="xl-tab on">工單總覽</span><span class="xl-tab">Layout_Output</span></div></div><div><ul class="sm"><li><code>工單總覽</code> 分頁帶入曝光資源</li><li><code>Layout_Output</code> 分頁帶入活動頁（<a href="#" target="_blank" rel="noopener">工單公版</a>）</li><li class="red">※ 活動頁內容必須從工單匯入，未匯入無法製作</li></ul></div></div><ul class="sm"><li>工單匯入會自動帶入活動等級名稱</li></ul><figure class="shot"><a class="zoom" href="img/v4-home-imported.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v4-home-imported.png" width="924" height="546" alt="" loading="lazy"></a></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>上傳工單</div><div class="step-b"><ul class="sm"><li>拖進「工單匯入」虛線框，或點擊選檔（<code>.xlsx</code>／暫存檔 <code>.json</code>）</li></ul><div class="tab-row"><div><ul class="sm"><li><code>工單總覽</code> 分頁帶入曝光資源</li><li><code>Layout_Output</code> 分頁帶入活動頁（<a href="#" target="_blank" rel="noopener">工單公版</a>）</li><li class="red">※ 活動頁內容必須從工單匯入，未匯入無法製作</li></ul></div><div class="xl-mini"><div class="xl-tabs" role="img" aria-label="Excel 工單下方的分頁標籤"><span class="xl-tab on">工單總覽</span><span class="xl-tab">Layout_Output</span></div></div></div><ul class="sm"><li>工單匯入會自動帶入活動等級名稱</li><li>沒有活動頁的等級（如 AD單買(BN Only)），工單與圖片素材會標示「可略」，可直接製作曝光資源</li></ul><figure class="shot"><a class="zoom" href="img/v4-home-imported.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v4-home-imported.png" width="924" height="546" alt="" loading="lazy"></a></figure><figure class="shot"><a class="zoom" href="img/v6-home-optional.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-home-optional.png" width="924" height="300" alt="" loading="lazy"></a><figcaption>沒有活動頁的等級：工單與圖片素材標示「可略」。</figcaption></figure></div></div>
   <div class="step"><div class="step-h"><span class="callout">2</span>上傳素材</div><div class="step-b"><ul class="sm"><li>支援拖曳整個資料夾，或點選圖片等上傳方式</li><li>工單中若有附上素材檔名，檔名與素材名稱自動配對，並顯示結果</li></ul><figure class="shot"><a class="zoom" href="img/v3-home-images.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v3-home-images.png" width="453" height="456" alt="" loading="lazy"></a></figure></div></div>
-  <div class="step"><div class="step-h"><span class="callout">3</span>開啟活動等級對應能製作的版位</div><div class="step-b"><ul class="sm"><li>活動等級決定可製作的項目（見下表），也可手動選擇</li><li>「BOD資交」若有廠商自製 MS，系統會主動確認，在提示框確認即可開啟活動頁</li></ul><div class="tbl"><table class="onoff"><thead><tr><th>等級</th><th class="n">曝光資源</th><th class="n">活動頁</th><th class="n">活動頁面配色</th><th class="n">吸底</th></tr></thead><tbody><tr><td>大促 Brand star</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>大促 Brand star 資交</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>AD單買(多店活動)</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>AD單買(BN Only)</td><td class="n">○</td><td class="n x">×</td><td class="n x">×</td><td class="n x">×</td></tr><tr><td>A BOD+</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>A BOD</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>A BOD+(資交)</td><td class="n">○</td><td class="n">△</td><td class="n">△</td><td class="n">△</td></tr><tr><td>A BOD(資交)</td><td class="n">○</td><td class="n">△</td><td class="n">△</td><td class="n">△</td></tr><tr><td>B級 JBP(多店活動)</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr></tbody></table></div><p class="lv-legend">○ 開啟　× 不開啟　<b>△</b> 依廠商自製需求開啟</p></div></div>
-  <div class="step"><div class="step-h"><span class="callout">4</span>按「開始編輯」</div><div class="step-b"><ul class="sm"><li>左側步驟解鎖，依序製作</li></ul><figure class="shot"><a class="zoom" href="img/v4-home-start.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v4-home-start.png" width="530" height="350" alt="" loading="lazy"></a></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>開啟活動等級對應能製作的版位</div><div class="step-b"><ul class="sm"><li>活動等級決定可製作的項目（見下表），也可手動選擇</li><li>「BOD資交」若有廠商自製 MS，系統會主動確認，在提示框確認即可開啟活動頁</li></ul><figure class="shot"><a class="zoom" href="img/v6-zj.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-zj.png" width="412" height="183" alt="" loading="lazy"></a></figure><div class="tbl"><table class="onoff"><thead><tr><th>等級</th><th class="n">曝光資源</th><th class="n">活動頁</th><th class="n">活動頁面配色</th><th class="n">吸底</th></tr></thead><tbody><tr><td>大促 Brand star</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>大促 Brand star 資交</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>AD單買(多店活動)</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>AD單買(BN Only)</td><td class="n">○</td><td class="n x">×</td><td class="n x">×</td><td class="n x">×</td></tr><tr><td>A BOD+</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>A BOD</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>A BOD+(資交)</td><td class="n">○</td><td class="n">△</td><td class="n">△</td><td class="n">△</td></tr><tr><td>A BOD(資交)</td><td class="n">○</td><td class="n">△</td><td class="n">△</td><td class="n">△</td></tr><tr><td>B級 JBP(多店活動)</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr></tbody></table></div><p class="lv-legend">○ 開啟　× 不開啟　<b>△</b> 依廠商自製需求開啟</p></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>按「開始編輯」</div><div class="step-b"><ul class="sm"><li>左側步驟解鎖，依序製作</li></ul><figure class="shot"><a class="zoom" href="img/v6-home-start.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-home-start.png" width="530" height="350" alt="" loading="lazy"></a></figure></div></div>
 </section>
 <section id="home-smart">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
@@ -425,40 +436,36 @@ main section .step-b ul.sm li.red::before{content:none}
 <!-- ============ 2 曝光資源 ============ -->
 <div class="cat" id="cat-ex"><h2>二、曝光資源</h2></div>
 <p class="lead">中間是版位預覽，右側是工具列。</p>
-<figure class="shot"><a class="zoom" href="img/v4-ex-overview.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v4-ex-overview.png" width="1280" height="860" alt="" loading="lazy"></a><figcaption>編號對應下方步驟。</figcaption></figure>
+<figure class="shot"><a class="zoom" href="img/v5-ex-overview.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-overview.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
 <section id="ex-edit">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
   <div class="step"><div class="step-h"><span class="callout">1</span>確認製作的版位</div><div class="step-b"><ul class="sm"><li>匯入工單時已按照活動等級自動勾選</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">2</span>輸入文字內容</div><div class="step-b"><ul class="sm"><li>可由右側欄位或畫布中的文字框直接編輯</li><li>所有版位同步套用</li></ul><div class="tab-row"><div><ul class="sm"><li>文案若不需加 $ 符號，可在畫布上反白數字，點選「暫時不加$和千分位符號」取消</li></ul></div><div class="dm"><div class="dm-text">優蛋白1包<mark>$502</mark></div><div class="dm-menu"><span>暫時不加$和千分位符號</span><span>不強制變阿拉伯數字</span></div></div></div></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>輸入文字內容</div><div class="step-b"><ul class="sm"><li>可由右側欄位或畫布中的文字框直接編輯</li><li>所有版位同步套用</li><li>文案若不需加 $ 符號，可在畫布上反白數字後按右鍵，點選<span class="or">「暫時不加$和千分位符號」</span></li></ul><figure class="shot"><a class="zoom" href="img/v5-ex-dollar.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-dollar.png" width="531" height="252" alt="" loading="lazy"></a></figure></div></div>
   <div class="step"><div class="step-h"><span class="callout">3</span>上傳 LOGO</div><div class="step-b"><ul class="sm"><li>最多 3 張</li><li>所有版位同步套用</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">4</span>上傳素材（商品圖、人物素材）</div><div class="step-b"><ul class="sm"><li>商品圖與人物素材需分開上傳：商品按「＋ 點擊上傳商品圖」；人物按「＋ 點擊上傳代言人」「＋ 點擊上傳簽名檔」</li><li>商品圖最多 3 張，代言人算 2 品</li><li>工單有填會自動帶入</li><li>所有版位同步套用</li></ul><figure class="shot"><div class="shot-row"><a class="zoom" href="img/v2-ex-product-modal.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ex-product-modal.png" width="418" height="370" alt="上傳商品圖視窗：選取圖片步驟，可拖曳或點擊選取，最多 3 張" loading="lazy"></a><a class="zoom" href="img/v2-ex-endorser.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ex-endorser.png" width="252" height="372" alt="右側曝品圖區塊：商品清單，以及人物（代言人照、簽名檔）與代言人小字" loading="lazy"></a></div><figcaption>左：上傳商品圖視窗。右：人物（代言人照、簽名檔）。</figcaption></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>上傳素材（商品圖、人物素材）</div><div class="step-b"><ul class="sm"><li>商品圖與人物素材需分開上傳</li><li>商品組合僅限 3 品、1 人＋2 品、2 人</li><li>工單有填會自動帶入</li><li>所有版位同步套用</li></ul><figure class="shot"><div class="shot-row"><a class="zoom" href="img/v5-ex-prod.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-prod.png" width="323" height="173" alt="" loading="lazy"></a><a class="zoom" href="img/v5-ex-person.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-person.png" width="323" height="221" alt="" loading="lazy"></a></div></figure></div></div>
   <div class="step"><div class="step-h"><span class="callout">5</span>選背景圖</div><div class="step-b"><ul class="sm"><li>開啟背景圖庫，點選即所有版位套用</li><li>支援上傳其他背景素材</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">6</span>商品與視覺排版</div><div class="step-b"><ul class="sm"><li>點選商品：拖曳移動、拖四角縮放、拖把手旋轉</li><li>滑到版位上可調整背景圖</li><li>調好 HBN 與 LPBN，其他版位會自動跟隨</li></ul><figure class="shot"><div class="shot-row"><a class="zoom" href="img/v2-ex-product-select.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ex-product-select.png" width="180" height="210" alt="在畫布上點選商品後出現四角縮放點與上方旋轉把手" loading="lazy"></a><a class="zoom" href="img/v2-ex-bg-panel.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ex-bg-panel.png" width="122" height="156" alt="滑到版位上時出現的背景圖調整面板：原尺寸／填滿、縮放、水平與垂直位置" loading="lazy"></a></div><figcaption>左：點選商品。右：背景圖調整。</figcaption></figure></div></div>
-  <div class="step"><div class="step-h"><span class="callout">7</span>逐張檢查版位</div><div class="step-b"><ul class="sm"><li>特殊版位（如 SCBN）先點標頭右上「版位連動」切成「獨立編輯」再微調</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">8</span>按「曝光資源完成」</div><div class="step-b"><ul class="sm"><li>左側打勾，進入活動頁</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">6</span>商品與視覺排版</div><div class="step-b"><ul class="sm"><li>點選商品：拖曳移動、拖四角縮放、拖把手旋轉</li><li>滑到版位上可調整背景圖</li></ul><figure class="shot"><div class="shot-row"><a class="zoom" href="img/v5-ex-product-select.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-product-select.png" width="290" height="300" alt="" loading="lazy"></a><a class="zoom" href="img/v5-ex-bg-panel.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-bg-panel.png" width="158" height="204" alt="" loading="lazy"></a></div><figcaption>左：點選商品出現控制點。右：背景圖調整。</figcaption></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">7</span>按「曝光資源完成」</div><div class="step-b"><ul class="sm"><li>左側打勾，進入活動頁</li></ul></div></div>
 </section>
 <section id="ex-smart">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
   <ul>
     <li><strong>超出字數即時提醒</strong>：文字超出字數會出現紅框，須先處理才能下載。</li>
-    <li><strong>依工單自動勾選版位</strong>：依工單總覽「版位」欄（黃底列）自動勾選；等級表沒有的版位會在首頁提示「沒有公版」。</li>
+    <li><strong>依工單自動勾選版位</strong>：依工單總覽「版位」欄（黃底列）自動勾選。</li>
     <li><strong>商品自動加影子，畫面更立體</strong>：上傳時自動加上，可調開關、光源、位移、寬度與長度。</li>
     <li><strong>自動分辨代言人照與簽名檔</strong>：檔名含「簽名／sign」視為簽名檔，含「代言／照／photo」視為代言人照；判斷錯誤時按「⇄」互換。</li>
-    <li><strong>品數自動控管，不會超規</strong>：代言人照算 1 品，與商品合計最多 3 品；簽名檔、小字不佔品數。</li>
-    <li><strong>小字字級自動符合規範</strong>：最多 10 字（2 排 × 5 字），字級固定；字色依底色自動黑／白，也可手動指定。</li>
-    <li><strong>調好兩張，全版位自動排好</strong>：只需調整 HBN 與 LPBN，其他版位自動跟隨；人像不會被裁切，並自動避開文字與 Logo。<div class="tbl"><table class=""><thead><tr><th>跟隨</th><th>版位</th></tr></thead><tbody><tr><td>HBN</td><td>HBN（橫式／方式）、活動總覽、AMS、SCBN、SBA_PC</td></tr><tr><td>LPBN</td><td>LPBN_APP、LPBN_PC、FB_POST、ddcard、IG、Coin_pageBN、SBA_APP</td></tr></tbody></table></div><figure class="shot"><a class="zoom" href="img/v2-ex-follow.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ex-follow.png" width="328" height="612" alt="同一組代言人在 HBN、活動總覽、Coin_pageBN、SCBN、LPBN 的排法" loading="lazy"></a></figure></li>
-    <li><strong>特殊版位可單獨微調</strong>：點版位標頭右上按鈕切換；獨立編輯的版位不受其他版位影響。<figure class="shot"><a class="zoom" href="img/v2-ex-lock.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ex-lock.png" width="200" height="110" alt="版位標頭右上角：上方為版位連動，下方為獨立編輯" loading="lazy"></a><figcaption>上：版位連動。下：獨立編輯。</figcaption></figure></li>
-    <li><strong>避免排好的版位被覆蓋</strong>：修改已完成的版位時，可選「僅套用至未完成版位」（建議）、「解除所有連動」或「確定全部覆蓋」。</li>
+    <li><strong>品數自動控管，不會超規</strong>：商品組合僅限 3 品、1 人＋2 品、2 人。</li>
+    <li><strong>連動功能</strong>：版位有連動功能，支援大部分素材一次調整完成，部分特殊版型再進行微調，能節省做圖時間。<figure class="shot"><a class="zoom" href="img/v5-ex-lock.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-lock.png" width="94" height="80" alt="" loading="lazy"></a><figcaption>上：版位連動。下：獨立編輯（單張自己調整）。</figcaption></figure></li>
+    <li><strong>智慧偵測提醒</strong>：修改已完成的版位時，可選「僅套用至未完成版位」（建議）、「解除所有連動」或「確定全部覆蓋」。</li>
   </ul>
 </section>
 <!-- ============ 3 活動頁 ============ -->
 <div class="cat" id="cat-ms"><h2>三、活動頁</h2></div>
-<p class="lead">中間是匯入預覽，右側是工具列。</p>
-<figure class="shot"><a class="zoom" href="img/v2-ms-overview.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ms-overview.png" width="800" height="663" alt="活動頁資源畫面：中間是匯入預覽，右側是活動等級、商品影子、顏色與版位編輯" loading="lazy"></a></figure>
+<figure class="shot"><a class="zoom" href="img/v5-ms-overview.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ms-overview.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
 <section id="ms-edit">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
   <div class="step"><div class="step-h"><span class="callout">1</span>檢查成品預覽</div><div class="step-b"><ul class="sm"><li>上方可調顯示比例 50%～100%</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">2</span>點選要修改的版位</div><div class="step-b"><ul class="sm"><li>點一下即鎖定，右側顯示編輯項目</li><li>按「已鎖定｜解除」恢復自動跟隨</li></ul><figure class="shot"><a class="zoom" href="img/v2-ms-edit-panel.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-ms-edit-panel.png" width="243" height="396" alt="右側版位編輯與操作：點選的副區顯示已鎖定，可新增、編輯、換圖、補圖、刪除與調整前後順序" loading="lazy"></a></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>點選要修改的版位</div><div class="step-b"><ul class="sm"><li>點一下即鎖定，右側顯示編輯項目</li><li>按「已鎖定｜解除」恢復自動跟隨</li></ul><figure class="shot"><a class="zoom" href="img/v5-ms-edit-panel.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ms-edit-panel.png" width="320" height="530" alt="" loading="lazy"></a><figcaption>點選版位後：② 已鎖定｜解除　③ 編輯、換圖、刪除　④ 補圖（上傳簽名檔）</figcaption></figure></div></div>
   <div class="step"><div class="step-h"><span class="callout">3</span>編輯素材</div><div class="step-b"><ul class="sm"><li>右側可新增、編輯、換圖、補圖、刪除</li><li>↑↓ 調整前後順序</li><li>畫布上可直接拖曳、縮放</li></ul></div></div>
   <div class="step"><div class="step-h"><span class="callout">4</span>上傳簽名檔</div><div class="step-b"><ul class="sm"><li>在指定欄位按「補圖」</li><li>上傳後自動開啟代言人文案輸入框</li></ul></div></div>
   <div class="step"><div class="step-h"><span class="callout">5</span>調整商品影子</div><div class="step-b"><ul class="sm"><li>光源：左／中／右／關閉</li><li>可調顏色、位移，按「套用修改」</li></ul></div></div>
@@ -477,7 +484,7 @@ main section .step-b ul.sm li.red::before{content:none}
 </section>
 <!-- ============ 4 活動頁面配色 ============ -->
 <div class="cat" id="cat-color"><h2>四、活動頁面配色</h2></div>
-<figure class="shot"><a class="zoom" href="img/v2-color.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-color.png" width="800" height="663" alt="活動頁設定色票：配色模擬分頁，左側預覽與各色票，右側底色、跳色候選與輸出 CSV" loading="lazy"></a></figure>
+<figure class="shot"><a class="zoom" href="img/v5-color.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-color.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
 <section id="color-edit">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
   <div class="step"><div class="step-h"><span class="callout">1</span>確認底色</div><div class="step-b"><ul class="sm"><li>連結圖示亮起＝與曝光資源連動</li></ul></div></div>
@@ -489,7 +496,7 @@ main section .step-b ul.sm li.red::before{content:none}
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
   <ul>
     <li><strong>色票自動算好，簡單確認即可</strong>：依前面設計的配色，自動算出主標、副標、日期、CTA 與價格顏色。</li>
-    <li><strong>自動檢查文字對比度</strong>：「取色」分頁可載入 hbn 資料夾或拖入圖片，自動偵測底色、主標、副標、CTA 並標示對比度。<figure class="shot"><a class="zoom" href="img/v2-color-pick.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-color-pick.png" width="738" height="235" alt="取色分頁：選擇或載入 hbn 資料夾、重新掃描、複製 CSV、下載此資源檔案" loading="lazy"></a></figure></li>
+    <li><strong>智慧偵測提醒</strong>：調整若會變更到活動頁與曝光資源的素材，會跳出警示視窗。</li>
     <li><strong>一鍵輸出色票檔</strong>：下載色票 CSV，格式對應色票.xlsx。</li>
     <li><strong>改色一次，全部同步</strong>：換色時只確認一次，曝光資源與活動頁同步修改，並改回未完成。</li>
     <li><strong>內建配色原則，避免配錯色</strong>：全頁四色（底、深、強調、白）；淺底配深字，深底配白主標＋淺黃／米色副標；CTA 用白字。</li>
@@ -497,20 +504,19 @@ main section .step-b ul.sm li.red::before{content:none}
 </section>
 <!-- ============ 5 吸底 ============ -->
 <div class="cat" id="cat-bt"><h2>五、吸底</h2></div>
-<p class="lead">頁面底部 1200 × 150 的促銷橫幅。</p>
-<figure class="shot"><a class="zoom" href="img/v2-bottom.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-bottom.png" width="800" height="663" alt="吸底工具：中間是吸底預覽，右側是反白顏色、吸底顆數與每顆內容" loading="lazy"></a></figure>
+<figure class="shot"><a class="zoom" href="img/v6-bottom.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-bottom.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
 <section id="bt-edit">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
-  <div class="step"><div class="step-h"><span class="callout">1</span>選擇顆數</div><div class="step-b"><ul class="sm"><li>2～5 顆</li><li>反白顏色可選橘或紅</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">2</span>設定每顆 icon 與文字</div><div class="step-b"><ul class="sm"><li>icon 可搜尋，或上傳自訂 icon</li><li>大小可調 50%～250%</li><li>文字建議 5 字內</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">3</span>檢查預覽</div><div class="step-b"><ul class="sm"><li>可新增分頁、復原／重做</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">4</span>按「吸底完成」</div><div class="step-b"><ul class="sm"><li>系統會詢問是否整包下載</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>選擇顆數</div><div class="step-b"><ul class="sm"><li>2～5 顆</li><li>一般活動使用橘色配色，BOD 使用紅色配色（系統可初步判斷）</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>設定每顆 icon 與文字</div><div class="step-b"><ul class="sm"><li>icon 可從資料庫挑選，或上傳自訂 icon</li><li>文字最多 5 字</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>檢查預覽</div><div class="step-b"></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>確認完成</div><div class="step-b"><ul class="sm"><li>按「吸底完成」</li></ul></div></div>
 </section>
 <section id="bt-smart">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
   <ul>
     <li><strong>工單內容自動帶入</strong>：工單內的 LOGO、ICON、文案自動帶入。</li>
-    <li><strong>多狀態圖一次出齊</strong>：匯出時每張反白一顆、其他轉灰，一次出齊。</li>
+    <li><strong>多狀態圖一次出齊</strong>：匯出時每張打亮一顆（顯示該頁面）、其他轉灰，一次出齊。</li>
     <li><strong>超出範圍即時提醒</strong>：圖片過大、壓字或超出邊界時顯示紅字（不影響匯出，但請檢查）。</li>
   </ul>
 </section>
@@ -518,8 +524,8 @@ main section .step-b ul.sm li.red::before{content:none}
 <div class="cat" id="cat-dl"><h2>六、下載</h2></div>
 <section id="dl-edit">
   <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
-  <div class="step"><div class="step-h"><span class="callout">1</span>按「整包下載」</div><div class="step-b"><ul class="sm"><li>有步驟未完成會先提醒</li></ul></div></div>
-  <div class="step"><div class="step-h"><span class="callout">2</span>逐張檢查圖片</div><div class="step-b"><ul class="sm"><li>切換「全部／活動頁／曝光資源」</li><li>點圖片可放大</li></ul><figure class="shot"><a class="zoom" href="img/v2-dl-check.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v2-dl-check.png" width="800" height="663" alt="整包下載・檢查圖片：依活動頁與曝光資源分類列出所有圖片，下方有取消與確認下載 ZIP" loading="lazy"></a></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>按「整包下載」</div><div class="step-b"><ul class="sm"><li>有步驟未完成會先提醒</li><li>所有項目都完成後，系統也會自動詢問是否要下載</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>預覽和檢查圖檔</div><div class="step-b"><ul class="sm"><li>切換「全部／活動頁／曝光資源」</li><li>點圖片可放大</li></ul><figure class="shot"><a class="zoom" href="img/v6-dl-check.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-dl-check.png" width="960" height="473" alt="" loading="lazy"></a></figure></div></div>
   <div class="step"><div class="step-h"><span class="callout">3</span>按「確認下載 ZIP」</div><div class="step-b"><ul class="sm"><li class="red">打包時請勿關閉分頁或切換頁面</li></ul></div></div>
 </section>
 <section id="dl-smart">
