@@ -1761,8 +1761,8 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
     <button class="nav-item nav-step" data-view="bottom" data-step="bottom" title="步驟 4：吸底工具">
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12v5H6z"/><path d="M4 12h16v8H4z"/><path d="M8 12V9M16 12V9"/><path d="M8 16h8"/></svg></span><span class="lbl">吸底工具</span>
     </button>
-    <button class="nav-item nav-step" data-view="color" data-step="color" title="步驟 5：取色工具（色票）">
-      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.87 7 13 7 13s7-9.13 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="3" fill="var(--bg,#fff)" stroke="none"/></svg></span><span class="lbl">取色工具</span>
+    <button class="nav-item nav-step" data-view="color" data-step="color" title="步驟 5：活動頁配色（色票）">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.87 7 13 7 13s7-9.13 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="3" fill="var(--bg,#fff)" stroke="none"/></svg></span><span class="lbl">活動頁配色</span>
     </button>
     <button class="nav-item nav-step" data-step="download" data-action="package-download" data-skip-app-loading title="步驟 6：整包下載（工單＋圖片＋色票＋暫存檔）">
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.8 10.2 4.2 4.2 4.2-4.2"/><path d="M4 15.8V20h16v-4.2"/></svg></span><span class="lbl">整包下載</span>
@@ -8234,7 +8234,7 @@ function appLoadingPulse(label) {
 /* 頁面切換不是重工作業，但常會接著初始化 iframe、字體或大型畫布。
    先以共用視窗接住切換，再由真正的載入流程覆蓋進度；一般頁面至少等一個繪製週期才淡出。 */
 function appLoadingStartView(name) {
-  var labels = { home: '首頁', generator: '工單生成器', upload: '匯入工單', import: '活動頁資源', exposure: '曝光資源', color: '取色工具', bottom: '吸底工具', maint: '維修' };
+  var labels = { home: '首頁', generator: '工單生成器', upload: '匯入工單', import: '活動頁資源', exposure: '曝光資源', color: '活動頁配色', bottom: '吸底工具', maint: '維修' };
   APP_LOADING.viewToken++;
   var token = APP_LOADING.viewToken;
   appLoadingStart('LOADING · 正在開啟' + (labels[name] || '工具'), 12, '正在準備畫面與必要資源…');
@@ -30147,7 +30147,7 @@ var WORKFLOW_STEPS = [
   { key: 'upload', label: '匯入工單', view: 'upload' },
   { key: 'exposure', label: '曝光資源', view: 'exposure' },
   { key: 'import', label: '活動頁資源', view: 'import' },
-  { key: 'color', label: '取色工具', view: 'color' },
+  { key: 'color', label: '活動頁配色', view: 'color' },
   { key: 'bottom', label: '吸底工具', view: 'bottom' }
 ];
 var WORKFLOW_STATUS_KEY = 'boda_workflow_step_status_v1';
@@ -30900,7 +30900,7 @@ document.getElementById('btn-deep-clear-all').addEventListener('click', deepClea
      「取消」＝這次修改作廢：活動頁改回修改前的顏色、子工具也送回原本的顏色，兩邊維持一致。
    頁面剛載入時的對齊（同一管道第一次送）不算修改；換到別的步驟後重新詢問。 */
 (function () {
-  var STEP_LABEL = { exposure: '曝光資源', import: '活動頁資源', color: '取色工具', bottom: '吸底工具' };
+  var STEP_LABEL = { exposure: '曝光資源', import: '活動頁資源', color: '活動頁配色', bottom: '吸底工具' };
   var SHARED_STORAGE_KEYS = [SHARED_CANVAS_BG_KEY, SHARED_CTA_BG_KEY, SHARED_CTA_TEXT_KEY, SHARED_EXPOSURE_TEXT_PALETTE_KEY];
   var SHARED_THEME_FIELDS = ['bg', 'bgAuto', 'ctaBg', 'ctaText'];
   var lastSig = {};
