@@ -1227,8 +1227,8 @@
      有動畫的步驟：動畫演完（匯入結果出現）才出現「下一步」，讓人停下來看。 */
   var STEPS = [
     { intro: true,
-      title: '歡迎使用 活動素材製作工具 - MS編輯器',
-      body: '要用示範工單，帶你走一遍嗎？',
+      title: '歡迎使用\n活動素材製作工具-MS編輯器/BN編輯器',
+      body: '只要 3 分鐘，帶你快速上手所有功能！',
       before: goUpload },
 
     { target: function(){ return proxy; }, place: 'right',
