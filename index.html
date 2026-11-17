@@ -24599,6 +24599,13 @@ function deleteWorkorderImportDatabase(name) {
 }
 function resetBeforeWorkorderImport() {
   appLoadingUpdate(28, 'LOADING · 匯入工單', '正在重置上一份工單與各工具暫存…', 38);
+  /* 使用者可能先丟圖片資料夾、再匯入工單；工單匯入前的重置不能把這批「尚未配對」的圖片洗掉。
+     但如果畫面上已經有舊工單，就代表這次是換專案，仍要清掉舊圖片，避免同檔名誤配到上一案素材。 */
+  var hasExistingWorkorderBeforeReset = !!(currentImportOverviewByLabels || currentImportWorkbook || (currentImportColumns && currentImportColumns.length));
+  var preserveUploadedImagesForNewWorkorder = !hasExistingWorkorderBeforeReset;
+  var uploadedImagesBeforeWorkorderReset = preserveUploadedImagesForNewWorkorder
+    ? (uploadedImages || []).filter(function (img) { return img && img.url; }).map(function (img) { return Object.assign({}, img); })
+    : [];
   try { window.__bodaResetting = true; } catch (e) {}
   try { importPersistDisabled = true; } catch (e) {}
   try { clearTimeout(importStateSaveTimer); } catch (e) {}
@@ -24625,10 +24632,12 @@ function resetBeforeWorkorderImport() {
   return Promise.all(WORKORDER_IMPORT_RESET_IDB.map(deleteWorkorderImportDatabase)).then(function () {
     clearWorkorderImportBrowserStorage();
     currentImportColumns = [];
-    uploadedImages = [];
+    uploadedImages = uploadedImagesBeforeWorkorderReset;
+    lastImportImageMatchReport = { matched: 0, fuzzy: [], unresolved: [], ambiguous: [] };
     currentImportWorkbook = null;
     currentImportWorkbookName = '';
     currentImportActivityName = '';
+    currentImportOverviewByLabels = null;
     currentImportSource = '';
     currentGeneratorSignature = '';
     currentImportedWorkOrderSpec = null;
@@ -24654,6 +24663,7 @@ function resetBeforeWorkorderImport() {
     try { setUploadStepState('import-img-drop', 'idle', ''); } catch (e) {}
     try { renderImportColumns(currentImportColumns); } catch (e) {}
     try { renderImageGallery(); } catch (e) {}
+    try { renderUploadImageStatus(); } catch (e) {}
     try { renderUploadExposurePlacementStatus(null, null); } catch (e) {}
     try { hideImportBottomPreview(); } catch (e) {}
     try { broadcastBottomImageAssets(); } catch (e) {}
