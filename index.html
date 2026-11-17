@@ -24563,7 +24563,9 @@ function parseLargeJsonBlob(blob, onProgress, chunkSize) {
 /* 匯入新的 xlsx 工單前先做一次「不重新整理頁面」的乾淨重置。
    使用者明確要求：工單匯入時，先重置，再載入工單資料。
    注意：這只套用 xlsx 工單；上傳 wo_import_snapshot 暫存檔時不能先清，否則會把要還原的內容洗掉。 */
-var WORKORDER_IMPORT_RESET_KEEP_KEYS = { 'bn-layouts': 1, 'bn-layout-selection-version': 1, 'bn_feedback_draft_v2': 1, 'jbp_whatsnew_seen': 1 };
+var WORKORDER_IMPORT_RESET_KEEP_KEYS = { 'bn-layouts': 1, 'bn-layout-selection-version': 1, 'bn_feedback_draft_v2': 1, 'jbp_whatsnew_seen': 1,
+  /* 2026-11-17：新手導覽的「看過了」與進行中狀態不能被匯入工單清掉，否則每匯入一次工單，下次開啟又會自動跑導覽 */
+  'boda_onboarding_tour_v1': 1, 'boda_tour_resume_after_reset': 1, 'boda_tour_section': 1 };
 var WORKORDER_IMPORT_RESET_IDB = ['boda-import-persist', 'boda-bottom-persist', 'bn_editor_state_db', 'hbn-color-tool'];
 function isWorkorderImportResetToolKey(key) {
   return /^(wo_|bn|boda|hbn-)/i.test(String(key || ''));
