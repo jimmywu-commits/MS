@@ -1761,8 +1761,8 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
     <button class="nav-item nav-step" data-view="bottom" data-step="bottom" title="步驟 4：吸底工具">
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12v5H6z"/><path d="M4 12h16v8H4z"/><path d="M8 12V9M16 12V9"/><path d="M8 16h8"/></svg></span><span class="lbl">吸底工具</span>
     </button>
-    <button class="nav-item nav-step" data-view="color" data-step="color" title="步驟 5：取色工具（色票）">
-      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.87 7 13 7 13s7-9.13 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="3" fill="var(--bg,#fff)" stroke="none"/></svg></span><span class="lbl">取色工具</span>
+    <button class="nav-item nav-step" data-view="color" data-step="color" title="步驟 5：活動頁配色（色票）">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.87 7 13 7 13s7-9.13 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="3" fill="var(--bg,#fff)" stroke="none"/></svg></span><span class="lbl">活動頁配色</span>
     </button>
     <button class="nav-item nav-step" data-step="download" data-action="package-download" data-skip-app-loading title="步驟 6：整包下載（工單＋圖片＋色票＋暫存檔）">
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.8 10.2 4.2 4.2 4.2-4.2"/><path d="M4 15.8V20h16v-4.2"/></svg></span><span class="lbl">整包下載</span>
@@ -8234,7 +8234,7 @@ function appLoadingPulse(label) {
 /* 頁面切換不是重工作業，但常會接著初始化 iframe、字體或大型畫布。
    先以共用視窗接住切換，再由真正的載入流程覆蓋進度；一般頁面至少等一個繪製週期才淡出。 */
 function appLoadingStartView(name) {
-  var labels = { home: '首頁', generator: '工單生成器', upload: '匯入工單', import: '活動頁資源', exposure: '曝光資源', color: '取色工具', bottom: '吸底工具', maint: '維修' };
+  var labels = { home: '首頁', generator: '工單生成器', upload: '匯入工單', import: '活動頁資源', exposure: '曝光資源', color: '活動頁配色', bottom: '吸底工具', maint: '維修' };
   APP_LOADING.viewToken++;
   var token = APP_LOADING.viewToken;
   appLoadingStart('LOADING · 正在開啟' + (labels[name] || '工具'), 12, '正在準備畫面與必要資源…');
@@ -19063,6 +19063,35 @@ function rememberExposureAssetSig(sig) {
   _exposureOverviewAssetSentSig = sig;
   try { if (sig) localStorage.setItem(EXPOSURE_ASSET_SIG_KEY, sig); else localStorage.removeItem(EXPOSURE_ASSET_SIG_KEY); } catch (e) {}
 }
+function exposureOverviewAssetSigPart(asset) {
+  if (!asset) return '';
+  return [
+    asset.name || '',
+    importShadowFingerprint(asset.src || ''),
+    importShadowFingerprint(asset.baseSrc || ''),
+    importShadowFingerprint(asset.logoSrc || ''),
+    asset.logoBg || ''
+  ].join('|');
+}
+function exposureOverviewAssetSigPartsFromStored(raw) {
+  if (!raw) return null;
+  try {
+    var parsed = JSON.parse(raw);
+    if (parsed && parsed.v === 2) return parsed;
+    /* 舊版簽章格式：
+       [logoNames, logoAssets.length, productNames, productAssets.length, endorserNames, endorserAssets.length, endorserNote]
+       轉成分類簽章，讓新版第一次重送 LOGO 時，不會誤判商品也變了而覆蓋商品位置。 */
+    if (Array.isArray(parsed)) {
+      return {
+        v: 2,
+        logo: JSON.stringify([parsed[0] || [], parsed[1] || 0]),
+        product: JSON.stringify([parsed[2] || [], parsed[3] || 0]),
+        endorser: JSON.stringify([parsed[4] || [], parsed[5] || 0, parsed[6] || ''])
+      };
+    }
+  } catch (e) {}
+  return null;
+}
 function pushExposureOverviewAssets(payload, force) {
   payload = payload || readSharedExposureOverviewText();
   if (!payload) return false;
@@ -19074,8 +19103,19 @@ function pushExposureOverviewAssets(payload, force) {
   var endorserNote = String(payload.endorserNote == null ? '' : payload.endorserNote).trim();
   if (!logoNames.length && !productNames.length && !endorserNames.length && !endorserNote) return false;
   var endorserAssets = exposureEndorserAssets(endorserNames);
-  var sentSig = JSON.stringify([logoNames, logoAssets.length, productNames, productAssets.length,
-    endorserNames, endorserAssets.length, endorserNote]);
+  /* 2026-11-17 修正：曝光 LOGO 同步不能只看「檔名＋數量」。
+     例如工單總覽寫「順發」、圖片資料夾後來才讀到順發.png，或暫存／舊狀態曾記過同名同數量時，
+     只用數量會被判定已送過，導致曝光資源沒有重新套用真正的 LOGO 圖。
+     LOGO 改成簽章包含實際圖片內容指紋；檔名相同但圖片內容補齊／改變時會重新推送。
+     商品則維持「檔名＋找到幾張」判斷，避免換背景重烘影子時又整組重送商品、覆蓋使用者已調整的位置大小。 */
+  var logoSig = JSON.stringify([logoNames, logoAssets.map(exposureOverviewAssetSigPart)]);
+  var productSig = JSON.stringify([productNames, productAssets.length]);
+  var endorserSig = JSON.stringify([endorserNames, endorserAssets.length, endorserNote]);
+  var sentSig = JSON.stringify({ v: 2, logo: logoSig, product: productSig, endorser: endorserSig });
+  var oldSigParts = exposureOverviewAssetSigPartsFromStored(_exposureOverviewAssetSentSig);
+  var logoChanged = force || !oldSigParts || oldSigParts.logo !== logoSig;
+  var productChanged = force || !oldSigParts || oldSigParts.product !== productSig;
+  var endorserChanged = force || !oldSigParts || oldSigParts.endorser !== endorserSig;
   if (!force && sentSig === _exposureOverviewAssetSentSig) return false;
   if (!_exposureFrameReadyForAssets) return false;   /* 曝光資源載入後會再呼叫一次 */
   rememberExposureAssetSig(sentSig);
@@ -19088,14 +19128,14 @@ function pushExposureOverviewAssets(payload, force) {
       }),
       products: productAssets,
       /* LOGO 仍等工單列出的檔案全數讀完才取代，避免載入中途暫時清空。 */
-      replaceLogos: logoNames.length > 0 && logoAssets.length === logoNames.length,
+      replaceLogos: logoChanged && logoNames.length > 0 && logoAssets.length === logoNames.length,
       /* 工單可列 1～3 品，但使用者可能只上傳其中幾張。只要有成功命中的商品就先送進曝光資源；
          其他圖片後續讀完時 handleImageFiles 會再推送完整清單。 */
-      replaceProducts: productNames.length > 0 && productAssets.length > 0,
+      replaceProducts: productChanged && productNames.length > 0 && productAssets.length > 0,
       /* 代言人照＋簽名檔：照工單欄位順序送，曝光資源再依檔名／圖片內容分辨哪張是照片、哪張是簽名。
          只找到其中一張也先送；另一張讀完後簽章不同會再套一次。 */
       endorsers: endorserAssets,
-      replaceEndorser: endorserAssets.length > 0,
+      replaceEndorser: endorserChanged && endorserAssets.length > 0,
       endorserNote: endorserNote
     }
   };
@@ -30107,7 +30147,7 @@ var WORKFLOW_STEPS = [
   { key: 'upload', label: '匯入工單', view: 'upload' },
   { key: 'exposure', label: '曝光資源', view: 'exposure' },
   { key: 'import', label: '活動頁資源', view: 'import' },
-  { key: 'color', label: '取色工具', view: 'color' },
+  { key: 'color', label: '活動頁配色', view: 'color' },
   { key: 'bottom', label: '吸底工具', view: 'bottom' }
 ];
 var WORKFLOW_STATUS_KEY = 'boda_workflow_step_status_v1';
@@ -30860,7 +30900,7 @@ document.getElementById('btn-deep-clear-all').addEventListener('click', deepClea
      「取消」＝這次修改作廢：活動頁改回修改前的顏色、子工具也送回原本的顏色，兩邊維持一致。
    頁面剛載入時的對齊（同一管道第一次送）不算修改；換到別的步驟後重新詢問。 */
 (function () {
-  var STEP_LABEL = { exposure: '曝光資源', import: '活動頁資源', color: '取色工具', bottom: '吸底工具' };
+  var STEP_LABEL = { exposure: '曝光資源', import: '活動頁資源', color: '活動頁配色', bottom: '吸底工具' };
   var SHARED_STORAGE_KEYS = [SHARED_CANVAS_BG_KEY, SHARED_CTA_BG_KEY, SHARED_CTA_TEXT_KEY, SHARED_EXPOSURE_TEXT_PALETTE_KEY];
   var SHARED_THEME_FIELDS = ['bg', 'bgAuto', 'ctaBg', 'ctaText'];
   var lastSig = {};
