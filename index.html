@@ -1644,10 +1644,13 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 .upload-card-head .upload-optional-tag{margin-left:8px;padding:1px 8px;border-radius:9px;background:#e6f2ef;color:#2f7a70;font-size:11px;font-weight:700;vertical-align:middle;}
 .upload-card-head .upload-optional-tag[hidden],.upload-optional-note[hidden]{display:none;}
 .upload-optional-note{margin:0 0 8px;font-size:12px;color:#2f7a70;}
-.nav-step.is-locked:hover{opacity:.55;}
 .nav-step.is-locked .step-badge{display:grid;background:transparent;color:inherit;font-size:10px;}
 .nav-step.is-locked .step-badge::before{content:'🔒';}
-.nav-step.is-off:hover{opacity:.7;}
+/* 反灰（略過／鎖住）的步驟沒有 hover 效果；點下去仍會跳出提示 */
+#nav-rail .nav-step.is-off:hover,#nav-rail .nav-step.is-locked:hover{background:none;color:#aebbb7;cursor:default;}
+#nav-rail .nav-step.is-off:hover{opacity:.42;}
+#nav-rail .nav-step.is-locked:hover{opacity:.32;}
+#nav-rail .nav-step[data-step="download"].is-locked:hover{background:#ee4d2d;color:#fff;opacity:.35;}
 #boda-choice-dialog{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,22,.45);display:flex;align-items:center;justify-content:center;padding:16px;}
 #boda-choice-dialog .bcd-panel{width:400px;max-width:100%;background:#fff;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.25);padding:22px 22px 18px;}
 #boda-choice-dialog .bcd-title{margin:0 0 8px;font-size:16px;color:var(--ink);}
@@ -7931,10 +7934,10 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 <script src="JS/dependency-loader.js?v=20261113-newboda1"></script>
 <script src="JS/render-config.js"></script>
 <script src="core/core-engine.js"></script>
-<script src="core/schema-renderer.js?v=20261114-badge1"></script>
+<script src="core/schema-renderer.js?v=20261119-cta"></script>
 <script src="shadow-module/shadow-plugin.js?v=20261019-shadow3"></script>
-<script src="JS/image-layout.js?v=20261106-display-clamp2"></script>
-<script src="JS/editor-plugin.js?v=20261019-rotate3"></script>
+<script src="JS/image-layout.js?v=20261118-fill7"></script>
+<script src="JS/editor-plugin.js?v=20261118-cutout2"></script>
 <script src="jbp/js/logo-editor-plugin.js"></script>
 
 <script>
@@ -11873,6 +11876,19 @@ function workOrderWorksheet(wb, expectedName) {
     var name = String(sheets[i].name || sheets[i].title || '').trim();
     if (name === wanted) return sheets[i];
   }
+  /* 頁簽名稱前後可能多了年份或版本字樣（例如「Y26工單總覽」）：
+     找名稱「包含」目標名稱的頁簽；備份／複本（Backup、副本、Copy）排除，有多個時取名稱最短的那個。 */
+  var key = wanted.replace(/[\s\u3000_-]+/g, '').toLowerCase();
+  if (key) {
+    var fuzzy = sheets.filter(function (sheet) {
+      var n = String(sheet.name || sheet.title || '').replace(/[\s\u3000_-]+/g, '').toLowerCase();
+      return n.indexOf(key) !== -1 && !/backup|備份|副本|copy|隱藏|hidden/i.test(n);
+    });
+    fuzzy.sort(function (a, b) {
+      return String(a.name || a.title || '').length - String(b.name || b.title || '').length;
+    });
+    if (fuzzy.length) return fuzzy[0];
+  }
   return null;
 }
 
@@ -14779,6 +14795,23 @@ function importShadowPrepared(originalDataUrl) {
    方向與位移重新合成。這與 Shopee 的 baseSrc → rotate → shadow 順序一致，旋轉時不會
    把舊影子一起轉走，也讓後續調整光影能持續以這張新底圖重製。 */
 window.BODAImportShadow = window.BODAImportShadow || {};
+/* 給編輯視窗用：回傳這張圖「自動去背後」的 dataURL（與畫布上實際用的去背結果相同）；
+   本來就是去背圖、或去背失敗時回傳 null（呼叫端直接用原圖）。 */
+window.BODAImportShadow.cutoutDataUrl = function (baseUrl) {
+  if (!baseUrl || !isImportShadowEngineReady()) return Promise.resolve(null);
+  return importShadowPrepared(baseUrl).then(function (prep) {
+    if (!prep || !prep.product) return null;
+    var src = String(prep.product.currentSrc || prep.product.src || '');
+    return (src && src !== baseUrl) ? src : null;
+  }).catch(function () { return null; });
+};
+/* 這張畫布圖片的素材是否被標成「不去背、保留原圖」（編輯視窗的自動去背開關用）。 */
+window.BODAImportShadow.isNoCutout = function (imgEl) {
+  if (!imgEl) return false;
+  var asset = importShadowAssetForCanvasValue(imgEl.getAttribute('src') || imgEl.src || '') ||
+    importShadowAssetForCanvasValue((imgEl.dataset && imgEl.dataset.baseSrc) || '');
+  return !!(asset && asset.noCutout);
+};
 window.BODAImportShadow.composeProduct = function (baseUrl) {
   if (!baseUrl || importShadowSettings.angle === 'off') {
     return Promise.resolve({ url: baseUrl, geometry: null });
@@ -16381,6 +16414,7 @@ function importUploadStateFields(img) {
   var out = {};
   ['logoBg', 'logoUrl', 'logoMode', 'logoAuto', 'logoKey', 'shadowGeom', 'shadowKey'].forEach(function (k) { if (img[k]) out[k] = img[k]; });
   if (img.skipShadow) out.skipShadow = true;
+  if (img.noCutout) out.noCutout = true;
   return out;
 }
 function importUploadFromState(img) {
@@ -17960,7 +17994,7 @@ function canvasImageEditorStateFrom(img, outputSrc, includeProductEditorState) {
   state.outputSrc = outputSrc || img.getAttribute('src') || img.src;
   if (includeProductEditorState !== false) {
     if (img.dataset.baseSrc) state.baseSrc = img.dataset.baseSrc;
-    ['outputRatio', 'productOnlyRatio',
+    ['outputRatio', 'productOnlyRatio', 'noCutout',
       'layoutSourceWidth', 'layoutSourceHeight', 'layoutOutputWidth', 'layoutOutputHeight', 'layoutOffsetX', 'layoutOffsetY']
       .forEach(function (key) { if (img.dataset[key] != null) state[key] = img.dataset[key]; });
   }
@@ -17996,6 +18030,8 @@ function updateRenderedImageField(ctxName, idx, fieldKey) {
   }
   restoreCanvasImageEditorState(mount, col);
   applyImportShadowGeometry(mount);
+  /* 只換了圖片（例如編輯視窗關掉／打開自動去背）不會整張重畫；商品區的背景填色要重新判斷。 */
+  if (typeof window.__b41AutoFillZones === 'function') window.__b41AutoFillZones(mount, col);
 }
 function updateVisibleImageThumbnails(oldUrl, newUrl) {
   document.querySelectorAll('.if-thumb img').forEach(function (img) {
@@ -18101,7 +18137,18 @@ function openImportFieldImageEditor(idx, fieldKey, imageIndex, ctxName) {
       var linked = replaceImageInUsages(others, oldUrl, rawNewUrl, ctxName);
       /* 更新素材清單前先讀出外掛寫回的 baseSrc。後續調整影子才會從旋轉／去背後的
          無影子商品底圖重製，而不是從舊的含影子版本再疊一層。 */
-      syncImageAssetsByName(oldUrl, rawNewUrl, !isLogoField && editorState && editorState.baseSrc);
+      /* 編輯視窗改了「自動去背」開關：商品區背景填色回到「依圖片自動」
+         （關去背＝不透明圖，自動開；開去背＝透明圖，自動關），清掉先前手動設定。 */
+      if (!isLogoField && editorState && editorState.noCutout != null) {
+        var prevAsset = importShadowAssetForCanvasValue(oldUrl);
+        var prevNoCutout = !!(prevAsset && prevAsset.noCutout);
+        var fillM = /^productImg([0-9]*)$/i.exec(String(fieldKey || ''));
+        if (fillM && prevNoCutout !== (editorState.noCutout === '1') && col && col.data) {
+          delete col.data['productFillBg' + fillM[1]];
+        }
+      }
+      syncImageAssetsByName(oldUrl, rawNewUrl, !isLogoField && editorState && editorState.baseSrc,
+        (!isLogoField && editorState && editorState.noCutout != null) ? editorState.noCutout === '1' : undefined);
       rememberCanvasImageEditorState(col, fieldKey, renderedIndex, editorState);
       updateRenderedImageField(ctxName, idx, fieldKey);
       linkedLayoutStates.forEach(function (linkedState) {
@@ -18167,7 +18214,7 @@ function sameImageAsset(a, b) {
   });
 
 }
-function syncImageAssetsByName(oldUrl, newUrl, editedBaseUrl) {
+function syncImageAssetsByName(oldUrl, newUrl, editedBaseUrl, noCutout) {
   var names = imageAssetNamesForUrl(oldUrl);
   var editedGeom = importShadowGeometryOf(newUrl);
   (uploadedImages || []).forEach(function (img) {
@@ -18177,6 +18224,10 @@ function syncImageAssetsByName(oldUrl, newUrl, editedBaseUrl) {
     if (img.url !== oldUrl && img.baseUrl !== oldUrl && !sameName) return;
     img.baseUrl = editedBaseUrl || img.baseUrl || oldUrl;
     img.url = newUrl;
+    /* 編輯視窗的「自動去背」開關：關＝保留原圖、不再去背／加影子（沿用 skipShadow 機制，
+       調整影子方向時也不會被重烘）；開＝恢復成會去背＋加影子的一般商品圖。 */
+    if (noCutout === true) { img.noCutout = true; img.skipShadow = true; }
+    else if (noCutout === false && img.noCutout) { delete img.noCutout; delete img.skipShadow; }
     if (editedGeom) img.shadowGeom = editedGeom;
     else delete img.shadowGeom;
   });
@@ -22017,7 +22068,12 @@ function buildImportColumnTools(col, idx, ctxName, env) {
       if (!layerGroup) { arrangedToolDefs.push(toolDef); return; }
       if (layerGroupSeen[layerGroup]) return;
       layerGroupSeen[layerGroup] = true;
-      importImageLayerGroupFields(col, toolDef.key).forEach(function (key) {
+      /* 顯示順序：同組裡曝品（productImg）固定排在贈品等其他圖上面。
+         （實際前後位置不變——例如 A-2-2 贈品在曝品前面，只是清單不再把贈品排第一。） */
+      var groupKeys = importImageLayerGroupFields(col, toolDef.key);
+      groupKeys = groupKeys.filter(function (k) { return /^productImg/i.test(k); })
+        .concat(groupKeys.filter(function (k) { return !/^productImg/i.test(k); }));
+      groupKeys.forEach(function (key) {
         if (toolDefsByKey[key]) arrangedToolDefs.push(toolDefsByKey[key]);
       });
     });
@@ -22933,6 +22989,16 @@ function bindCanvasInteractions(mountEl, col, idx, ctxName) {
     BNImageLayout.scanAndProcess(mountEl);
   }
   bindEndorserTextContrast(mountEl);
+  if (typeof window.__b41AutoFillZones === 'function') window.__b41AutoFillZones(mountEl, col);
+  /* 空白的 CTA：點到按鈕（外層）就把焦點交給裡面的輸入框，可以直接打字。 */
+  Array.prototype.forEach.call(mountEl.querySelectorAll('[data-bn-empty-cta]'), function (box) {
+    if (box.__emptyCtaBound) return;
+    box.__emptyCtaBound = true;
+    box.addEventListener('click', function (e) {
+      var inner = box.querySelector('[contenteditable="true"]');
+      if (inner && e.target !== inner) { e.stopPropagation(); inner.focus(); }
+    });
+  });
 }
 
 /* 原生色盤拖曳時直接更新既有色塊，不重建 DOM，色盤才不會被關掉；
@@ -23796,6 +23862,17 @@ function bindCanvasEditable(mountEl, col, idx, ctxName) {
         ? BNSchemaRenderer.dynamicRowSignatureOf(dynamicSchema, col.data) : null;
       col.data[key] = text;
       (col._manualText = col._manualText || {})[key] = true;
+      /* MSBN B-4-1：品名有字／清空時，商品區即時縮回／往下延伸 */
+      if (/^msbn_B_4_1$/i.test(String(col.blockId || '')) && /^name[0-9]*$/.test(String(key)) &&
+          window.BNSchemaRenderer && BNSchemaRenderer.syncMsbnB41ProductArea) {
+        if (BNSchemaRenderer.syncMsbnB41ProductArea(mountEl, col.data) &&
+            window.BNImageLayout && BNImageLayout.relayout) {
+          requestAnimationFrame(function () {
+            BNImageLayout.relayout(mountEl);
+            if (window.__b41RefreshFills) window.__b41RefreshFills(120);
+          });
+        }
+      }
       syncCanvasAddLineButton(el, col, idx, ctxName, key);
       /* 副區品名從一行變兩行（或反過來）時，警語即時回到原位／往上移，不必重畫畫布。 */
       if (window.BNSchemaRenderer && BNSchemaRenderer.syncSubareaWarnLift) BNSchemaRenderer.syncSubareaWarnLift(mountEl);
@@ -23966,6 +24043,10 @@ function endorserBackdropLumaAt(mountEl, textEl, x, y) {
   for (var i = 0; i < stack.length; i++) {
     var el = stack[i];
     if (!el || !mountEl.contains(el) || el === textEl || textEl.contains(el) || el.tagName === 'IMG') continue;
+    if (typeof el._b41Probe === 'function') {            /* 商品區的背景填色（漸層）：用填色本身的亮度 */
+      var probed = el._b41Probe(x, y);
+      if (probed != null) return probed;
+    }
     var sample = endorserCssColorSample(window.getComputedStyle(el).backgroundColor);
     if (!sample || sample.alpha <= 0.01) continue;
     return sample.luma * sample.alpha + fallback * (1 - sample.alpha);
@@ -24601,13 +24682,6 @@ function deleteWorkorderImportDatabase(name) {
 }
 function resetBeforeWorkorderImport() {
   appLoadingUpdate(28, 'LOADING · 匯入工單', '正在重置上一份工單與各工具暫存…', 38);
-  /* 使用者可能先丟圖片資料夾、再匯入工單；工單匯入前的重置不能把這批「尚未配對」的圖片洗掉。
-     但如果畫面上已經有舊工單，就代表這次是換專案，仍要清掉舊圖片，避免同檔名誤配到上一案素材。 */
-  var hasExistingWorkorderBeforeReset = !!(currentImportOverviewByLabels || currentImportWorkbook || (currentImportColumns && currentImportColumns.length));
-  var preserveUploadedImagesForNewWorkorder = !hasExistingWorkorderBeforeReset;
-  var uploadedImagesBeforeWorkorderReset = preserveUploadedImagesForNewWorkorder
-    ? (uploadedImages || []).filter(function (img) { return img && img.url; }).map(function (img) { return Object.assign({}, img); })
-    : [];
   try { window.__bodaResetting = true; } catch (e) {}
   try { importPersistDisabled = true; } catch (e) {}
   try { clearTimeout(importStateSaveTimer); } catch (e) {}
@@ -24634,12 +24708,10 @@ function resetBeforeWorkorderImport() {
   return Promise.all(WORKORDER_IMPORT_RESET_IDB.map(deleteWorkorderImportDatabase)).then(function () {
     clearWorkorderImportBrowserStorage();
     currentImportColumns = [];
-    uploadedImages = uploadedImagesBeforeWorkorderReset;
-    lastImportImageMatchReport = { matched: 0, fuzzy: [], unresolved: [], ambiguous: [] };
+    uploadedImages = [];
     currentImportWorkbook = null;
     currentImportWorkbookName = '';
     currentImportActivityName = '';
-    currentImportOverviewByLabels = null;
     currentImportSource = '';
     currentGeneratorSignature = '';
     currentImportedWorkOrderSpec = null;
@@ -24665,7 +24737,6 @@ function resetBeforeWorkorderImport() {
     try { setUploadStepState('import-img-drop', 'idle', ''); } catch (e) {}
     try { renderImportColumns(currentImportColumns); } catch (e) {}
     try { renderImageGallery(); } catch (e) {}
-    try { renderUploadImageStatus(); } catch (e) {}
     try { renderUploadExposurePlacementStatus(null, null); } catch (e) {}
     try { hideImportBottomPreview(); } catch (e) {}
     try { broadcastBottomImageAssets(); } catch (e) {}
@@ -24754,6 +24825,7 @@ function handleImportFile(file) {
           rememberBottomWorkOrder(file.name, reader.result, raw.hasBottomWorkOrder === true, currentImportWorkbook);
           afterImportParsed(raw, { source: 'file', hasBottomWorkOrder: raw.hasBottomWorkOrder === true });
           syncBottomAfterImportAction('import-sync');
+          if (typeof window.bodaCheckBottomAfterWorkbookImport === 'function') window.bodaCheckBottomAfterWorkbookImport(raw);
         }).catch(function (err) {
           importLog.innerHTML = '<span class="err">解析失敗：' + esc(err.message) + '</span>';
           setUploadStepState('import-drop', 'error', '解析失敗：' + err.message);
@@ -30332,9 +30404,48 @@ var ACTIVITY_PAGE_OFF_KEY = 'boda_activity_page_off_v1';
 function isActivityPageOff() {
   try { return localStorage.getItem(ACTIVITY_PAGE_OFF_KEY) === '1'; } catch (e) { return false; }
 }
+/* 「吸底工具」單獨關閉：活動頁開著、但這份工單沒有吸底、而且使用者選了不加做。
+   跟整個活動頁關閉（上面）分開記，所以只有吸底這一步變灰標「略」，其他活動頁步驟照常。 */
+var BOTTOM_STEP_OFF_KEY = 'boda_bottom_step_off_v1';
+function isBottomStepOff() {
+  try { return localStorage.getItem(BOTTOM_STEP_OFF_KEY) === '1'; } catch (e) { return false; }
+}
+function setBottomStepOff(off) {
+  try {
+    if (off) localStorage.setItem(BOTTOM_STEP_OFF_KEY, '1');
+    else localStorage.removeItem(BOTTOM_STEP_OFF_KEY);
+  } catch (e) {}
+  renderWorkflowNav();
+  if (typeof refreshUploadStartState === 'function') refreshUploadStartState();
+}
 function isActivityStepOff(key) {
+  if (key === 'bottom' && isBottomStepOff()) return true;
   return ACTIVITY_PAGE_STEPS.indexOf(key) !== -1 && isActivityPageOff();
 }
+/* 匯入「工單」（xlsx）完成後檢查吸底：
+   - 工單有吸底：吸底步驟開著。
+   - 工單沒有吸底、也沒有 MSBN：吸底直接略過。
+   - 工單沒有吸底、但活動頁有 MSBN：問要不要加做吸底（要＝開著、之後可手動製作；不要＝略過）。
+   暫存檔、整份還原不走這裡（沒有 hasBottomWorkOrder 旗標）。 */
+window.bodaCheckBottomAfterWorkbookImport = function (rawColumns) {
+  if (!rawColumns || typeof rawColumns.hasBottomWorkOrder !== 'boolean') return;
+  if (rawColumns.hasBottomWorkOrder) { setBottomStepOff(false); return; }
+  if (isActivityPageOff()) { setBottomStepOff(false); return; }   /* 整個活動頁已關閉：吸底本來就關著 */
+  /* 等匯入的載入畫面結束再問，避免被蓋住 */
+  var tries = 0;
+  (function waitThenAsk() {
+    if (typeof APP_LOADING !== 'undefined' && APP_LOADING && APP_LOADING.active && tries++ < 80) { setTimeout(waitThenAsk, 250); return; }
+    var cols = (typeof currentImportColumns !== 'undefined' && currentImportColumns) || rawColumns;
+    var hasMsbn = Array.prototype.some.call(cols || [], function (c) { return /^msbn_/i.test(String(c && c.blockId || '')); });
+    if (!hasMsbn) { setBottomStepOff(true); return; }
+    bodaChoiceDialog({
+      title: '吸底工具',
+      body: '工單裡沒有吸底的內容。需要加做吸底嗎？',
+      okText: '需要',
+      cancelText: '不需要'
+    }).then(function (yes) { setBottomStepOff(!yes); });
+  })();
+};
 /* 等級本身就沒有活動頁（規則 none，例如 AD單買 BN Only）：活動頁步驟完全不能開，只能回首頁改等級。
    資交（規則 ask）回答「沒有」的關閉，之後仍可以點開。 */
 function isActivityHardOff() {
@@ -30399,6 +30510,20 @@ window.bodaApplyActivityPageRule = function (levelId, source) {
 };
 function askReopenActivitySteps(stepKey) {
   var step = workflowStepByKey(stepKey);
+  /* 只有吸底被略過（活動頁本身開著）：只問要不要開吸底 */
+  if (stepKey === 'bottom' && isBottomStepOff() && !isActivityPageOff()) {
+    bodaChoiceDialog({
+      title: '要開啟「吸底工具」嗎？',
+      body: '這份工單沒有吸底，所以先略過了。開啟後可以手動製作吸底。',
+      okText: '開啟',
+      cancelText: '取消'
+    }).then(function (yes) {
+      if (!yes) return;
+      setBottomStepOff(false);
+      goToWorkflowStep(stepKey);
+    });
+    return;
+  }
   if (isActivityHardOff()) {
     var lv = typeof window.bodaCurrentLevelId === 'function' ? (LEVELS.filter(function (l) { return l.id === window.bodaCurrentLevelId(); })[0] || {}).label : '';
     bodaChoiceDialog({
@@ -30484,7 +30609,7 @@ function renderWorkflowNav() {
     badge.textContent = state === 'done' ? '✓' : (state === 'skipped' ? '略' : (state === 'todo' ? String(makeNo) : ''));
     var base = String(button.getAttribute('data-base-title') || button.getAttribute('title') || '');
     if (!button.getAttribute('data-base-title')) button.setAttribute('data-base-title', base);
-    button.setAttribute('title', base + (locked ? '（請先在首頁選擇活動等級）' : (off && isActivityHardOff()) ? '（此活動等級沒有活動頁，不能製作）' : off ? '（此活動等級沒有活動頁，已略過；點一下可開啟）'
+    button.setAttribute('title', base + (locked ? '（請先在首頁選擇活動等級）' : (off && isActivityHardOff()) ? '（此活動等級沒有活動頁，不能製作）' : off ? (key === 'bottom' && isBottomStepOff() && !isActivityPageOff() ? '（這份工單沒有吸底，已略過；點一下可開啟）' : '（此活動等級沒有活動頁，已略過；點一下可開啟）')
       : (state === 'done' ? '（已完成）' : (state === 'skipped' ? '（已略過）' : ''))));
   });
   var actions = document.getElementById('step-actions');
@@ -31451,5 +31576,435 @@ ensureBlocksLoaded(function () {
 <!-- 2026-11-16：舊導覽（boda-tour-script v1.11）停用，改用新手導覽 tour/（引擎 tour-guide.js＋步驟 tour.js；示範資料 tour/demo-data.js 只在導覽時載入） -->
 <script src="tour/tour-guide.js?v=1.0.0"></script>
 <script src="tour/tour.js?v=20261116x"></script>
+<script>
+/* ══ MSBN 商品區「背景填色」══
+   商品區沒被圖片蓋到的空白處，填上從圖片邊緣取的顏色（漸層，跟著邊緣一路變化）。
+   預設：放進來的是不透明圖（JPG 等沒去背的圖）就自動開啟；去背的透明圖不填色。
+   點商品區（含背景空白處）會出現小開關，可手動關閉／開啟，只對那一張卡片生效。
+   資料存在該格 productFillBg（帶編號）：沒有值＝依圖片自動、'0'＝使用者關閉、其他＝已套用的顏色。 */
+(function () {
+  var bar = null, current = null;
+  function toastMsg(msg) {
+    try { if (typeof window.showToast === 'function') return window.showToast(msg, 'wa', 1800); } catch (e) {}
+    try { if (typeof toast === 'function') return toast(msg, 'wa'); } catch (e) {}
+  }
+  /* 可以用「空白填色」的商品區：B-4-1（4 格）、A-2-2（左右兩格曝品）、B-1-1、C-1-5（主商品圖） */
+  function isB41Zone(zone) {
+    var block = zone && zone.closest && zone.closest('[data-bn-schema-id]');
+    var id = block ? String(block.getAttribute('data-bn-schema-id') || '') : '';
+    var f = zone ? String(zone.getAttribute('data-img-field') || '') : '';
+    if (/^msbn_B_4_1$/i.test(id) || /^msbn_A_2_2$/i.test(id)) return /^productImg[0-9]*$/i.test(f);
+    if (/^msbn_B_1_[1-4]$/i.test(id) || /^msbn_C_1_5$/i.test(id)) return /^productImg$/i.test(f);
+    return false;
+  }
+  function keyOf(zone) {
+    var m = /^productImg([0-9]*)$/i.exec(zone.getAttribute('data-img-field') || '');
+    return m ? 'productFillBg' + m[1] : '';
+  }
+  function colOf(zone) {
+    var mount = zone.closest('[id^="imp-mount-"]');
+    var m = mount && /^imp-mount-(\d+)$/.exec(mount.id);
+    if (!m) return null;
+    return canvasCtx('import').columns()[Number(m[1])] || null;
+  }
+  var FILL_RADIUS = 6;   /* 背景填色開啟時商品區四邊的小圓角（px） */
+  function isB41OnlyZone(zone) {
+    var block = zone && zone.closest && zone.closest('[data-bn-schema-id]');
+    return !!(block && /^msbn_B_4_1$/i.test(block.getAttribute('data-bn-schema-id') || ''));
+  }
+  function isA22Zone(zone) {
+    var block = zone && zone.closest && zone.closest('[data-bn-schema-id]');
+    return !!(block && /^msbn_A_2_2$/i.test(block.getAttribute('data-bn-schema-id') || ''));
+  }
+  /* A-2-2：填色範圍是「曝品＋贈品」整塊（寬版 260×390、直版也是 260×390）。
+     在曝品框後面鋪一塊同範圍的底板放填色，並把曝品圖的裁切範圍放大到這一整塊：
+     圖片放大不會超出這塊範圍；贈品圖層級本來就在曝品上面，會疊在填色上方，贈品自己不延伸背景。 */
+  function a22UnionRect(zone) {
+    var block = zone.closest('[data-bn-schema-id]');
+    var m = /^productImg([0-9]*)$/i.exec(zone.getAttribute('data-img-field') || '');
+    var gift = block && m ? block.querySelector('[data-img-field="giftImg' + m[1] + '"]') : null;
+    function box(el) { return { l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight }; }
+    var z = box(zone), u = { l: z.l, t: z.t, r: z.r, b: z.b };
+    if (gift && gift.offsetParent === zone.offsetParent) {
+      var g = box(gift);
+      u = { l: Math.min(z.l, g.l), t: Math.min(z.t, g.t), r: Math.max(z.r, g.r), b: Math.max(z.b, g.b) };
+    }
+    return { z: z, u: u };
+  }
+  function a22Backdrop(zone, create) {
+    /* 底板放在曝品框旁邊（同一個父層）：兩者的定位基準相同，座標可直接沿用曝品框的 offsetLeft／offsetTop。 */
+    var host = zone.parentNode;
+    var id = 'b41fill-' + (zone.getAttribute('data-img-field') || '');
+    var el = null;
+    Array.prototype.forEach.call(host.children, function (c) { if (c.getAttribute && c.getAttribute('data-b41-backdrop') === id) el = c; });
+    if (!el && create) {
+      el = document.createElement('div');
+      el.setAttribute('data-b41-backdrop', id);
+      el.style.cssText = 'position:absolute;pointer-events:none;';
+      var zi = parseInt(zone.style.zIndex, 10);
+      el.style.zIndex = String(isFinite(zi) ? zi - 1 : 0);
+      host.insertBefore(el, zone);
+    }
+    return el;
+  }
+  /* A-2-2 曝品圖的裁切範圍＝「曝品＋贈品」整塊（負的 inset ＝往外擴）。
+     不管背景填色開不開都要裁，圖片放大才不會超出整個做圖區；填色開著時再加小圓角。 */
+  function a22Clip(zone, rounded) {
+    var r = a22UnionRect(zone), z = r.z, u = r.u;
+    zone.style.clipPath = 'inset(' + (u.t - z.t) + 'px ' + (z.r - u.r) + 'px ' + (z.b - u.b) + 'px ' + (u.l - z.l) + 'px' +
+      (rounded ? ' round ' + FILL_RADIUS + 'px' : '') + ')';
+  }
+  function paintA22(zone, value, active) {
+    var el = a22Backdrop(zone, active);
+    if (active) zone.setAttribute('data-bn-fill-on', '1'); else zone.removeAttribute('data-bn-fill-on');
+    if (!active) {
+      if (el) el.remove();
+      a22Clip(zone, false);
+      return;
+    }
+    var r = a22UnionRect(zone), u = r.u;
+    el.style.left = u.l + 'px'; el.style.top = u.t + 'px';
+    el.style.width = (u.r - u.l) + 'px'; el.style.height = (u.b - u.t) + 'px';
+    el.style.borderRadius = FILL_RADIUS + 'px';
+    el.style.background = value && value.indexOf('linear-gradient') === 0 ? value : '';
+    if (value && value.charAt(0) === '#') el.style.backgroundColor = value;
+    a22Clip(zone, true);
+  }
+  /* 填色變了，壓在上面的代言人小字要重新判斷黑字／白字。 */
+  function kickContrast(zone) {
+    try {
+      var m = zone.closest('[id^="imp-mount-"]');
+      if (m && typeof m.__endorserContrastRefresh === 'function') m.__endorserContrastRefresh();
+    } catch (e) {}
+  }
+  function paintStyle(zone, value, active) {
+    if (!active || (value && value.charAt(0) === '#')) zone._b41Probe = null;   /* 單色填色用一般底色判斷即可 */
+    paintStyleInner(zone, value, active);
+    kickContrast(zone);
+  }
+  function paintStyleInner(zone, value, active) {
+    if (isA22Zone(zone)) { paintA22(zone, value, !!active); return; }
+    /* 有些版位的商品區本來就有底色（例如 B-1-1 的白底）：第一次上色前先記起來，清除時還原。 */
+    if (zone.dataset.fillOrigBg === undefined) zone.dataset.fillOrigBg = zone.style.backgroundColor || '';
+    if (active) zone.setAttribute('data-bn-fill-on', '1'); else zone.removeAttribute('data-bn-fill-on');
+    if (zone.dataset.fillOrigRadius === undefined) zone.dataset.fillOrigRadius = zone.style.borderRadius || '';
+    zone.style.borderRadius = (active && isB41OnlyZone(zone)) ? FILL_RADIUS + 'px' : zone.dataset.fillOrigRadius;
+    zone.style.background = '';
+    zone.style.backgroundColor = zone.dataset.fillOrigBg;
+    zone.style.backgroundImage = '';
+    if (!value) return;
+    if (value.charAt(0) === '#') zone.style.backgroundColor = value;
+    else if (value.indexOf('linear-gradient') === 0) zone.style.background = value;
+  }
+  function rgbStr(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+  /* 依圖片「目前實際的大小與位置」取邊緣顏色，回傳 {opaque, css}。
+     做法是把圖片邊緣的顏色「直接往外延伸」填滿空白：
+     - 左邊空白：每個高度用圖片最左邊那一排的顏色往左延伸；右邊空白同理（各自獨立，不混在一起）；
+     - 上／下空白：每個水平位置用圖片最上／最下那一列的顏色往上／往下延伸。
+     每一塊空白是一層獨立的漸層背景，大小剛好等於空白的寬／高。圖片縮放、拖曳後會重算。
+     圖片已蓋滿商品區（沒有空白）時 css 為 ''。 */
+  function sampleFill(img, zone) {
+    try {
+      var nw = img.naturalWidth, nh = img.naturalHeight;
+      if (!nw || !nh) return null;
+      var W = 192, H = 192, c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      var cx = c.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(img, 0, 0, W, H);
+      var d = cx.getImageData(0, 0, W, H).data;
+      var opaque = true;
+      for (var k = 3; k < d.length; k += 16) { if (d[k] < 250) { opaque = false; break; } }
+      /* 取一小塊的平均色（x0..x1, y0..y1 為像素範圍），忽略透明像素 */
+      function avg(x0, x1, y0, y1) {
+        var r = 0, g = 0, b = 0, n = 0;
+        x0 = Math.max(0, x0); x1 = Math.min(W - 1, x1); y0 = Math.max(0, y0); y1 = Math.min(H - 1, y1);
+        for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) {
+          var i = (y * W + x) * 4;
+          if (d[i + 3] < 200) continue;
+          r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
+        }
+        return n ? [r / n, g / n, b / n] : null;
+      }
+      /* A-2-2 以「曝品＋贈品」整塊為填色範圍；其他版位就是商品區本身 */
+      var target = zone;
+      if (isA22Zone(zone)) {
+        var ur = a22UnionRect(zone), zr0 = zone.getBoundingClientRect();
+        var sx = zone.offsetWidth ? zr0.width / zone.offsetWidth : 1, sy = zone.offsetHeight ? zr0.height / zone.offsetHeight : 1;
+        target = { getBoundingClientRect: function () {
+          var q = zone.getBoundingClientRect();
+          return { left: q.left + (ur.u.l - ur.z.l) * sx, top: q.top + (ur.u.t - ur.z.t) * sy,
+                   right: q.left + (ur.u.r - ur.z.l) * sx, bottom: q.top + (ur.u.b - ur.z.t) * sy,
+                   width: (ur.u.r - ur.u.l) * sx, height: (ur.u.b - ur.u.t) * sy };
+        }, offsetWidth: ur.u.r - ur.u.l, offsetHeight: ur.u.b - ur.u.t };
+      }
+      var zr = target.getBoundingClientRect(), ir = img.getBoundingClientRect();
+      if (!zr.height || !zr.width || !ir.height || !ir.width) return null;
+      var kx = target.offsetWidth ? zr.width / target.offsetWidth : 1, ky = target.offsetHeight ? zr.height / target.offsetHeight : 1;
+      var gapL = (ir.left - zr.left) / kx, gapR = (zr.right - ir.right) / kx;
+      var gapT = (ir.top - zr.top) / ky, gapB = (zr.bottom - ir.bottom) / ky;
+      var N = 28, band = 2, layers = [];
+      function css(c) { return 'rgb(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ')'; }
+      /* 左右：沿著商品區高度，每個位置取圖片對應那一列的最左／最右邊緣色 */
+      var rec = { L: null, R: null, T: null, B: null };
+      function sideLayer(isLeft, gap) {
+        var st = [], last = null, colors = [];
+        rec[isLeft ? 'L' : 'R'] = colors;
+        for (var i = 0; i < N; i++) {
+          var t = i / (N - 1);
+          var v = Math.max(0, Math.min(1, (zr.top + t * zr.height - ir.top) / ir.height));
+          var cy = Math.round(v * (H - 1));
+          var col = isLeft ? avg(0, 1, cy - band, cy + band) : avg(W - 2, W - 1, cy - band, cy + band);
+          if (!col) col = last;
+          if (!col) return null;
+          last = col; colors.push(col);
+          st.push(css(col) + ' ' + Math.round(t * 100) + '%');
+        }
+        /* 多伸進圖片底下 4px：圖片邊緣若因縮放有半個像素的誤差，也不會露出一條縫。 */
+        return 'linear-gradient(to bottom,' + st.join(',') + ') ' + (isLeft ? 'left' : 'right') + ' top / ' +
+          (Math.ceil(gap) + 4) + 'px 100% no-repeat';
+      }
+      /* 上下：沿著商品區寬度，每個位置取圖片對應那一欄的最上／最下邊緣色 */
+      function capLayer(isTop, gap) {
+        var st = [], last = null, colors = [];
+        rec[isTop ? 'T' : 'B'] = colors;
+        for (var i = 0; i < N; i++) {
+          var t = i / (N - 1);
+          var u = Math.max(0, Math.min(1, (zr.left + t * zr.width - ir.left) / ir.width));
+          var cxp = Math.round(u * (W - 1));
+          var col = isTop ? avg(cxp - band, cxp + band, 0, 1) : avg(cxp - band, cxp + band, H - 2, H - 1);
+          if (!col) col = last;
+          if (!col) return null;
+          last = col; colors.push(col);
+          st.push(css(col) + ' ' + Math.round(t * 100) + '%');
+        }
+        return 'linear-gradient(to right,' + st.join(',') + ') left ' + (isTop ? 'top' : 'bottom') + ' / 100% ' +
+          (Math.ceil(gap) + 4) + 'px no-repeat';
+      }
+      var L;
+      if (gapL > 0.5) { L = sideLayer(true, gapL); if (!L) return { opaque: opaque, css: '' }; layers.push(L); }
+      if (gapR > 0.5) { L = sideLayer(false, gapR); if (!L) return { opaque: opaque, css: '' }; layers.push(L); }
+      if (gapT > 0.5) { L = capLayer(true, gapT); if (!L) return { opaque: opaque, css: '' }; layers.push(L); }
+      if (gapB > 0.5) { L = capLayer(false, gapB); if (!L) return { opaque: opaque, css: '' }; layers.push(L); }
+      /* 給「代言人小字自動對比」用：問某個螢幕位置底下的填色亮度，才不會把填色當成沒有底色而誤判黑白字。 */
+      function lum(c) { return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255; }
+      function pick(arr, t) { return arr[Math.round(Math.max(0, Math.min(1, t)) * (arr.length - 1))]; }
+      if (!isA22Zone(zone)) {
+        zone._b41Probe = function (x, y) {
+          if (rec.L && x < ir.left) return lum(pick(rec.L, (y - zr.top) / zr.height));
+          if (rec.R && x > ir.right) return lum(pick(rec.R, (y - zr.top) / zr.height));
+          if (rec.T && y < ir.top) return lum(pick(rec.T, (x - zr.left) / zr.width));
+          if (rec.B && y > ir.bottom) return lum(pick(rec.B, (x - zr.left) / zr.width));
+          return null;
+        };
+      }
+      return { opaque: opaque, css: layers.join(',') };
+    } catch (e) { return null; }
+  }
+  /* 縮放／拖曳／換圖後，重算所有「空白填色」開著的商品區。 */
+  function refreshAllFills() {
+    Array.prototype.forEach.call(document.querySelectorAll('[id^="imp-mount-"] [data-img-field^="productImg"]'), function (zone) {
+      if (!isB41Zone(zone)) return;
+      var col = colOf(zone); if (!col) return;
+      var key = keyOf(zone), stored = String(col.data[key] || '');
+      var auto = zone.getAttribute('data-b41-auto-bg') === '1';
+      if (stored === '0' || (!stored && !auto)) {
+        if (isA22Zone(zone) && zone.querySelector('img')) a22Clip(zone, false);   /* 填色關著也要依目前版型更新裁切範圍 */
+        return;
+      }
+      var img = zone.querySelector('img'); if (!img) return;
+      if (stored.charAt(0) === '#') { paintStyle(zone, stored, true); return; }   /* 手動選的單色：不重算 */
+      var r = sampleFill(img, zone);
+      if (!r) return;
+      paintStyle(zone, r.css, true);         /* css 為 '' ＝ 圖片已蓋滿商品區，不需要填色 */
+      if (stored && r.css && stored !== r.css) {
+        col.data[key] = r.css;
+        try { if (typeof queueImportStateSave === 'function') queueImportStateSave(); } catch (e) {}
+      }
+    });
+  }
+  var refreshTimer = null;
+  function scheduleRefresh(delay) {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshAllFills, delay == null ? 80 : delay);
+  }
+  window.__b41RefreshFills = scheduleRefresh;
+  /* 縮放、拖曳、四角縮放、旋轉、填滿等「放開／停止」時會送這個事件。 */
+  window.addEventListener('bn-image-layout-history', function (e) {
+    if (e && e.detail && e.detail.phase === 'commit') scheduleRefresh(60);
+  });
+
+  /* 圖片的大小／位置（style）一變就重算，避免版面剛排好或縮放中填色跟不上而露出一條線。 */
+  function watchImg(img) {
+    if (img._b41Watch) return;
+    img._b41Watch = true;
+    try {
+      new MutationObserver(function () { scheduleRefresh(100); })
+        .observe(img, { attributes: true, attributeFilter: ['style'] });
+    } catch (e) {}
+  }
+  /* 畫布每次重畫後呼叫：沒被使用者設定過的商品區，不透明圖自動填色。 */
+  function autoFillZones(mountEl, col) {
+    if (!mountEl || !col || !col.data) return;
+    Array.prototype.forEach.call(mountEl.querySelectorAll('[data-img-field^="productImg"]'), function (zone) {
+      if (!isB41Zone(zone)) return;
+      var key = keyOf(zone), stored = String(col.data[key] || '');
+      zone.removeAttribute('data-b41-auto-bg');
+      var img0 = zone.querySelector('img');
+      if (img0) {
+        if (isA22Zone(zone)) a22Clip(zone, false);     /* A-2-2：圖片超出整塊範圍的部分一律裁掉 */
+        watchImg(img0);
+      }
+      if (stored === '0') return;                      /* 使用者關了 */
+      if (stored) {                                    /* 已套用過顏色：其他版位由渲染器畫好；A-2-2 由這裡鋪底板 */
+        if (isA22Zone(zone)) scheduleRefresh(120);
+        return;
+      }
+      var img = zone.querySelector('img');
+      if (!img) { paintStyle(zone, '', false); return; }
+      function run() {
+        var r = sampleFill(img, zone);
+        if (r && r.opaque) { zone.setAttribute('data-b41-auto-bg', '1'); paintStyle(zone, r.css, true); scheduleRefresh(150); }
+        else paintStyle(zone, '', false);              /* 換成去背圖：自動填色收掉 */
+      }
+      if (img.complete && img.naturalWidth) run(); else img.addEventListener('load', run, { once: true });
+    });
+  }
+  window.__b41AutoFillZones = autoFillZones;
+
+  var BTN_CSS = 'all:unset;cursor:pointer;padding:4px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.35);white-space:nowrap';
+  function ensureBar() {
+    if (bar) return bar;
+    bar = document.createElement('div');
+    bar.id = 'b41-fill-bar';
+    bar.style.cssText = 'position:fixed;z-index:99999;display:none;gap:6px;align-items:center;padding:5px 6px;background:rgba(20,28,26,.94);' +
+      'border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);font:12px "Microsoft JhengHei",sans-serif;color:#fff;';
+    bar.innerHTML =
+      '<button type="button" data-b41="bg" style="' + BTN_CSS + '"></button>' +
+      '<span style="width:1px;height:18px;background:rgba(255,255,255,.25)"></span>' +
+      '<button type="button" data-b41="auto" title="依圖片邊緣的顏色自動延伸" style="' + BTN_CSS + '">自動吸色</button>' +
+      '<button type="button" data-b41="manual" title="自己選一個單色" style="' + BTN_CSS + '">手動選色</button>' +
+      '<input type="color" data-b41-color value="#cccccc" title="手動選色時才能使用" style="width:26px;height:22px;padding:0;border:1px solid rgba(255,255,255,.5);border-radius:4px;background:none;cursor:pointer">';
+    var colorInput = bar.querySelector('[data-b41-color]');
+    colorInput.addEventListener('input', function () {
+      if (!current || colorInput.disabled) return;
+      try { applyManualColor(colorInput.value); } catch (err) { console.warn('[BODA] 手動選色失敗', err); }
+    });
+    bar.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    bar.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-b41]');
+      if (!(btn && current)) return;
+      try {
+        var which = btn.getAttribute('data-b41');
+        if (which === 'auto') autoColor();
+        else if (which === 'manual') applyManualColor(colorInput.value);
+        else toggle();
+      } catch (err) { console.warn('[BODA] 背景填色切換失敗', err); toastMsg('背景填色切換失敗，請重新整理後再試'); }
+    });
+    document.body.appendChild(bar);
+    return bar;
+  }
+  function effectiveOn() {
+    var col = current.col, zone = current.zone, v = String(col.data[keyOf(zone)] || '');
+    if (v === '0') return false;
+    if (v) return true;
+    return zone.getAttribute('data-b41-auto-bg') === '1';
+  }
+  function toHex(c) {
+    var m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(String(c || ''));
+    if (!m) return '';
+    return '#' + [m[1], m[2], m[3]].map(function (v) { v = Number(v).toString(16); return v.length < 2 ? '0' + v : v; }).join('');
+  }
+  function setActiveStyle(btn, on) {
+    btn.style.background = on ? '#4d9b95' : 'transparent';
+    btn.style.borderColor = on ? '#4d9b95' : 'rgba(255,255,255,.35)';
+  }
+  /* 小工具列要看得出目前狀態：
+     關閉＝兩種模式都變淡；自動吸色＝「自動吸色」亮起、色票反灰不能用；手動選色＝「手動選色」亮起、色票可用。 */
+  function paintBar() {
+    var on = effectiveOn();
+    var v = String(current.col.data[keyOf(current.zone)] || '');
+    var manual = on && v.charAt(0) === '#';
+    var autoMode = on && !manual;
+    var bgBtn = bar.querySelector('[data-b41="bg"]');
+    var autoBtn = bar.querySelector('[data-b41="auto"]');
+    var manualBtn = bar.querySelector('[data-b41="manual"]');
+    var colorInput = bar.querySelector('[data-b41-color]');
+    bgBtn.textContent = '背景填色：' + (on ? '開' : '關');
+    setActiveStyle(bgBtn, on);
+    setActiveStyle(autoBtn, autoMode);
+    setActiveStyle(manualBtn, manual);
+    autoBtn.style.opacity = on ? '1' : '.55';
+    manualBtn.style.opacity = on ? '1' : '.55';
+    colorInput.disabled = !manual;
+    colorInput.style.opacity = manual ? '1' : '.3';
+    colorInput.style.cursor = manual ? 'pointer' : 'not-allowed';
+    /* 色票的顏色：手動＝選的色；自動＝目前吸到的第一個顏色（只是參考，反灰不能改） */
+    var shown = manual ? v : toHex(((v.indexOf('linear-gradient') === 0 ? v : (current.zone.style.background || current.zone.style.backgroundImage || '')).match(/rgb\([^)]*\)/) || [''])[0]);
+    if (shown && /^#[0-9a-f]{6}$/i.test(shown)) colorInput.value = shown;
+  }
+  /* 手動選色：用單色填滿空白處；之後縮放拖曳不會被自動吸色蓋掉。 */
+  function applyManualColor(hex) {
+    var col = current.col, zone = current.zone, key = keyOf(zone);
+    if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
+    col.data[key] = hex;
+    zone.removeAttribute('data-b41-auto-bg');
+    paintStyle(zone, hex, true);
+    try { if (typeof queueImportStateSave === 'function') queueImportStateSave(); } catch (e) {}
+    paintBar();
+  }
+  /* 自動吸色（依圖片邊緣延伸）。 */
+  function autoColor() {
+    var col = current.col, zone = current.zone, key = keyOf(zone);
+    var img = zone.querySelector('img');
+    if (!img) { toastMsg('請先放入圖片'); return; }
+    var r = sampleFill(img, zone);
+    if (!r) { toastMsg('這張圖邊緣沒有可取的顏色'); return; }
+    col.data[key] = r.css || 'on';
+    zone.removeAttribute('data-b41-auto-bg');
+    paintStyle(zone, r.css, true);
+    try { if (typeof queueImportStateSave === 'function') queueImportStateSave(); } catch (e) {}
+    paintBar();
+  }
+  function place(zone) {
+    var r = zone.getBoundingClientRect();
+    bar.style.display = 'flex';
+    var w = bar.offsetWidth || 120;
+    bar.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px';
+    bar.style.top = Math.max(6, r.top - bar.offsetHeight - 6) + 'px';
+  }
+  function hide() { if (bar) bar.style.display = 'none'; current = null; }
+  function toggle() {
+    var col = current.col, zone = current.zone, key = keyOf(zone);
+    if (effectiveOn()) {
+      col.data[key] = '0';
+      zone.removeAttribute('data-b41-auto-bg');
+      paintStyle(zone, '', false);
+    } else {
+      var img = zone.querySelector('img');
+      if (!img) { toastMsg('請先放入圖片'); return; }
+      var r = sampleFill(img, zone);
+      if (!r) { toastMsg('這張圖邊緣沒有可取的顏色'); return; }
+      col.data[key] = r.css || 'on';         /* 目前沒有空白可填也先記成「開」，之後縮小露出空白會自動填 */
+      zone.removeAttribute('data-b41-auto-bg');
+      paintStyle(zone, r.css, true);
+    }
+    try { if (typeof queueImportStateSave === 'function') queueImportStateSave(); } catch (e) {}
+    paintBar();
+  }
+  document.addEventListener('click', function (e) {
+    if (bar && bar.contains(e.target)) return;
+    var zone = e.target.closest && e.target.closest('[data-img-field^="productImg"]');
+    if (!zone || !isB41Zone(zone)) { hide(); return; }
+    var col = colOf(zone);
+    if (!col) { hide(); return; }
+    ensureBar();
+    current = { zone: zone, col: col };
+    paintBar();
+    place(zone);
+  }, true);
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('resize', hide);
+})();
+</script>
 </body>
 </html>

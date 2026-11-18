@@ -370,16 +370,33 @@
     /* 圖片小於可用區時仍完整留在區內；放大後則允許大於區域，
        只限制它持續覆蓋圖片區，讓使用者可自由平移取景，超出部分由容器裁切。 */
     var minX, maxX, minY, maxY;
+    /* 去背商品（有商品本體幾何）：放大到比範圍還大時，不強迫「圖片一定要蓋滿範圍」
+       （那會讓商品卡在邊上拖不回中間）；改成只要商品中心還在範圍內就能自由移動，
+       這樣可以把放大的商品拖回置中，超出範圍的部分由商品區裁掉。 */
+    /* 商品區的「背景填色」開著時，圖片移開露出的空白會被邊緣色補滿，
+       所以情境圖也不必強迫蓋滿範圍：可以自由拖曳取景（例如人物下方有空白，想把圖往下拉）。 */
+    var fillZone = closestImageZone(img);
+    var relaxOversize = !!geometry || !!(fillZone && fillZone.hasAttribute('data-bn-fill-on'));
     if (imageW >= bounds.width) {
-      minX = (bounds.right - imageW - baseLeft) / scale.x;
-      maxX = (bounds.left - baseLeft) / scale.x;
+      if (relaxOversize) {
+        minX = (bounds.left - imageW / 2 - baseLeft) / scale.x;
+        maxX = (bounds.right - imageW / 2 - baseLeft) / scale.x;
+      } else {
+        minX = (bounds.right - imageW - baseLeft) / scale.x;
+        maxX = (bounds.left - baseLeft) / scale.x;
+      }
     } else {
       minX = (bounds.left - baseLeft) / scale.x;
       maxX = (bounds.right - imageW - baseLeft) / scale.x;
     }
     if (imageH >= bounds.height) {
-      minY = (bounds.bottom - imageH - baseTop) / scale.y;
-      maxY = (bounds.top - baseTop) / scale.y;
+      if (relaxOversize) {
+        minY = (bounds.top - imageH / 2 - baseTop) / scale.y;
+        maxY = (bounds.bottom - imageH / 2 - baseTop) / scale.y;
+      } else {
+        minY = (bounds.bottom - imageH - baseTop) / scale.y;
+        maxY = (bounds.top - baseTop) / scale.y;
+      }
     } else {
       minY = (bounds.top - baseTop) / scale.y;
       maxY = (bounds.bottom - imageH - baseTop) / scale.y;
@@ -419,6 +436,49 @@
         （其他頁面維持原本的自由縮放行為）。 */
   /* opts.persistClamp：使用者剛縮放（滾輪、四角把手）時，夾回範圍內的位置要寫回；
      其他自動排版只影響畫面，不改寫存好的位移（見 clampImageOffset）。 */
+  /* ── 商品區「圖片填滿」（情境圖蓋滿範圍，多出的部分由商品區裁掉）── */
+  function zoneWantsFillCover(group) {
+    var zone = closestImageZone(group);
+    return !!(zone && zone.getAttribute('data-bn-fill-cover') === '1');
+  }
+  function hasStoredWeight(groupKey, index) {
+    return !!(weightStore[groupKey] && weightStore[groupKey][index] != null);
+  }
+  function coverWeightFor(group, img, slotWidth) {
+    var cw = group.clientWidth, ch = group.clientHeight;
+    var geometry = imageEditorGeometry(img);
+    var nw = geometry ? geometry.sourceWidth : img.naturalWidth;
+    var nh = geometry ? geometry.sourceHeight : img.naturalHeight;
+    if (!cw || !ch || !nw || !nh || !slotWidth) return 0;
+    var slotHeight = slotWidth * nh / nw;
+    var w = Math.max(cw / slotWidth, ch / slotHeight);
+    return isFinite(w) && w > 0 ? Math.max(1, w) : 0;
+  }
+  /* 開／關「圖片填滿」：開＝放大到蓋滿並置中；關＝回到原本完整顯示的大小與位置。 */
+  function setFillCover(zone, on) {
+    if (!zone || !zone.querySelectorAll) return;
+    zone.setAttribute('data-bn-fill-cover', on ? '1' : '0');
+    if (!on) zone.removeAttribute('data-bn-fill-cover');
+    Array.prototype.forEach.call(zone.querySelectorAll('.bn-imggroup'), function (group) {
+      var groupKey = getGroupKey(group);
+      emitImageHistory(group, 'begin', 'fill');
+      getImgs(group).forEach(function (img, i) {
+        setOffset(groupKey, i, 0, 0);
+        setWeight(groupKey, i, 1, img);
+      });
+      applyLayout(group);            /* 先回到原始大小，才量得到蓋滿所需的倍率 */
+      if (on) {
+        var slots = getImgs(group);
+        slots.forEach(function (img, i) {
+          var w = coverWeightFor(group, img, parseFloat(img.style.width) || img.offsetWidth);
+          if (w) setWeight(groupKey, i, w, img);
+        });
+        applyLayout(group, { persistClamp: true });
+      }
+      emitImageHistory(group, 'commit', 'fill');
+    });
+  }
+
   function applyLayout(group, opts) {
     var persistClamp = !!(opts && opts.persistClamp);
     var imgs = getImgs(group);
@@ -437,6 +497,7 @@
     var bounds = bounded ? imageBoundaryOfGroup(group) : null;
     var n = imgs.length;
     var totalGap = GAP * (n - 1);
+    var fillCover = zoneWantsFillCover(group);
 
     var savedSlotRatios = null;
     var savedGapPx = null;
@@ -491,6 +552,11 @@
       img.style.maxWidth = 'none';
       img.style.maxHeight = 'none';
       appliedSlotRatios.push(slotWidth / containerW);
+      /* 商品區「圖片填滿」開啟、這張圖還沒有調整過縮放：預設放大到蓋滿整個範圍（情境圖用）。 */
+      if (fillCover && !hasStoredWeight(groupKey, i)) {
+        var cw0 = coverWeightFor(group, img, slotWidth);
+        if (cw0) setWeight(groupKey, i, cw0, img, true);
+      }
       applyOffset(img, groupKey, i);
       if (bounds) clampImageOffset(img, groupKey, i, bounds, !persistClamp);
     });
@@ -1326,6 +1392,19 @@
 
   window.BNImageLayout = {
     scanAndProcess: scanAndProcess,
+    setFillCover: setFillCover,
+    /* 圖片框尺寸被程式直接改過（例如 B-4-1 品名有字／清空切換商品區高度）時，
+       立刻依新範圍重排並把圖片夾回範圍內，效果等同重新上傳圖片。 */
+    relayout: function (root) {
+      if (!root || !root.querySelectorAll) return;
+      var groups = root.classList && root.classList.contains('bn-imggroup')
+        ? [root] : Array.prototype.slice.call(root.querySelectorAll('.bn-imggroup'));
+      groups.forEach(function (group) {
+        if (!group.isConnected) return;
+        applyLayout(group, { persistClamp: true });
+        if (transformSelection && transformSelection.group === group) scheduleTransformOverlayRefresh();
+      });
+    },
     refreshEditedImage: function (img, options) {
       if (!img) return false;
       var group = img;

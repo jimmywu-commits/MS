@@ -71,6 +71,7 @@
         <button data-act="applyCrop">套用裁切</button>
         <span class="hbn-plugin-crop-help">請按「套用裁切」完成裁切後，其他工具才會恢復</span>
         <span class="hbn-plugin-tool-separator"></span>
+        <button data-act="toggleCutout" data-role="cutoutToggle" title="開：商品自動去背並加影子；關：保留原圖（情境圖用），不去背、不加影子">自動去背：開</button>
         <button data-act="autoBg">自動去背</button>
         <span class="hbn-plugin-control-group hbn-plugin-pickbg-group">
           <button data-act="pickBg">點選顏色去背</button>
@@ -146,6 +147,8 @@
     const status = $('[data-role="status"]');
 
     let targetImg = null, targetBox = null, originalSrc = '';
+    /* 自動去背開關：uncutSrc＝沒去背的原圖；cutSrc＝自動去背後的圖（沒有就是 null＝原圖本身已去背或去背不了）。 */
+    let uncutSrc = '', cutSrc = null, cutoutOn = true, cutFailed = false;
     let mode = 'none', isDrawing=false, cropStart=null, cropEnd=null, activeCropEdge=null;
     let lastPointerPoint=null, pickedBgColor=null, rotateDrag=null;
     /* 旋轉永遠從同一張未旋轉的底圖重算。這和 Shopee 的 baseSrc → rotate → shadow
@@ -532,6 +535,87 @@
       setStatus('裁切完成');
     }
 
+    /* ── 自動去背開關 ── */
+    const cutoutToggleBtn = $('[data-role="cutoutToggle"]');
+    function updateCutoutToggleUI(){
+      if(!cutoutToggleBtn) return;
+      /* 開著、但這張圖背景抽不出來（沒有透明像素）：畫布上其實還是原圖，如實標示「失敗」。 */
+      cutoutToggleBtn.textContent = '自動去背：' + (!cutoutOn ? '關' : (cutFailed ? '失敗（保留原圖）' : '開'));
+      cutoutToggleBtn.classList.toggle('active', !cutoutOn || cutFailed);
+    }
+    /* 目前開關狀態對應的底圖：開＝去背版（沒有就用原圖），關＝沒去背的原圖。 */
+    function currentBaseSrc(){
+      return cutoutOn ? (cutSrc || uncutSrc || originalSrc) : (uncutSrc || originalSrc);
+    }
+    function loadBaseIntoCanvas(src, doneText, keepHistory, onDone){
+      if(!src) return;
+      const img = new Image();
+      img.onload = ()=>{
+        if(keepHistory) pushHistory();
+        canvas.style.transform = '';
+        rotateDrag = null;
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,0,0);
+        rebaseRotationFromCanvas();
+        if(!keepHistory){ undoStack = []; redoStack = []; }
+        pushHistory();
+        cropStart = cropEnd = null;
+        chip.style.background = 'transparent';
+        updateCanvasCssSize();
+        setMode('none');
+        if(doneText) setStatus(doneText);
+        if(onDone) onDone();
+      };
+      img.src = src;
+    }
+    function toggleCutout(){
+      if(!hasImage() || !uncutSrc) return;
+      if(cutoutOn && cutFailed){
+        /* 去背本來就沒成功，畫布已是原圖；改成明確的「關」，之後不再嘗試去背。 */
+        cutoutOn = false; cutFailed = false;
+        updateCutoutToggleUI();
+        setStatus('已關閉自動去背：保留原圖，完成套用後不去背、不加影子');
+        return;
+      }
+      if(cutoutOn){
+        cutoutOn = false;
+        updateCutoutToggleUI();
+        loadBaseIntoCanvas(uncutSrc, '已關閉自動去背：保留原圖，完成套用後不去背、不加影子', true);
+        return;
+      }
+      cutoutOn = true;
+      updateCutoutToggleUI();
+      const finish = ()=> loadBaseIntoCanvas(cutSrc || uncutSrc, '已開啟自動去背', true, ()=>{
+        /* 沒有去背版、而且原圖也不是透明背景＝去背失敗，畫布還是原圖。 */
+        cutFailed = !cutSrc && !canvasHasAlpha(canvas);
+        updateCutoutToggleUI();
+        if(cutFailed) setStatus('這張圖的背景無法自動去背，維持原圖');
+      });
+      if(cutSrc !== undefined){ finish(); return; }
+      setStatus('正在自動去背…');
+      const token = openToken;
+      requestCutout(uncutSrc).then(url=>{
+        if(token !== openToken || !cutoutOn) return;
+        cutSrc = url; finish();
+      });
+    }
+    function requestCutout(src){
+      const api = window.BODAImportShadow;
+      if(!api || typeof api.cutoutDataUrl !== 'function') return Promise.resolve(null);
+      return api.cutoutDataUrl(src).catch(()=>null);
+    }
+    function canvasHasAlpha(c){
+      try{
+        const w = c.width, h = c.height;
+        const d = c.getContext('2d').getImageData(0,0,w,h).data;
+        const step = Math.max(1, Math.floor(d.length / 4 / 200000)) * 4;
+        for(let i=3;i<d.length;i+=step){ if(d[i] < 250) return true; }
+      }catch(_){ return true; }
+      return false;
+    }
+
     function resetToOriginal(){
       if(!originalSrc) return;
       const img = new Image();
@@ -550,13 +634,17 @@
         updateCanvasCssSize();
         setMode('none');
       };
-      img.src = originalSrc;
+      img.src = currentBaseSrc() || originalSrc;
     }
 
     function applyToTarget(){
       if(!targetImg || !hasImage()) return;
       const productOnly = renderProductOnlyCanvas();
-      const productUrl = productOnly.toDataURL('image/png');
+      const keepOriginal = !cutoutOn;   /* 自動去背關閉：原圖不去背、不加影子 */
+      /* 不去背的原圖多半是不透明照片；存成 PNG 會非常大，沒有透明像素就改存高品質 JPEG。 */
+      const productUrl = (keepOriginal && !canvasHasAlpha(productOnly))
+        ? productOnly.toDataURL('image/jpeg', 0.95)
+        : productOnly.toDataURL('image/png');
 
       // Keep stable references before close() clears the editor state.
       // Otherwise the onload callback cannot restore the original product box size.
@@ -577,6 +665,7 @@
            時也同步寫一份，兩種既有畫布都能保留旋轉後商品本體的幾何。 */
         [stateRef, imgRef].filter((node, index, list)=>node && node.dataset && list.indexOf(node) === index).forEach(node=>{
           node.dataset.baseSrc = productUrl;
+          node.dataset.noCutout = keepOriginal ? '1' : '0';
           node.dataset.outputRatio = String(outputWidth / Math.max(1, outputHeight));
           node.dataset.productOnlyRatio = String(sourceWidth / Math.max(1, sourceHeight));
           node.dataset.layoutSourceWidth = String(sourceWidth);
@@ -606,7 +695,9 @@
       /* 對應 Shopee 的 baseSrc → rotate → shadow：先把編輯器中的旋轉結果當成新的
          無影子底圖，再用匯入工單目前的方向／位移立即合成，不能拿舊的含影子圖旋轉。 */
       const shadow = window.BODAImportShadow;
-      if(shadow && typeof shadow.composeProduct === 'function'){
+      if(keepOriginal){
+        applyRenderedResult(productUrl, null);
+      }else if(shadow && typeof shadow.composeProduct === 'function'){
         setStatus('正在以目前光影設定重新合成影子…');
         shadow.composeProduct(productUrl).then(result=>{
           applyRenderedResult((result && result.url) || productUrl, result && result.geometry);
@@ -628,6 +719,7 @@
       modal.classList.remove('open');
       setMode('none');
       targetImg = null; targetBox = null; originalSrc = '';
+      uncutSrc = ''; cutSrc = undefined; openToken++;
     }
 
     function openPhotoRoomLink(){
@@ -724,6 +816,7 @@
         if(!redoStack.length) return setStatus('沒有下一步');
         const next = redoStack.pop(); undoStack.push(next); restoreFrom(next); setStatus('已到下一步');
       }
+      if(act === 'toggleCutout') toggleCutout();
       if(act === 'reset') resetToOriginal();
       if(act === 'photoroom') openPhotoRoomLink();
       if(act === 'pluginNudgeImage') openPhotoRoomLink();
@@ -732,6 +825,7 @@
       if(act === 'apply') applyToTarget();
     });
 
+    let openToken = 0;
     function open(imgEl){
       targetImg = imgEl;
       targetBox = imgEl.closest('.editor-item');
@@ -740,26 +834,53 @@
          已烘好的影子圖帶回編輯器。 */
       originalSrc = (imgEl.dataset && imgEl.dataset.baseSrc) ||
         ((stateRef && stateRef.dataset && stateRef.dataset.baseSrc) ? stateRef.dataset.baseSrc : imgEl.src);
+      uncutSrc = originalSrc;
+      cutSrc = undefined; cutFailed = false;
+      const api = window.BODAImportShadow;
+      const canToggle = !!(api && typeof api.cutoutDataUrl === 'function');
+      /* 匯入工單的商品預設會自動去背；這張若已被標成「不去背」就維持關閉。 */
+      cutoutOn = canToggle ? !(typeof api.isNoCutout === 'function' && api.isNoCutout(imgEl)) : false;
+      if(cutoutToggleBtn) cutoutToggleBtn.style.display = canToggle ? '' : 'none';
+      updateCutoutToggleUI();
       modal.classList.add('open');
-      const img = new Image();
-      img.onload = ()=>{
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(img,0,0);
-        rebaseRotationFromCanvas();
-        undoStack = []; redoStack = [];
-        pushHistory();
-        mode = 'none';
-        cropStart = cropEnd = null;
-        pickedBgColor = null;
-        chip.style.background = 'transparent';
+      const token = ++openToken;
+      const show = (src)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          if(token !== openToken) return;
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(img,0,0);
+          rebaseRotationFromCanvas();
+          undoStack = []; redoStack = [];
+          pushHistory();
+          mode = 'none';
+          cropStart = cropEnd = null;
+          pickedBgColor = null;
+          chip.style.background = 'transparent';
 
-        setActive();
-        updateCanvasCssSize();
-        setStatus('外掛商品編輯器已開啟');
+          setActive();
+          updateCanvasCssSize();
+          setStatus('外掛商品編輯器已開啟');
+          /* 開關顯示「開」但其實沒去背成功（沒有去背版、原圖也不透明）：標示「失敗」。 */
+          cutFailed = cutoutOn && !cutSrc && !canvasHasAlpha(canvas);
+          updateCutoutToggleUI();
+          if(cutFailed) setStatus('這張圖的背景無法自動去背，目前是原圖');
+        };
+        img.src = src;
       };
-      img.src = originalSrc;
+      if(cutoutOn){
+        /* 畫布上看到的是去背後的商品，編輯視窗也要一樣；去背結果通常已快取，很快。 */
+        setStatus('正在載入去背後的商品…');
+        requestCutout(uncutSrc).then(url=>{
+          if(token !== openToken) return;
+          cutSrc = url;
+          show(url || uncutSrc);
+        });
+      }else{
+        show(uncutSrc);
+      }
     }
 
     return {open};
