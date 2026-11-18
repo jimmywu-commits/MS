@@ -1,0 +1,101 @@
+/* ============================================================
+   BODA 主工作台「吸底工具」（bottom/index.html?embed=standalone）嵌入模式專屬樣式（UI-011，2026-11-12）
+   由 BODA/index.html ensureStandaloneBottomLoaded() 於 iframe load 後注入子頁 <head>（每份 document 一次）。
+   只對 html.embed-standalone 生效；bottom/ 原始檔與其他嵌入模式（generator／import-preview／maint-preview）不受影響。
+   目的：把 bottom 嵌入模式原本「面板左／畫布右」的 grid 改為「畫布左／面板右」，面板固定 340px（與曝光資源右側欄一致）。
+   不動 #panel 內容、id、事件、#panel-scroll 捲動與 #panel-footer 釘底；#zoom-bar 仍在畫布左上角；Konva 以容器 rect 換算座標，與面板左右無關。
+   ============================================================ */
+html.embed-standalone #app { grid-template-columns: minmax(0, 1fr) 340px; }
+html.embed-standalone #panel { grid-column: 2; grid-row: 1 / 3; width: auto; min-width: 0; border-right: 0; border-left: 1px solid var(--border); }
+html.embed-standalone #tabbar { grid-column: 1; grid-row: 1; }
+html.embed-standalone #stage-wrap { grid-column: 1; grid-row: 2; }
+
+/* ── UI-011 第二輪（2026-11-12）：隱藏右側欄上方的匯入區塊（只做視覺隱藏，DOM／事件／資料綁定保留） ──
+   子頁 standalone 模式的 #panel 結構（app.js 47–53、panel.js 1719–1727）：
+     #panel > #bottom-host-level（「等級」標題＋活動等級下拉，由 app.js 插在最前）
+     #panel > #panel-scroll > .panel-section（第一個 = buildHostImportSection：h3「匯入」、STEP 1 工單 .host-step-drop、
+                                             STEP 2 圖片／資料夾 .host-step-drop、.host-snapshot-restore 上傳暫存檔還原、匯入結果）
+                            > .panel-section 反白顏色（這條）／模板顆數／畫質／每顆內容／套用到其他分頁
+     #panel > #panel-footer（底部下載列）
+   以 :has(.host-snapshot-restore) 精準鎖定匯入區塊（只有該區塊含此元素），不碰 #panel 本身與其後的設定。
+   等級下拉隱藏後仍存在於 DOM；BottomHostLevel.setOptions／setValue 與 change 事件（requestLevelChange）照常運作，等級同步邏輯不變。 */
+html.embed-standalone #bottom-host-level { display: none; }
+html.embed-standalone #panel-scroll > .panel-section:has(.host-snapshot-restore) { display: none; }
+
+/* ── UI-011 第三輪（2026-11-12）：精簡右側欄說明文字（只做視覺處理，DOM／事件保留） ──
+   各段文字實際 DOM（panel.js）：
+     反白顏色：buildAccentColorSection 700 → section("反白顏色（這條）") 的 <h3> 單一文字節點；區塊內含 .accent-btn（唯一）
+     畫質：buildSharpenSection 730 → section("畫質（全部分頁）") 的 <h3>；開關 button[title 含 "unsharp mask"]（唯一）；其下 .note 為整段說明
+     下載列：buildHostActionFooter 577 → #panel-footer .host-dl-bar > .host-dl-hint（灰色說明；ui.exportStatus 的 .note 不在此列）
+   h3 括號與主標題共用同一文字節點：以 font-size:0 收起原文字、::before 顯示主標題（沿用 .panel-section h3 的 10.5px／700／letter-spacing 1px／--text2／margin 0 0 8px，
+   無多餘高度）；:has() 以區塊內唯一元素鎖定，不用 nth-child，不影響其他 h3／.note。 */
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) > h3,
+html.embed-standalone #panel-scroll > .panel-section:has(button[title*="unsharp mask"]) > h3 { font-size: 0; line-height: 0; }
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) > h3::before,
+html.embed-standalone #panel-scroll > .panel-section:has(button[title*="unsharp mask"]) > h3::before { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; line-height: normal; color: var(--text2); text-transform: uppercase; }
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) > h3::before { content: "吸底已選取顏色"; } /* UI-011 第六輪：原「反白顏色」 */
+html.embed-standalone #panel-scroll > .panel-section:has(button[title*="unsharp mask"]) > h3::before { content: "畫質"; }
+html.embed-standalone #panel-scroll > .panel-section:has(button[title*="unsharp mask"]) > .note { display: none; }
+html.embed-standalone #panel-footer .host-dl-bar > .host-dl-hint { display: none; }
+
+/* ── UI-011 第四輪（2026-11-12）：四個區塊標題統一為曝光資源「活動等級」規格（11.5px／800／#357872／letter-spacing .3px） ──
+   標題 DOM（panel.js，皆為 .panel-section > h3）：反白顏色 700、模板顆數 761、畫質 730、每顆內容 1424（文字含括號，依需求不改寫）。
+   鎖定方式：反白顏色 :has(.accent-btn)、畫質 :has(button[title*="unsharp mask"])（沿用第三輪）；模板顆數 = 反白顏色區塊的下一個 .panel-section
+   （renderAll 1727–1729 固定順序 accent → slotCount → sharpen）；每顆內容 :has(.slot-card)（.slot-card 僅在該區塊）。
+   反白顏色／畫質的 h3 仍為 font-size:0（括號文字維持隱藏），只調整 ::before 的字體樣式；margin／區塊高度不動。 */
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) > h3::before,
+html.embed-standalone #panel-scroll > .panel-section:has(button[title*="unsharp mask"]) > h3::before { font-size: 11.5px; font-weight: 800; letter-spacing: .3px; color: #357872; text-transform: none; }
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) + .panel-section > h3,
+html.embed-standalone #panel-scroll > .panel-section:has(.slot-card) > h3 { font-size: 11.5px; font-weight: 800; letter-spacing: .3px; color: #357872; text-transform: none; }
+
+/* ── UI-011 第五輪（2026-11-12）：「每顆內容（點「設為反白」決定這張圖反白哪一顆）」只顯示「每顆內容」 ──
+   DOM：panel.js 1424 section("每顆內容（…）") 的 <h3> 單一文字節點（與括號共用），沿用第三輪作法：font-size:0 收起原文字、::before 顯示主標題，
+   字體沿用第四輪統一規格（11.5px／800／#357872／letter-spacing .3px）；margin 0 0 8px 不變，無多餘空白。區塊仍以 :has(.slot-card) 鎖定。 */
+html.embed-standalone #panel-scroll > .panel-section:has(.slot-card) > h3 { font-size: 0; line-height: 0; }
+html.embed-standalone #panel-scroll > .panel-section:has(.slot-card) > h3::before { content: "每顆內容"; font-size: 11.5px; font-weight: 800; letter-spacing: .3px; line-height: normal; color: #357872; text-transform: none; }
+
+/* ── UI-011 第六輪（2026-11-12）：文字調整（只改可見文字；狀態、事件、資料不動） ──
+   1. 「反白顏色」→「吸底已選取顏色」：第三輪 ::before content 直接改（見上方）。
+   2. 「模板顆數」→「吸底顆數」：panel.js 761 section("模板顆數") 的 <h3> 文字節點；沿用 font-size:0 + ::before（字體同第四輪規格），區塊以「反白顏色區塊的下一個 .panel-section」鎖定。
+   3.「● 反白中」／4.「○ 設為反白」→「● 有顏色」／「○ 設為反灰」：panel.js 1107–1115 每顆卡片 .slot-head 的第一顆 <button>
+      （isActive 時 class="primary"），每次 renderAll 重建；以 font-size:0 + ::before 依 .primary 狀態顯示文字，
+      字級沿用 button 原本 calc(12px * --ui-scale)，color 繼承按鈕（primary 白字／一般深字），尺寸、邊框、底色不變。
+      .slot-head 內其他按鈕（.mini.link-toggle 等）不受影響。 */
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) + .panel-section > h3 { font-size: 0; line-height: 0; }
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) + .panel-section > h3::before { content: "吸底顆數"; font-size: 11.5px; font-weight: 800; letter-spacing: .3px; line-height: normal; color: #357872; text-transform: none; }
+html.embed-standalone #panel-scroll .slot-card > .slot-head > button:first-of-type { font-size: 0; line-height: 0; }
+html.embed-standalone #panel-scroll .slot-card > .slot-head > button:first-of-type::before { content: "○ 設為彩色"; font-size: calc(12px * var(--ui-scale, 1)); line-height: normal; white-space: nowrap; } /* UI-011 第八輪：原「○ 設為反灰」 */
+html.embed-standalone #panel-scroll .slot-card > .slot-head > button:first-of-type.primary::before { content: "● 保留彩色"; } /* UI-011 第八輪：原「● 有顏色」 */
+
+/* ── UI-011 第七輪（2026-11-12）：四個標題字重統一 800（與曝光資源右側欄標題相同） ──
+   現況：四個標題實際顯示文字皆為 ::before（第三～六輪），規則已各自寫 font-weight:800；此處以單一規則統一收斂並明確指定字重，
+   同時把字體家族對齊曝光資源側欄（shopee index.html body：「Segoe UI」→ CJK 回退），因為 bottom 嵌入模式 body 指定「Microsoft JhengHei」，
+   兩者 CJK 回退字型（JhengHei vs JhengHei UI）不同，會讓同為 800 的字看起來粗細不一。只影響這四個標題的 ::before；字級、顏色、字距、行高、間距不變。 */
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) > h3::before,
+html.embed-standalone #panel-scroll > .panel-section:has(.accent-btn) + .panel-section > h3::before,
+html.embed-standalone #panel-scroll > .panel-section:has(button[title*="unsharp mask"]) > h3::before,
+html.embed-standalone #panel-scroll > .panel-section:has(.slot-card) > h3::before { font-weight: 800; font-family: "Segoe UI", "PingFang TC", Arial, sans-serif; }
+
+/* ── UI-011 第九輪（2026-11-12）：底部「吸底完成」＋「單獨下載吸底檔案」統一為曝光資源底部兩鈕樣式 ──
+   子頁 footer DOM：#panel > #panel-scroll ＋ #panel-footer（panel.js buildHostActionFooter 577：.host-dl-bar > button.primary.block.host-dl-btn
+   （innerHTML = svg.host-btn-svg ＋「 下載此資源檔案」，click → downloadBottomPageResources；每次 renderAll 重建）＋ .host-dl-hint（第三輪隱藏）＋ 狀態 .note）。
+   「吸底完成」由 BODA/index.html installBottomDoneButton() 建於 #panel-footer 之前的 #boda-bottom-done-wrap（不被重繪清掉）。
+   下載鈕文字由外掛每次重寫，改以 font-size:0 ＋ ::after 顯示「單獨下載吸底檔案」；既有 svg.host-btn-svg 的路徑與 BODA lineIcon('download') 完全相同
+   （M12 3v11／m7.8 10.2…／M4 20h16），只套同一組 .line-icon 尺寸樣式。事件、下載範圍、檔名、輸出內容不動。 */
+html.embed-standalone #boda-bottom-done-wrap { flex: 0 0 auto; padding: 10px 12px 0; background: var(--bg1); border-top: 1px solid var(--border); box-shadow: 0 -4px 12px rgba(20,40,35,.06); }
+html.embed-standalone #boda-bottom-done-btn { display: block; width: 100%; min-height: 36px; margin: 0; padding: 8px 16px; background: #4d9b95; border: 1px solid #4d9b95; border-radius: 6px; color: #FFFFFF; font-family: "Segoe UI", "PingFang TC", Arial, sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: .12s; box-shadow: none; }
+html.embed-standalone #boda-bottom-done-btn:hover { background: #357872; border-color: #357872; color: #FFFFFF; }
+html.embed-standalone #boda-bottom-done-wrap + #panel-footer { border-top: 0; box-shadow: none; padding-top: 8px; }
+html.embed-standalone #panel-footer .host-dl-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 36px; padding: 9px 12px; background: linear-gradient(135deg, #357872, #2C6660); border: none; border-radius: 6px; color: #FFFFFF; font-family: "Segoe UI", "PingFang TC", Arial, sans-serif; font-size: 0; line-height: 0; font-weight: 700; box-shadow: none; transition: opacity .12s; }
+html.embed-standalone #panel-footer .host-dl-btn::after { content: "單獨下載吸底檔案"; font-size: 12.5px; font-weight: 700; line-height: 1; white-space: nowrap; }
+html.embed-standalone #panel-footer .host-dl-btn .host-btn-svg { width: 15px; height: 15px; margin: 0 3px 0 0; vertical-align: -3px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+html.embed-standalone #panel-footer .host-dl-btn:hover { background: linear-gradient(135deg, #357872, #2C6660); color: #FFFFFF; opacity: .88; }
+html.embed-standalone #panel-footer .host-dl-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ── UI-011 第十輪（2026-11-12）：「每顆內容」卡片框線與配色（只改 .slot-card 本身的 border／background／radius） ──
+   既有來源（bottom style.css）：.slot-card 387 → border 1px var(--border) ＋ border-left 3px（左側粗框＝選取提示）、radius var(--radius)=6px、bg var(--bg2)；
+   .slot-card.active 398／embed-standalone 1613 → border-color var(--accent)、border-left-color、bg #e6f2f0；無 outline／box-shadow。
+   參考曝光資源商品清單卡片（exposure-light.css：.bn-prod-item bg --bg2 #EEF3F2、radius 6；--border #DDE3E1、品牌綠 #357872、tint #E6F2F0）。
+   以 border 縮寫一次設定四邊 1px（覆蓋 border-left 3px），選取狀態改以背景＋框色區分；卡片內容、按鈕、縮圖、欄位、滑桿、排序不動。 */
+html.embed-standalone #panel-scroll .slot-card { border: 1px solid #DDE3E1; border-radius: 6px; background: #EEF3F2; box-shadow: none; outline: none; }
+html.embed-standalone #panel-scroll .slot-card.active { border: 1px solid #357872; background: #E6F2F0; }

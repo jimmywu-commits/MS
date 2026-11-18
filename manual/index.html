@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>活動素材製作工具 操作手冊</title>
+<style>
+:root{
+  --bg:#F5F7F6;
+  --panel:#FFFFFF;
+  --panel-2:#E9EFED;
+  --ink:#17201E;
+  --ink-dim:#5B6764;
+  --line:#D7E0DD;
+  --accent:#0B7D72;
+  --accent-ink:#FFFFFF;
+  --warn:#8A5A0B;
+  --warn-bg:#F7ECD6;
+  --code-bg:#E8EEEC;
+  --todo:#9AA8A4;
+  --shadow:0 1px 2px rgba(18,32,29,.06),0 8px 24px rgba(18,32,29,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121716; --panel:#1C2321; --panel-2:#242D2B; --ink:#E7EDEB; --ink-dim:#97A4A0; --line:#33403D;
+    --accent:#3CC3B2; --accent-ink:#0B1513; --warn:#E9A23B; --warn-bg:#3A301C; --code-bg:#242D2B; --todo:#5F6E6A;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121716; --panel:#1C2321; --panel-2:#242D2B; --ink:#E7EDEB; --ink-dim:#97A4A0; --line:#33403D;
+  --accent:#3CC3B2; --accent-ink:#0B1513; --warn:#E9A23B; --warn-bg:#3A301C; --code-bg:#242D2B; --todo:#5F6E6A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  font-size:16px;line-height:1.75;overflow-wrap:anywhere;
+}
+h1,h2,h3{text-wrap:balance;margin:0}
+code,kbd,.mono{font-family:"JetBrains Mono","SFMono-Regular",Consolas,ui-monospace,monospace}
+a{color:var(--accent)}
+::selection{background:var(--accent);color:var(--accent-ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);max-width:1180px;margin:0 auto}
+@media (max-width:860px){.shell{grid-template-columns:minmax(0,1fr)}}
+
+.toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+  padding:36px 18px 36px 26px;border-right:1px solid var(--line);scrollbar-width:thin}
+@media (max-width:860px){.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:22px 16px}}
+.toc-brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.toc-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--accent-ink);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
+.toc-brand b{font-size:14.5px}
+.toc nav{display:flex;flex-direction:column;gap:2px}
+.toc a{color:var(--ink-dim);text-decoration:none;font-size:13.5px;padding:6px 10px;border-radius:8px}
+.toc a:hover{background:var(--panel-2);color:var(--ink)}
+.toc .grp{font-size:11px;letter-spacing:.09em;color:var(--ink-dim);opacity:.75;margin:16px 10px 6px;font-weight:700}
+.toc .grp:first-of-type{margin-top:2px}
+
+main{padding:56px 44px 100px;min-width:0}
+@media (max-width:640px){main{padding:32px 16px 72px}}
+
+.cover{margin-bottom:46px}
+.cover .kicker{font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:700;margin-bottom:12px;display:block}
+.cover h1{font-size:clamp(28px,4.4vw,40px);font-weight:900;line-height:1.25;margin-bottom:14px}
+.cover .lede{font-size:17px;color:var(--ink-dim);max-width:62ch;line-height:1.7;margin:0}
+.cover .who{margin-top:20px;display:flex;gap:8px;flex-wrap:wrap}
+.tag{font-size:12.5px;padding:4px 12px;border-radius:99px;background:var(--panel-2);color:var(--ink-dim);
+  border:1px solid var(--line);font-weight:600}
+
+section{margin-bottom:52px;scroll-margin-top:20px}
+.stepnum{font-size:13px;color:var(--accent);font-weight:700;display:block;margin-bottom:6px;letter-spacing:.04em}
+h2{font-size:22px;font-weight:700;margin-bottom:10px}
+h3{font-size:17px;font-weight:700;margin:22px 0 8px}
+p{margin:0 0 12px;max-width:66ch}
+ul,ol{margin:0 0 14px;padding-left:1.3em;max-width:64ch}
+li{margin-bottom:5px}
+.muted{color:var(--ink-dim);font-size:13.5px}
+.lead{color:var(--ink-dim);font-size:14.5px;max-width:64ch;margin-bottom:14px}
+
+kbd{font-size:12px;font-weight:600;background:var(--code-bg);color:var(--ink);
+  padding:1px 7px;border-radius:5px;border:1px solid var(--line);border-bottom-width:2px}
+
+.box{border-radius:14px;padding:15px 18px;margin:16px 0;max-width:64ch;box-shadow:var(--shadow)}
+.box .label{font-size:11.5px;letter-spacing:.08em;font-weight:700;display:block;margin-bottom:6px}
+.box p:last-child,.box ul:last-child{margin-bottom:0}
+.box.tip{background:var(--panel);border:1px solid var(--line)}
+.box.tip .label{color:var(--accent)}
+.box.warn{background:var(--warn-bg);border:1px solid var(--line)}
+.box.warn .label{color:var(--warn)}
+
+/* 截圖位置（待補實機截圖） */
+figure.shot{margin:14px 0 20px;max-width:100%}
+figure.shot.todo{border:2px dashed var(--todo);border-radius:12px;background:var(--panel-2);
+  min-height:140px;padding:18px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+figure.shot.todo::before{content:"截圖待補";font-size:11.5px;letter-spacing:.1em;font-weight:700;color:var(--ink-dim)}
+figure.shot.todo figcaption{font-size:13px;color:var(--ink-dim);margin:0}
+figure.shot img{display:block;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--line);box-shadow:var(--shadow);background:var(--panel)}
+figure.shot a.zoom{display:inline-block;cursor:zoom-in}
+figure.shot figcaption{font-size:13px;color:var(--ink-dim);margin-top:8px;max-width:66ch}
+.shot-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.shot-row img{flex:none}
+.shot-side{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin:6px 0 14px}
+.shot-side figure.shot{margin:0;flex:none}
+.shot-side ul{flex:1;min-width:260px;margin-top:4px}
+.callout{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;padding:0 .3em;border-radius:99px;background:#ee4d2d;color:#fff;font-size:.78em;font-weight:700;line-height:1;vertical-align:.08em;margin-right:.3em}
+
+.tbl{max-width:100%;overflow-x:auto;margin:10px 0 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--panel-2);font-weight:700;white-space:nowrap}
+td.n,th.n{text-align:center;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+
+.cardgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;max-width:68ch;margin-bottom:10px}
+.xcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.xcard .xh{font-weight:700;font-size:13.5px;color:var(--accent);margin-bottom:6px}
+.xcard p{font-size:13px;margin-bottom:0;color:var(--ink-dim)}
+
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 16px;max-width:68ch}
+.flow span{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 10px;font-size:13.5px;font-weight:600}
+.flow i{font-style:normal;color:var(--ink-dim)}
+
+footer{border-top:1px solid var(--line);padding-top:20px;color:var(--ink-dim);font-size:12.5px;max-width:64ch}
+:root{--head:var(--accent);--head-ink:var(--accent-ink)}
+/* 層級：大標題大字、細項小字，所有標題用綠色 */
+main section p,main section li,main section td,main section th{font-size:14px;line-height:1.75}
+main section .lead,main p.lead{font-size:14px}
+main section .muted,figure.shot figcaption{font-size:12.5px}
+main section ul,main section ol{max-width:72ch}
+main section li{margin-bottom:6px}
+main section li::marker{color:var(--head)}
+.cat{display:flex;align-items:center;gap:16px;margin:72px 0 20px;padding:28px 0 14px;border-top:3px solid var(--head)}
+.cat:first-of-type{margin-top:8px}
+.cat .cn{width:48px;height:48px;border-radius:14px;background:var(--head);color:var(--head-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;flex:none}
+.cat h2{margin:0;font-size:40px;font-weight:900;color:var(--head);line-height:1.15}
+.sub{display:flex;align-items:center;gap:10px;margin:40px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.sub h3{margin:0;font-size:22px;color:var(--head)}
+main section > h3{font-size:22px;color:var(--head);margin:36px 0 10px}
+main section > h3:first-child{margin-top:0}
+.sub .pill.smart{background:var(--head);border-color:var(--head);color:var(--head-ink)}
+#faq h2{font-size:30px;color:var(--head)}
+
+/* 線框 icon */
+.ic{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.cat .cn .ic{width:26px;height:26px;stroke-width:1.7}
+.sic{width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--head) 12%,transparent);color:var(--head);display:flex;align-items:center;justify-content:center;flex:none}
+.sic .ic{width:20px;height:20px}
+
+/* 左側導覽：白底、灰色分組標題、線框 icon、目前項目淡色底 */
+.toc{background:var(--panel);padding:20px 14px 28px;border-right:1px solid var(--line)}
+.toc-brand{padding:0 8px 18px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.toc nav{gap:0}
+.toc details.tg{padding:12px 0;border-bottom:1px solid var(--line)}
+.toc details.tg:last-child{border-bottom:none}
+.toc summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  padding:4px 10px 8px;font-size:12px;color:var(--ink-dim);font-weight:500}
+.toc summary::-webkit-details-marker{display:none}
+.toc summary .ic{width:14px;height:14px;transition:transform .15s}
+.toc details:not([open]) summary .ic{transform:rotate(180deg)}
+.toc a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;font-size:14px;color:var(--ink);margin:1px 0}
+.toc a .ic{color:var(--ink-dim)}
+.toc a:hover{background:var(--panel-2)}
+.toc a.on{background:color-mix(in srgb,var(--head) 10%,transparent);color:var(--head);font-weight:600}
+.toc a.on .ic{color:var(--head)}
+
+.toc div.tg{padding:12px 0;border-bottom:1px solid var(--line)}
+.toc .tg-link,.toc .tg-link.on,.toc .tg-link:hover{display:block;padding:4px 10px 8px;margin:0;font-size:12px;font-weight:500;color:var(--ink-dim);background:none;border-radius:0}
+/* 封面進度條：可點擊的大按鈕 */
+.cat{scroll-margin-top:20px}
+.flow.flow-nav{max-width:none;gap:10px 12px;margin:22px 0 0}
+.flow-nav a{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border:1px solid var(--line);border-radius:14px;
+  background:var(--panel);color:var(--ink);font-size:17px;font-weight:700;text-decoration:none;box-shadow:var(--shadow);
+  transition:background .15s,border-color .15s,color .15s,transform .15s}
+.flow-nav a .ic{width:26px;height:26px;color:var(--head);stroke-width:1.7}
+.flow-nav a:hover{border-color:var(--head);background:color-mix(in srgb,var(--head) 8%,var(--panel));color:var(--head);transform:translateY(-1px)}
+.flow-nav i{font-size:22px;color:var(--head)}
+@media (max-width:640px){.flow-nav a{padding:10px 14px;font-size:15px}.flow-nav a .ic{width:22px;height:22px}}
+
+/* Excel 分頁標籤（示意） */
+.xl-tabs{display:inline-flex;align-items:flex-end;gap:0;background:#E6E6E6;border:1px solid #C8C8C8;border-radius:6px;padding:6px 10px 0;font-family:"Segoe UI","Microsoft JhengHei",sans-serif;max-width:100%;overflow:hidden;flex-wrap:nowrap}
+td code{white-space:nowrap}
+.xl-tab{padding:6px 18px;font-size:14px;color:#444;border-right:1px solid #C8C8C8;white-space:nowrap}
+.xl-tab.on{background:#fff;color:#107C41;font-weight:700;border-bottom:3px solid #107C41;margin-bottom:-1px}
+.xl-plus{padding:4px 12px;color:#666;font-size:18px}
+/* 開啟狀態表 */
+table.onoff td.n{font-size:16px;font-weight:700;color:var(--head)}
+table.onoff td.n.x{color:var(--ink-dim);font-weight:400}
+/* 首頁編輯說明：三個同層級的步驟 */
+.step{margin:0 0 26px}
+.step-h{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;margin-bottom:8px}
+.step-h .callout{font-size:14px;min-width:26px;height:26px;margin-right:0}
+.step-b{padding-left:36px}
+.step-b figure.shot{margin:10px 0 14px}
+.note-red{color:#D92D20;font-weight:600}
+:root[data-theme="dark"] .note-red{color:#FF8A7A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .note-red{color:#FF8A7A}}
+.unlock{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.ul-rail{display:flex;flex-direction:column;gap:2px;min-width:150px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.ul-cap{font-size:11.5px;color:var(--ink-dim);font-weight:700;margin-bottom:4px}
+.ul-item{display:flex;align-items:center;gap:8px;font-size:13.5px;padding:5px 8px;border-radius:8px}
+.ul-rail.locked .ul-item{opacity:.4}
+.ul-btn{padding:10px 22px;border-radius:99px;background:var(--head);color:var(--head-ink);font-weight:700;font-size:15px}
+.ul-arrow{font-style:normal;font-size:22px;color:var(--head)}
+.step-b .tbl{margin:0}
+
+/* 清單裡有圓標數字時，不再顯示圓點／數字 */
+main ul:has(> li > .callout),main ol:has(> li > .callout),main ul.plain,main ol.plain{list-style:none;padding-left:0}
+.faq-block{margin-top:36px;padding:4px 20px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.faq-block .sub{margin-top:16px}
+
+/* 封面：像頁首，標題＋灰色副標 */
+.cover h1{font-size:clamp(26px,3.6vw,34px)}
+.cover .lede{font-size:14px}
+.cover .kicker{display:none}
+.cover .xcard{border-radius:12px;box-shadow:none}
+.sub .pill{font-size:11.5px;font-weight:700;letter-spacing:.06em;padding:3px 10px;border-radius:99px;border:1px solid var(--line)}
+.pill.edit{background:var(--panel-2);color:var(--ink-dim)}
+.pill.look{background:var(--panel-2);color:var(--ink-dim)}
+.pill.smart{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+h4{font-size:15px;font-weight:700;margin:22px 0 6px;color:var(--head)}
+h4::before{content:"";display:inline-block;width:4px;height:.95em;border-radius:2px;background:var(--head);margin-right:8px;vertical-align:-.1em}
+
+/* 2026-11-17：步驟＝操作，下方小字補充 */
+.step-b ul.sm{list-style:none;padding-left:0;margin:0 0 10px}
+main section .step-b ul.sm li{font-size:13px;color:var(--ink-dim);margin-bottom:2px;line-height:1.7}
+main section .step-b ul.sm li::before{content:"・";color:var(--head)}
+main section .step-b ul.sm li.red{color:#D92D20;font-weight:600;padding-left:1.1em}
+main section .step-b ul.sm li.red::before{content:none}
+.step-h{font-size:16.5px}
+/* 首頁：分頁小圖、圖例、大類標題 */
+.tab-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:4px 0 10px}
+.tab-row > div:has(> ul.sm){flex:0 1 auto;min-width:240px}
+.tab-row > .dm{flex:none}
+.tab-row ul.sm{margin:0}
+.xl-mini{flex:none}
+.xl-mini .xl-tabs{font-size:12px;zoom:.85}
+.xl-cap{font-size:11.5px;color:var(--ink-dim);margin-top:2px}
+.lv-legend{font-size:12.5px;color:var(--ink-dim);margin:2px 0 6px}
+.lv-legend b,table.onoff td.n.tri{color:var(--head)}
+.cat h2{font-size:34px}
+/* 曝光資源示意：HBN 大圖＋縮小版位 */
+.ov-h span{font-size:12.5px;color:var(--ink-dim);font-weight:500}
+.hbn{position:relative;aspect-ratio:1200/360;width:100%;border-radius:8px;background:#4A9AD6;display:flex;gap:4%;padding:4% 4.5%;box-sizing:border-box}
+.hbn-txt{flex:1.1;display:flex;flex-direction:column;justify-content:center;gap:4px;color:#fff;min-width:0}
+.hbn-logo{width:max-content;font-size:10px;font-weight:800;letter-spacing:.06em;border:1.5px solid rgba(255,255,255,.85);border-radius:3px;padding:0 6px;margin-bottom:2px}
+.hbn-txt .l1{font-size:18px;font-weight:900;line-height:1.15;white-space:nowrap}
+.hbn-txt .l2{font-size:11.5px;font-weight:700;white-space:nowrap}
+.hbn-cta{position:absolute;right:4.5%;bottom:6%;background:#fff;color:#2F7EC0;font-size:10px;font-weight:800;border-radius:99px;padding:2px 10px}
+.hbn-txt .l3{font-size:10.5px;opacity:.85}
+.hbn-art{flex:1;border:2px dashed rgba(255,255,255,.9);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;background:rgba(255,255,255,.12)}
+.hbn-tag{position:absolute;top:-17px;right:2px;font-size:11px;font-weight:700;color:var(--ink-dim)}
+.mini-cap{font-size:12px;color:var(--ink-dim);margin:12px 0 6px}
+.bn-grid.mini{gap:6px}
+.bn-grid.mini .bn{font-size:9.5px;border-radius:4px;font-weight:600}
+/* 首段提醒、$ 選單示意 */
+.ov-tips{margin:16px 0 0;font-size:13.5px}
+.ov-tips li{margin-bottom:4px}
+.dm{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.dm-text{font-size:18px;font-weight:900;color:#B5410F;background:#E6F1F6;padding:4px 10px;border-radius:6px}
+.dm-text mark{background:#9CC7FF;color:#B5410F;padding:0 1px}
+.dm-menu{background:#1a1d2a;border:1px solid #2e3347;border-radius:8px;padding:5px;display:flex;flex-direction:column;gap:4px;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.dm-menu span{font-size:11.5px;font-weight:600;color:#dde3f0;background:#242942;border:1px solid #3a4160;border-radius:6px;padding:4px 10px;white-space:nowrap}
+.dm-menu span:first-child{border-color:#7a86c0}
+/* 左側品牌 */
+.toc-mark .ic{width:16px;height:16px;stroke-width:1.8}
+.toc-name{display:flex;flex-direction:column;line-height:1.3}
+.toc-name small{font-size:12px;color:#4A5552;font-weight:500;margin-top:2px}
+:root[data-theme="dark"] .toc-name small{color:var(--ink-dim)}
+main .or{color:#EE4D2D;font-weight:700}
+.ov-tips figure.shot{margin:8px 0 14px}
+.ov-tips figure.shot img{max-width:330px}
+.ov-pair{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.ov-pair figure.shot{margin:8px 0 14px}
+.toc summary{color:var(--head)!important;font-weight:700!important;font-size:13px!important}
+.toc summary .ic{color:var(--head)}
+/* 製作內容／流程 */
+.cover .lede{max-width:852px}
+.cover{margin-bottom:26px}
+.ov-title{font-size:20px;color:var(--head);margin:28px 0 8px}
+#overview > p,#overview > ul{font-size:14.5px}
+.flow.flow-nav{flex-wrap:nowrap;gap:8px;margin:18px 0 0}
+.flow-nav a{padding:9px 18px;font-size:14.5px;gap:0;border-radius:12px;white-space:nowrap;justify-content:center;min-width:88px}
+.flow-nav a .ic{width:20px;height:20px}
+.flow-nav i{font-size:16px}
+@media (max-width:980px){.flow.flow-nav{flex-wrap:wrap}}
+/* 製作範圍示意圖 */
+.ov{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin:6px 0 10px}
+.ov-col{display:flex;flex-direction:column;gap:10px}
+.ov-col .ov-card{flex:1}
+.hbn-img{position:relative;margin-top:18px}
+.hbn-img img{display:block;width:100%;height:auto;border-radius:6px}
+.ov-line{margin:12px 0 0;font-size:14.5px}
+.ov-line .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--head);margin-right:8px;vertical-align:middle}
+.bn-grid.mini{margin-top:12px}
+.ov-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;box-shadow:var(--shadow)}
+.ov-h{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+.ov-h b{font-size:16px;color:var(--head)}
+.ov-h .ic{width:20px;height:20px;color:var(--head)}
+.ov-d{font-size:13px;color:var(--ink-dim);margin:0 0 14px}
+.bn-grid{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.bn{background:#4A9AD6;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;text-align:center;line-height:1.2;padding:2px}
+.bn.hl{outline:3px solid #EE4D2D;outline-offset:2px}
+.page{display:flex;gap:12px;align-items:stretch}
+.page-col{width:150px;flex:none;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#6E8FA8}
+.pb{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11.5px;font-weight:700;text-align:center;border-bottom:1px solid rgba(255,255,255,.35)}
+.pb.lp{height:72px;background:#4A9AD6;outline:3px solid #EE4D2D;outline-offset:-3px}
+.pb.sub3{height:46px;background:#EAF5FB;color:#2D5B7C;gap:4px;padding:4px}
+.pb.sub3 i{flex:1;height:100%;background:#fff;border-radius:4px;font-style:normal;display:flex;align-items:center;justify-content:center}
+.pb.sys{height:40px;background:#6E8FA8;color:#E3ECF2;font-weight:500;font-size:11px}
+.pb.ms{height:34px;background:#5AA8E0}
+.pb.bt{height:24px;background:#fff;color:#EE4D2D;border-top:2px solid #EE4D2D}
+.page-lb{flex:1;display:flex;flex-direction:column;min-width:0}
+.lb{display:flex;flex-direction:column;justify-content:center;border-left:2px solid #F3A58F;padding-left:10px;font-size:12px;color:var(--ink-dim);line-height:1.45}
+.lb b{color:#EE4D2D;font-size:14px}
+.lb.sys{border-left-color:transparent;color:var(--todo)}
+.tag-ex{display:inline-block;margin-top:2px;font-size:11px;font-weight:700;color:#fff;background:#EE4D2D;border-radius:4px;padding:0 6px;width:max-content}
+.ov-note{font-size:13px;color:var(--ink-dim);margin-top:12px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h12l-2 4 2 4H5"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M4 20h16"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 9"/></symbol>
+<symbol id="i-page" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 2-.8 2-1.8 0-1-.8-1.4-.8-2.4 0-.9.7-1.6 1.6-1.6H17a4 4 0 004-4c0-4.4-4-8.2-9-8.2z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/></symbol>
+<symbol id="i-dock" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15h18M8 18h.01M12 18h.01M16 18h.01"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M4 20h16"/></symbol>
+<symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4"/></symbol>
+<symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></symbol>
+<symbol id="i-wand" viewBox="0 0 24 24"><path d="M4 20L15 9M14 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1zM19 12l.7 1.3L21 14l-1.3.7L19 16l-.7-1.3L17 14l1.3-.7z"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 .5c0 1.6-2.5 2-2.5 3.5M12 17h.01"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+</defs></svg><div class="shell">
+<aside class="toc">
+  <div class="toc-brand"><span class="toc-mark"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-image"/></svg></span><div class="toc-name"><b>活動素材製作工具</b><small>BN編輯器／MS編輯器</small></div></div>
+  <nav>
+    <div class="tg"><a class="tg-link" href="#overview">編輯器介紹與說明</a></div>
+        <details class="tg"><summary><span>首頁</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <a href="#home-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
+    <a href="#home-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
+    </details>
+    <details class="tg"><summary><span>曝光資源</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <a href="#ex-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
+    <a href="#ex-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
+    </details>
+    <details class="tg"><summary><span>活動頁</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <a href="#ms-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
+    <a href="#ms-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
+    </details>
+    <details class="tg"><summary><span>活動頁配色</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <a href="#color-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
+    <a href="#color-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
+    </details>
+    <details class="tg"><summary><span>吸底</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <a href="#bt-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
+    <a href="#bt-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
+    </details>
+    <details class="tg"><summary><span>下載</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+    <a href="#dl-edit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><span>操作說明</span></a>
+    <a href="#dl-smart"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg><span>功能介紹</span></a>
+    </details>
+  </nav>
+</aside>
+<main>
+<div class="cover">
+  <h1>活動素材製作工具 - MS編輯器/BN編輯器</h1>
+  <p class="lede">活動素材編輯器可一站完成一檔活動所需的美術素材，系統能預先排除常見法務與客訴疑慮問題、提供多款視覺背景模板挑選。</p>
+</div>
+<section id="overview">
+  <h3 class="ov-title">製作內容</h3>
+  <p>一檔活動分成兩大塊製作：</p>
+  <div class="ov">
+    <div class="ov-col">
+    <p class="ov-line"><span class="dot"></span><strong>曝光資源</strong>：投放到各處的廣告 Banner。</p>
+    <div class="ov-card">
+      <div class="ov-h"><b>曝光資源</b><span>（DD Card、HBN、IG 等套用同一套視覺）</span></div>
+      <div class="hbn-img"><img src="img/v6-hbn-sample.jpg" width="1200" height="360" alt="HBN 版位範例"><span class="hbn-tag">HBN</span></div>
+      <div class="bn-grid mini"><div class="bn" style="width:72px;height:33px">LPBN</div><div class="bn" style="width:44px;height:44px">DD Card</div><div class="bn" style="width:44px;height:44px">IG</div><div class="bn" style="width:66px;height:35px">FB_POST</div><div class="bn" style="width:86px;height:26px">Coin_pageBN</div><div class="bn" style="width:80px;height:24px">SCBN</div><div class="bn" style="width:58px;height:29px">AMS</div><div class="bn" style="width:64px;height:22px">SBA</div><div class="bn" style="width:66px;height:30px">活動總覽</div></div>
+    </div>
+    </div>
+    <div class="ov-col">
+    <p class="ov-line"><span class="dot"></span><strong>活動頁</strong>：點擊後進入的活動頁面。</p>
+    <div class="ov-card">
+      <div class="ov-h"><b>活動頁</b><span>（副區、MSBN、吸底）</span></div>
+      <div class="page">
+        <div class="page-col">
+          <div class="pb sub3"><i>副區</i><i>副區</i><i>副區</i></div>
+          <div class="pb sys">系統區塊</div>
+          <div class="pb ms">MSBN</div>
+          <div class="pb ms">MSBN</div>
+          <div class="pb sys">系統區塊</div>
+          <div class="pb bt">吸底</div>
+        </div>
+        <div class="page-lb">
+          <div class="lb" style="height:46px"><b>副區</b></div>
+          <div class="lb sys" style="height:40px"></div>
+          <div class="lb" style="height:68px"><b>MSBN</b></div>
+          <div class="lb sys" style="height:40px"></div>
+          <div class="lb" style="height:24px"><b>吸底</b></div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+  <h3 class="ov-title">製作流程</h3>
+  <p>系統會引導您依照以下流程完成製作，避免活動素材缺漏。</p>
+  <div class="flow flow-nav"><a href="#cat-home">首頁</a><i>➔</i><a href="#cat-ex">曝光資源</a><i>➔</i><a href="#cat-ms">活動頁</a><i>➔</i><a href="#cat-color">活動頁配色</a><i>➔</i><a href="#cat-bt">吸底</a><i>➔</i><a href="#cat-dl">下載</a></div>
+<h3 class="ov-title">輔助功能</h3>
+<p>左下角的按鈕，製作過程中隨時可以使用。</p><ul class="ov-tips"><li><strong>新手導覽</strong>：第一次開啟自動播放；重看請按左下「教學」→「導覽」。<figure class="shot"><a class="zoom" href="img/v6-help.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-help.png" width="186" height="147" alt="" loading="lazy"></a></figure></li><li><strong>清除重置</strong>：按左下「重置」清空全部暫存，無法復原，請先整包下載備份。<div class="ov-pair"><figure class="shot"><a class="zoom" href="img/v8-reset-btn.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v8-reset-btn.png" width="80" height="84" alt="" loading="lazy"></a></figure><figure class="shot"><a class="zoom" href="img/v6-reset.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-reset.png" width="412" height="315" alt="" loading="lazy"></a></figure></div></li><li><strong>使用反饋</strong>：按左下「反饋」開啟使用反饋表，回報問題或建議。<figure class="shot"><a class="zoom" href="img/v8-feedback.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v8-feedback.png" width="80" height="84" alt="" loading="lazy"></a></figure></li></ul>
+</section>
+<!-- ============ 1 首頁 ============ -->
+<div class="cat" id="cat-home"><h2>一、首頁</h2></div>
+<section id="home-edit">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>上傳工單</div><div class="step-b"><ul class="sm"><li>拖進「工單匯入」虛線框，或點擊選檔（<code>.xlsx</code>／暫存檔 <code>.json</code>）</li></ul><div class="tab-row"><div><ul class="sm"><li><code>工單總覽</code> 分頁帶入曝光資源</li><li><code>Layout_Output</code> 分頁帶入活動頁</li><li class="red">※ 活動頁內容必須從工單匯入，未匯入無法製作</li></ul></div><div class="xl-mini"><div class="xl-tabs" role="img" aria-label="Excel 工單下方的分頁標籤"><span class="xl-tab on">工單總覽</span><span class="xl-tab">Layout_Output</span></div></div></div><ul class="sm"><li>工單匯入會自動帶入活動等級名稱</li><li>沒有活動頁的等級（如 AD單買(BN Only)），工單與圖片素材會標示「可略」，可直接製作曝光資源</li></ul><figure class="shot"><a class="zoom" href="img/v4-home-imported.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v4-home-imported.png" width="924" height="546" alt="" loading="lazy"></a></figure><figure class="shot"><a class="zoom" href="img/v6-home-optional.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-home-optional.png" width="924" height="300" alt="" loading="lazy"></a><figcaption>沒有活動頁的等級：工單與圖片素材標示「可略」。</figcaption></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>上傳素材</div><div class="step-b"><ul class="sm"><li>支援拖曳整個資料夾，或點選圖片等上傳方式</li><li>工單中若有附上素材檔名，檔名與素材名稱自動配對，並顯示結果</li></ul><figure class="shot"><a class="zoom" href="img/v3-home-images.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v3-home-images.png" width="453" height="456" alt="" loading="lazy"></a></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>開啟活動等級對應能製作的版位</div><div class="step-b"><ul class="sm"><li>活動等級決定可製作的項目（見下表），也可手動選擇</li><li>「BOD資交」若有廠商自製 MS，系統會主動確認，在提示框確認即可開啟活動頁</li></ul><figure class="shot"><a class="zoom" href="img/v6-zj.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-zj.png" width="412" height="183" alt="" loading="lazy"></a></figure><div class="tbl"><table class="onoff"><thead><tr><th>等級</th><th class="n">曝光資源</th><th class="n">活動頁</th><th class="n">活動頁配色</th><th class="n">吸底</th></tr></thead><tbody><tr><td>大促 Brand star</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>大促 Brand star 資交</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>AD單買(多店活動)</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>AD單買(BN Only)</td><td class="n">○</td><td class="n x">×</td><td class="n x">×</td><td class="n x">×</td></tr><tr><td>A BOD+</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>A BOD</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr><tr><td>A BOD+(資交)</td><td class="n">○</td><td class="n">△</td><td class="n">△</td><td class="n">△</td></tr><tr><td>A BOD(資交)</td><td class="n">○</td><td class="n">△</td><td class="n">△</td><td class="n">△</td></tr><tr><td>B級 JBP(多店活動)</td><td class="n">○</td><td class="n">○</td><td class="n">○</td><td class="n">○</td></tr></tbody></table></div><p class="lv-legend">○ 開啟　× 不開啟　<b>△</b> 依廠商自製需求開啟</p></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>按「開始編輯」</div><div class="step-b"><ul class="sm"><li>左側步驟解鎖，依序製作</li></ul><figure class="shot"><a class="zoom" href="img/v7-home-start.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-home-start.png" width="530" height="350" alt="" loading="lazy"></a></figure></div></div>
+</section>
+<section id="home-smart">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
+  <ul>
+    <li><strong>自動配對素材，免逐一上傳</strong>：工單填寫的檔名，匯入圖片時自動對應到欄位；框下方顯示配對數量與找不到的檔名。</li>
+    <li><strong>檔名寫法略有差異也能配對</strong>：忽略大小寫、全半形、空白、底線、連字號及 / \ : * ? &quot; &lt; &gt; |。</li>
+    <li><strong>整包資料夾直接上傳</strong>：資料夾內第 2、3 層的圖片也會讀取。</li>
+    <li><strong>隨時接續上次進度</strong>：上傳之前下載的暫存檔 <code>.json</code> 即可繼續編輯。</li>
+  </ul>
+</section>
+<!-- ============ 2 曝光資源 ============ -->
+<div class="cat" id="cat-ex"><h2>二、曝光資源</h2></div>
+<p class="lead">中間是版位預覽，右側是工具列。</p>
+<figure class="shot"><a class="zoom" href="img/v7-ex-overview.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-ex-overview.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
+<section id="ex-edit">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>確認製作的版位</div><div class="step-b"><ul class="sm"><li>匯入工單時已按照活動等級自動勾選</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>輸入文字內容</div><div class="step-b"><ul class="sm"><li>可由右側欄位或畫布中的文字框直接編輯</li><li>所有版位同步套用</li><li>文案若不需加 $ 符號，可在畫布上反白數字後按右鍵，點選<span class="or">「暫時不加$和千分位符號」</span></li></ul><figure class="shot"><a class="zoom" href="img/v5-ex-dollar.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-dollar.png" width="531" height="252" alt="" loading="lazy"></a></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>上傳 LOGO</div><div class="step-b"><ul class="sm"><li>最多 3 張</li><li>所有版位同步套用</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>上傳素材（商品圖、人物素材）</div><div class="step-b"><ul class="sm"><li>商品圖與人物素材需分開上傳</li><li>商品組合僅限 3 品、1 人＋2 品、2 人</li><li>工單有填會自動帶入</li><li>所有版位同步套用</li></ul><figure class="shot"><div class="shot-row"><a class="zoom" href="img/v5-ex-prod.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-prod.png" width="323" height="173" alt="" loading="lazy"></a><a class="zoom" href="img/v5-ex-person.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-person.png" width="323" height="221" alt="" loading="lazy"></a></div></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">5</span>選背景圖</div><div class="step-b"><ul class="sm"><li>開啟背景圖庫，點選即所有版位套用</li><li>支援上傳其他背景素材</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">6</span>商品與視覺排版</div><div class="step-b"><ul class="sm"><li>點選商品：拖曳移動、拖四角縮放、拖把手旋轉</li><li>滑到版位上可調整背景圖</li></ul><figure class="shot"><div class="shot-row"><a class="zoom" href="img/v5-ex-product-select.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-product-select.png" width="290" height="300" alt="" loading="lazy"></a><a class="zoom" href="img/v5-ex-bg-panel.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-bg-panel.png" width="158" height="204" alt="" loading="lazy"></a></div><figcaption>左：點選商品出現控制點。右：背景圖調整。</figcaption></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">7</span>按「曝光資源完成」</div><div class="step-b"><ul class="sm"><li>左側打勾，進入活動頁</li></ul><figure class="shot"><a class="zoom" href="img/v7-done-ex.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-done-ex.png" width="323" height="100" alt="" loading="lazy"></a></figure></div></div>
+</section>
+<section id="ex-smart">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
+  <ul>
+    <li><strong>超出字數即時提醒</strong>：文字超出字數會出現紅框，須先處理才能下載。</li>
+    <li><strong>依工單自動勾選版位</strong>：依工單總覽「版位」欄（黃底列）自動勾選。</li>
+    <li><strong>商品自動加影子，畫面更立體</strong>：上傳時自動加上，可調開關、光源、位移、寬度與長度。</li>
+    <li><strong>自動分辨代言人照與簽名檔</strong>：檔名含「簽名／sign」視為簽名檔，含「代言／照／photo」視為代言人照；判斷錯誤時按「⇄」互換。</li>
+    <li><strong>品數自動控管，不會超規</strong>：商品組合僅限 3 品、1 人＋2 品、2 人。</li>
+    <li><strong>連動功能</strong>：版位有連動功能，支援大部分素材一次調整完成，部分特殊版型再進行微調，能節省做圖時間。<figure class="shot"><a class="zoom" href="img/v5-ex-lock.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ex-lock.png" width="94" height="80" alt="" loading="lazy"></a><figcaption>上：版位連動。下：獨立編輯（單張自己調整）。</figcaption></figure></li>
+    <li><strong>智慧偵測提醒</strong>：修改已完成的版位時，可選「僅套用至未完成版位」（建議）、「解除所有連動」或「確定全部覆蓋」。</li>
+  </ul>
+</section>
+<!-- ============ 3 活動頁 ============ -->
+<div class="cat" id="cat-ms"><h2>三、活動頁</h2></div>
+<figure class="shot"><a class="zoom" href="img/v7-ms-overview.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-ms-overview.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
+<section id="ms-edit">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>檢查成品預覽</div><div class="step-b"><ul class="sm"><li>上方可調顯示比例 50%～100%</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>點選要修改的版位</div><div class="step-b"><ul class="sm"><li>點一下即鎖定，右側顯示編輯項目</li><li>按「已鎖定｜解除」恢復自動跟隨</li></ul><figure class="shot"><a class="zoom" href="img/v5-ms-edit-panel.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v5-ms-edit-panel.png" width="320" height="530" alt="" loading="lazy"></a><figcaption>點選版位後：② 已鎖定｜解除　③ 編輯、換圖、刪除　④ 補圖（上傳簽名檔）</figcaption></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>編輯素材</div><div class="step-b"><ul class="sm"><li>右側可新增、編輯、換圖、補圖、刪除</li><li>↑↓ 調整前後順序</li><li>畫布上可直接拖曳、縮放</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>上傳簽名檔</div><div class="step-b"><ul class="sm"><li>在指定欄位按「補圖」</li><li>上傳後自動開啟代言人文案輸入框</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">5</span>調整商品影子</div><div class="step-b"><ul class="sm"><li>光源：左／中／右／關閉</li><li>可調顏色、位移，按「套用修改」</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">6</span>按「活動頁完成」</div><div class="step-b"><ul class="sm"><li>左側打勾，進入活動頁配色</li><li class="red">右下出現紅色提醒（如字數超過）須先修正</li></ul><figure class="shot"><a class="zoom" href="img/v7-done-ms.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-done-ms.png" width="323" height="100" alt="" loading="lazy"></a></figure></div></div>
+</section>
+<section id="ms-smart">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
+  <ul>
+    <li><strong>版位數量自動產生</strong>：自動決定三大保障、副區、MSBN 的數量。</li>
+    <li><strong>配色與曝光資源自動一致</strong>：背景色與 CTA 跟隨曝光資源；圓標、促標可在活動頁單獨調整。</li>
+    <li><strong>CTA 自動維持清楚可讀</strong>：曝光資源 CTA 為白色時，活動頁自動改用可辨識的顏色。</li>
+    <li><strong>圓標自動避開撞色</strong>：與促標同色系、不與 CTA 同色。</li>
+    <li><strong>一鍵關閉所有影子</strong>：商品影子的「光源」選「關閉」，所有商品的影子一次關閉。<figure class="shot"><a class="zoom" href="img/v7-ms-shadow.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-ms-shadow.png" width="316" height="220" alt="" loading="lazy"></a></figure></li>
+    <li><strong>沒有文案自動隱藏圓標</strong>：圓標無文案時底色自動隱藏，按「＋」可加回。</li>
+    <li><strong>改錯可隨時復原</strong>：↶ ↷ 或 <kbd>Ctrl</kbd> <kbd>Z</kbd>／<kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd>。</li>
+  </ul>
+</section>
+<!-- ============ 4 活動頁面配色 ============ -->
+<div class="cat" id="cat-color"><h2>四、活動頁配色</h2></div>
+<figure class="shot"><a class="zoom" href="img/v7-color.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-color.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
+<section id="color-edit">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>確認底色</div><div class="step-b"><ul class="sm"><li>連結圖示亮起＝與曝光資源連動</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>選擇跳色</div><div class="step-b"><ul class="sm"><li>點右側推薦色即可套用</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>檢查預覽色票</div><div class="step-b"><ul class="sm"><li>點色票上的筆可手動改色</li><li>「重設手動修改」可還原</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>按「取色工具完成」</div><div class="step-b"><ul class="sm"><li>進入吸底</li></ul><figure class="shot"><a class="zoom" href="img/v7-done-co.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-done-co.png" width="326" height="102" alt="" loading="lazy"></a></figure></div></div>
+</section>
+<section id="color-smart">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
+  <ul>
+    <li><strong>色票自動算好，簡單確認即可</strong>：依前面設計的配色，自動算出主標、副標、日期、CTA 與價格顏色。</li>
+    <li><strong>智慧偵測提醒</strong>：調整若會變更到活動頁與曝光資源的素材，會跳出警示視窗。</li>
+    <li><strong>一鍵輸出色票檔</strong>：下載色票 CSV，格式對應色票.xlsx。</li>
+    <li><strong>改色一次，全部同步</strong>：換色時只確認一次，曝光資源與活動頁同步修改，並改回未完成。</li>
+    <li><strong>內建配色原則，避免配錯色</strong>：全頁四色（底、深、強調、白）；淺底配深字，深底配白主標＋淺黃／米色副標；CTA 用白字。</li>
+  </ul>
+</section>
+<!-- ============ 5 吸底 ============ -->
+<div class="cat" id="cat-bt"><h2>五、吸底</h2></div>
+<figure class="shot"><a class="zoom" href="img/v7-bottom.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-bottom.png" width="1280" height="860" alt="" loading="lazy"></a></figure>
+<section id="bt-edit">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>選擇顆數</div><div class="step-b"><ul class="sm"><li>2～5 顆</li><li>一般活動使用橘色配色，BOD 使用紅色配色（系統可初步判斷）</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>設定每顆 icon 與文字</div><div class="step-b"><ul class="sm"><li>icon 可從資料庫挑選，或上傳自訂 icon</li><li>文字最多 5 字</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>檢查預覽</div><div class="step-b"></div></div>
+  <div class="step"><div class="step-h"><span class="callout">4</span>確認完成</div><div class="step-b"><ul class="sm"><li>按「吸底完成」</li></ul><figure class="shot"><a class="zoom" href="img/v7-done-bt.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-done-bt.png" width="331" height="100" alt="" loading="lazy"></a></figure></div></div>
+</section>
+<section id="bt-smart">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
+  <ul>
+    <li><strong>工單內容自動帶入</strong>：工單內的 LOGO、ICON、文案自動帶入。</li>
+    <li><strong>多狀態圖一次出齊</strong>：匯出時每張打亮一顆（顯示該頁面）、其他轉灰，一次出齊。</li>
+    <li><strong>超出範圍即時提醒</strong>：圖片過大、壓字或超出邊界時顯示紅字（不影響匯出，但請檢查）。</li>
+  </ul>
+</section>
+<!-- ============ 6 下載 ============ -->
+<div class="cat" id="cat-dl"><h2>六、下載</h2></div>
+<section id="dl-edit">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg></span><h3>操作說明</h3></div>
+  <div class="step"><div class="step-h"><span class="callout">1</span>按「整包下載」</div><div class="step-b"><ul class="sm"><li>有步驟未完成會先提醒</li><li>所有項目都完成後，系統也會自動詢問是否要下載</li></ul></div></div>
+  <div class="step"><div class="step-h"><span class="callout">2</span>預覽和檢查圖檔</div><div class="step-b"><ul class="sm"><li>切換「全部／活動頁／曝光資源」</li><li>點圖片可放大</li></ul><figure class="shot"><a class="zoom" href="img/v6-dl-check.png" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v6-dl-check.png" width="960" height="473" alt="" loading="lazy"></a></figure></div></div>
+  <div class="step"><div class="step-h"><span class="callout">3</span>按「確認下載 ZIP」</div><div class="step-b"><ul class="sm"><li class="red">打包時請勿關閉分頁或切換頁面</li></ul></div></div>
+</section>
+<section id="dl-smart">
+  <div class="sub"><span class="sic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg></span><h3>功能介紹</h3></div>
+  <ul>
+    <li><strong>一次打包所有交付檔</strong>：回填文案的 Excel、全部圖片（曝光資源、活動頁、吸底）、色票、暫存 <code>.json</code>。</li>
+    <li><strong>也能單獨下載單頁</strong>：各頁下方可單獨下載該頁檔案。</li>
+    <li><strong>下載前自動把關</strong>：字數超過或提醒未確認時，會擋下下載並跳到該頁。<figure class="shot"><a class="zoom" href="img/v7-dl-blocked.jpg" target="_blank" rel="noopener" title="點一下看原尺寸"><img src="img/v7-dl-blocked.jpg" width="318" height="132" alt="" loading="lazy"></a></figure></li>
+    <li><strong>自動暫存，不怕內容遺失</strong>：編輯內容存在這台電腦的瀏覽器，重新整理會還原；換電腦請用 <code>.json</code> 暫存檔。</li>
+  </ul>
+</section>
+</main>
+</div>
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  var map={};links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a});
+  var secs=Object.keys(map).map(function(id){return document.getElementById(id)}).filter(Boolean);
+  function setOn(id){links.forEach(function(a){a.classList.toggle('on',a===map[id])})}
+  function spy(){
+    var cur=secs[0],y=window.scrollY+120;
+    secs.forEach(function(s){if(s.getBoundingClientRect().top+window.scrollY<=y)cur=s});
+    if(cur)setOn(cur.id);
+  }
+  links.forEach(function(a){
+    a.addEventListener('click',function(e){
+      var el=document.getElementById(a.getAttribute('href').slice(1));
+      if(!el)return;
+      e.preventDefault();
+      var target=el.id==='home'?(el.previousElementSibling&&el.previousElementSibling.classList.contains('cat')?el.previousElementSibling:el):el;
+      var sub=el.querySelector('.sub');
+      if(sub&&el.id!=='home')target=sub;
+      var y=target.getBoundingClientRect().top+window.scrollY-24;
+      window.scrollTo({top:Math.max(0,y),behavior:'smooth'});
+      setOn(el.id);
+    });
+  });
+  [].slice.call(document.querySelectorAll('.flow-nav a')).forEach(function(a){
+    a.addEventListener('click',function(e){
+      var el=document.getElementById(a.getAttribute('href').slice(1));
+      if(!el)return;
+      e.preventDefault();
+      window.scrollTo({top:Math.max(0,el.getBoundingClientRect().top+window.scrollY-20),behavior:'smooth'});
+    });
+  });
+  window.addEventListener('scroll',spy,{passive:true});spy();
+})();
+</script>
+</body>
+</html>
