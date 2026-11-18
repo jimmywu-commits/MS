@@ -206,7 +206,69 @@
     return /^msbn_C_1_5$/i.test(String(schemaId || '')) && /^productImg$/i.test(String(fieldKey || ''));
   }
   function isMsbnB34ProductBoundary(schemaId, fieldKey) {
-    return /^msbn_B_3_4$/i.test(String(schemaId || '')) && /^productImg[0-9]*$/i.test(String(fieldKey || ''));
+    /* B-3-4、B-4-1：商品只能在自己的商品區內縮放／移動，超出的部分裁掉。 */
+    return /^msbn_B_(3_4|4_1)$/i.test(String(schemaId || '')) && /^productImg[0-9]*$/i.test(String(fieldKey || ''));
+  }
+  /* B-4-1：品名欄位清空時，商品區往下多延伸這麼多 px（品名那一行空出來可以讓商品多用一點）。 */
+  var MSBN_B41_NAME_EMPTY_EXTEND_PX = 50;
+  function msbnB41ExtendedProductLayer(layer, data, fieldPrefix, opts) {
+    if (!layer || layer.type !== 'image' || !/^msbn_B_4_1$/i.test(String((opts && opts._schemaId) || ''))) return layer;
+    var m = /^productImg([0-9]*)$/i.exec(String(layer.field || ''));
+    if (!m || !data) return layer;
+    var key = resolveFieldKey({ field: 'name' + m[1] }, fieldPrefix);
+    var raw = key ? data[key] : null;
+    var baseH = Number(layer.height) || 0;
+    var empty = raw != null && String(raw).trim() === '';   /* 沒有這個欄位（顯示預設字）不算清空 */
+    return Object.assign({}, layer, {
+      height: baseH + (empty ? MSBN_B41_NAME_EMPTY_EXTEND_PX : 0), _b41BaseH: baseH
+    });
+  }
+  /* 商品區「空白填色」可用的版位／欄位（資料存在 productFillBg＋編號，見 index.html 的小工具列）。 */
+  function msbnProductFillEligible(schemaId, fieldKey) {
+    var id = String(schemaId || ''), f = String(fieldKey || '');
+    if (/^msbn_B_4_1$/i.test(id)) return /^productImg[0-9]*$/i.test(f);
+    /* A-2-2 的填色範圍是「曝品＋贈品」整塊，由 index.html 的小工具列在畫布上另外鋪（贈品疊在上方），這裡不畫。 */
+    if (/^msbn_B_1_[1-4]$/i.test(id) || /^msbn_C_1_5$/i.test(id)) return /^productImg$/i.test(f);
+    return false;
+  }
+  /* 副區 E-1-1：工單沒有 LOGO（欄位空白）時，LOGO 白色底框不畫，促標文字改置中在整條促標底色上；
+     放入 LOGO 後兩者自動回到原位。編輯畫面仍保留淡淡的虛線提示框，可以直接加 LOGO（下載成品不會出現）。 */
+  function e11NoLogo(layer, data, fieldPrefix, opts) {
+    if (!/^subarea_E_1_1$/i.test(String((opts && opts._schemaId) || ''))) return false;
+    if (!layer || (layer.id !== 'promo' && layer.id !== 'logoBg')) return false;
+    var key = resolveFieldKey({ field: 'logoImg' }, fieldPrefix);
+    var raw = key && data ? String(data[key] == null ? '' : data[key]) : '';
+    return raw.split(',').every(function (part) { return !String(part).trim(); });
+  }
+  function msbnProductFillLayer(layer, data, fieldPrefix, opts) {
+    if (!layer || layer.type !== 'image' || !data || !msbnProductFillEligible(opts && opts._schemaId, layer.field)) return layer;
+    var m = /^productImg([0-9]*)$/i.exec(String(layer.field || ''));
+    var bgKey = m ? resolveFieldKey({ field: 'productFillBg' + m[1] }, fieldPrefix) : null;
+    var v = bgKey ? String(data[bgKey] || '') : '';
+    if (!/^(#[0-9a-f]{3,8}|linear-gradient\([#0-9a-z(),.%\/ -]+$)/i.test(v) || /url|expression|@|;|\\/i.test(v)) return layer;
+    return Object.assign({}, layer, { _b41FillBg: v });
+  }
+  /* 畫布上直接打字改品名時不會整張重畫，這裡即時把商品區高度跟著品名有字／清空切換
+     （高度變了，image-layout 的 ResizeObserver 會自動重新排版並夾回範圍）。 */
+  function syncMsbnB41ProductArea(root, data) {
+    if (!root || !root.querySelectorAll || !data) return false;
+    var changed = false;
+    var schemaEl = root.closest ? root.closest('[data-bn-schema-id]') : null;
+    var blocks = schemaEl ? [schemaEl] : Array.prototype.slice.call(root.querySelectorAll('[data-bn-schema-id]'));
+    blocks.forEach(function (block) {
+      if (!/^msbn_B_4_1$/i.test(String(block.getAttribute('data-bn-schema-id') || ''))) return;
+      Array.prototype.forEach.call(block.querySelectorAll('[data-img-field]'), function (zone) {
+        var m = /^productImg([0-9]*)$/i.exec(String(zone.getAttribute('data-img-field') || ''));
+        if (!m) return;
+        var base = Number(zone.getAttribute('data-b41-base-h'));
+        if (!isFinite(base) || base <= 0) return;
+        var raw = data['name' + m[1]];
+        var empty = raw != null && String(raw).trim() === '';
+        var nextH = (base + (empty ? MSBN_B41_NAME_EMPTY_EXTEND_PX : 0)) + 'px';
+        if (zone.style.height !== nextH) { zone.style.height = nextH; changed = true; }
+      });
+    });
+    return changed;   /* 只有高度真的變了才需要讓圖片重排 */
   }
   /* 曝品／贈品／代言人圖要在底層，但仍須位於卡片背景之上；促標、圓標、
      CTA、品名與其他資訊則全部壓在它們上方。以每個 schema 的背景與資訊層
@@ -1315,6 +1377,17 @@
        那個框現在是可以直接拖圖片進來的圖片欄位，字疊在上面反而礙眼。
        保留資料不刪，之後想恢復把這個旗標拿掉就好。 */
     if (layer.hidden) return '';
+    layer = msbnB41ExtendedProductLayer(layer, data, fieldPrefix, opts);
+    layer = msbnProductFillLayer(layer, data, fieldPrefix, opts);
+    if (e11NoLogo(layer, data, fieldPrefix, opts)) {
+      if (layer.id === 'promo') {
+        /* 沒有 LOGO：促標文字置中在整條促標底色上（促標底色 left 12、width 575） */
+        layer = Object.assign({}, layer, { left: 12, width: 575 });
+        left = 12;
+      } else if (layer.id === 'logoBg') {
+        layer = Object.assign({}, layer, { _noPlate: true });
+      }
+    }
 
     /* MSBN 圓標：文字刪光 → 不畫圓標底色（編輯畫面與下載成品都一樣） */
     if (isMsbnSchema(opts) && layer.type !== 'text' &&
@@ -1619,7 +1692,15 @@
         style.push('pointer-events:auto');
         content = '';
       } else {
-      if (imgBgColor && (!url || keepBg)) style.push('background-color:' + imgBgColor);
+      if (imgBgColor && (!url || keepBg) && !layer._noPlate) style.push('background-color:' + imgBgColor);
+      /* B-4-1：商品區「空白填色」開啟時，商品區底色改用圖片邊緣取的顏色。 */
+      if (layer._b41FillBg) {
+        style.push(layer._b41FillBg.charAt(0) === '#'
+          ? 'background-color:' + layer._b41FillBg
+          : 'background:' + layer._b41FillBg);
+        /* B-4-1：背景填色開啟時商品區四邊帶一點小圓角（圖片也跟著裁成圓角） */
+        if (/^msbn_B_4_1$/i.test(String((opts && opts._schemaId) || ''))) style.push('border-radius:6px');
+      }
       if (!url && rangePlaceholderOpacity != null) {
         style.push('opacity:' + rangePlaceholderOpacity);
       } else if (!url && layer.opacity != null) {
@@ -1898,6 +1979,13 @@
       /* 外層不接收滑鼠，避免點擊空白處時把焦點落在不可編輯的容器上；
          內層寬度覆蓋真正文字所需的範圍，實際字面仍由它接收輸入。 */
       style.push('pointer-events:none');
+      /* CTA 文字刪光後，內層是空的（高度、寬度都是 0），點虛線或按鈕根本點不到，
+         點擊會穿透到底下的背景色塊（變成開色盤）。空白的 CTA 讓外層接收點擊，
+         再由 index.html 把焦點交給內層輸入框，點按鈕任何位置都能重新打字。 */
+      if (isEmptyEditableText && /^cta\d*$/i.test(String(fieldKey))) {
+        style.push('pointer-events:auto');
+        style.push('cursor:text');
+      }
       attrs = '';
     }
     /* 讓外層工具列直接讀渲染後的 computedStyle，而不是再猜一次 schema 預設色。
@@ -1910,6 +1998,7 @@
     }
     if (renderClassNames.length) attrs += ' class="' + renderClassNames.join(' ') + '"';
     if (isEmptyEditableText) attrs += ' data-bn-empty-text="1"';
+    if (isEmptyEditableText && /^cta\d*$/i.test(String(fieldKey))) attrs += ' data-bn-empty-cta="1"';
     /* 警語跟著品名行數上下移：畫布直接編輯品名時由 syncSubareaWarnLift 即時調整。 */
     if (warnLiftInfo) {
       attrs += ' data-bn-warn-follow="' + esc(warnLiftInfo.nameField) + '"' +
@@ -1947,6 +2036,9 @@
       }
       if (rangePlaceholderOpacityOf(layer) != null && !url && !layer.boundaryOnly) attrs += ' data-bn-range-placeholder="1"';
       if (layer.boundaryOnly) attrs += ' data-bn-boundary-only="1"';
+      if (layer._b41BaseH != null) attrs += ' data-b41-base-h="' + layer._b41BaseH + '"';
+      if (layer._b41FillCover) attrs += ' data-bn-fill-cover="1"';
+      if (layer._b41FillBg) attrs += ' data-bn-fill-on="1"';
       if (shouldSampleLogoBackground(layer, urls.length)) attrs += ' data-logo-bg-sample="adaptive"';
 
       /* aspectSource + aspectBoxes：同一組曝品／贈品範圍會依曝品原圖方向一起切換。
@@ -2897,6 +2989,7 @@
     dynamicRowLayoutOf: dynamicRowLayoutOf,
     dynamicRowSignatureOf: dynamicRowSignatureOf,
     syncSubareaWarnLift: syncSubareaWarnLift,
+    syncMsbnB41ProductArea: syncMsbnB41ProductArea,
     hasSecondLineText: hasSecondLineText,
     addLineButtonHtml: addLineButtonHtml
   };

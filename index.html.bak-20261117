@@ -828,6 +828,21 @@ html,body{height:100%;background:var(--bg);color:var(--ink);
 .import-image-tool-row:first-child{margin-top:0;}
 .import-image-tool-row .import-image-tool-label{flex:1;min-width:0;margin:0;font-weight:600;color:var(--ink3);}
 .import-image-tool-actions{display:flex;gap:3px;flex-shrink:0;}
+.import-icon-empty-slot{outline:2px dashed rgba(25,111,216,.78);outline-offset:-4px;background:rgba(255,255,255,.34);}
+.import-missing-icon-pick{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;display:flex;align-items:center;justify-content:center;gap:6px;min-width:86px;max-width:calc(100% - 16px);padding:8px 10px;border:1px dashed rgba(25,111,216,.9);border-radius:10px;background:rgba(255,255,255,.92);color:#196fd8;font:800 13px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 8px 20px rgba(15,35,70,.16);cursor:pointer;pointer-events:auto;white-space:nowrap;}
+.import-missing-icon-pick:hover{background:#edf5ff;border-style:solid;box-shadow:0 10px 24px rgba(25,111,216,.22);}
+.import-icon-picker{position:absolute;z-index:99990;width:292px;max-width:calc(100vw - 24px);padding:10px;border:1px solid rgba(31,51,83,.18);border-radius:12px;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.25);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#182338;}
+.import-icon-picker[hidden]{display:none!important;}
+.import-icon-picker-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:14px;font-weight:800;}
+.import-icon-picker-close{width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:#516071;font-size:20px;line-height:1;cursor:pointer;}
+.import-icon-picker-close:hover{background:#f1f5f9;color:#0f172a;}
+.import-icon-picker-search{width:100%;box-sizing:border-box;margin-bottom:8px;padding:8px 10px;border:1px solid #d5dce7;border-radius:8px;font:600 12px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;}
+.import-icon-picker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;max-height:236px;overflow:auto;padding:1px;}
+.import-icon-picker-item{appearance:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:58px;padding:6px;border:1px solid #dbe3ef;border-radius:9px;background:#fff;cursor:pointer;color:#344154;font:700 10px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center;}
+.import-icon-picker-item:hover,.import-icon-picker-item:focus-visible{border-color:#196fd8;background:#edf5ff;outline:none;}
+.import-icon-picker-item img{width:34px;height:34px;object-fit:contain;display:block;}
+.import-icon-picker-empty{grid-column:1/-1;padding:18px 8px;text-align:center;color:#7b8794;font-size:12px;}
+.import-icon-picker-note{margin-top:8px;color:#7b8794;font-size:11px;line-height:1.4;}
 .import-tool-mini-preview{width:26px;height:26px;flex:0 0 26px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--ink3);font-size:8px;line-height:1;text-align:center;}
 .import-tool-mini-preview img{display:block;width:100%;height:100%;object-fit:contain;}
 .import-logo-bg-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:-2px 0 8px 32px;font-size:10.5px;color:var(--ink2);}
@@ -1625,6 +1640,10 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 #upload-workorder-head .upload-required-tag[hidden],.upload-required-note[hidden],#upload-start-note[hidden]{display:none;}
 .upload-required-note{margin:0 0 8px;font-size:12px;color:#c2410c;}
 #import-drop.is-required{border-color:#f0a37a;}
+/* 首頁：沒有活動頁的等級，工單與圖片可略（樣式比照「必填」） */
+.upload-card-head .upload-optional-tag{margin-left:8px;padding:1px 8px;border-radius:9px;background:#e6f2ef;color:#2f7a70;font-size:11px;font-weight:700;vertical-align:middle;}
+.upload-card-head .upload-optional-tag[hidden],.upload-optional-note[hidden]{display:none;}
+.upload-optional-note{margin:0 0 8px;font-size:12px;color:#2f7a70;}
 .nav-step.is-locked:hover{opacity:.55;}
 .nav-step.is-locked .step-badge{display:grid;background:transparent;color:inherit;font-size:10px;}
 .nav-step.is-locked .step-badge::before{content:'🔒';}
@@ -1742,8 +1761,8 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
     <button class="nav-item nav-step" data-view="bottom" data-step="bottom" title="步驟 4：吸底工具">
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12v5H6z"/><path d="M4 12h16v8H4z"/><path d="M8 12V9M16 12V9"/><path d="M8 16h8"/></svg></span><span class="lbl">吸底工具</span>
     </button>
-    <button class="nav-item nav-step" data-view="color" data-step="color" title="步驟 5：取色工具（色票）">
-      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.87 7 13 7 13s7-9.13 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="3" fill="var(--bg,#fff)" stroke="none"/></svg></span><span class="lbl">取色工具</span>
+    <button class="nav-item nav-step" data-view="color" data-step="color" title="步驟 5：活動頁配色（色票）">
+      <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.87 7 13 7 13s7-9.13 7-13a7 7 0 0 0-7-7Z"/><circle cx="12" cy="9" r="3" fill="var(--bg,#fff)" stroke="none"/></svg></span><span class="lbl">活動頁配色</span>
     </button>
     <button class="nav-item nav-step" data-step="download" data-action="package-download" data-skip-app-loading title="步驟 6：整包下載（工單＋圖片＋色票＋暫存檔）">
       <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.8 10.2 4.2 4.2 4.2-4.2"/><path d="M4 15.8V20h16v-4.2"/></svg></span><span class="lbl">整包下載</span>
@@ -7912,7 +7931,7 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 <script src="JS/dependency-loader.js?v=20261113-newboda1"></script>
 <script src="JS/render-config.js"></script>
 <script src="core/core-engine.js"></script>
-<script src="core/schema-renderer.js?v=20261114-badge1"></script>
+<script src="core/schema-renderer.js?v=20261117-b41"></script>
 <script src="shadow-module/shadow-plugin.js?v=20261019-shadow3"></script>
 <script src="JS/image-layout.js?v=20261106-display-clamp2"></script>
 <script src="JS/editor-plugin.js?v=20261019-rotate3"></script>
@@ -8215,7 +8234,7 @@ function appLoadingPulse(label) {
 /* 頁面切換不是重工作業，但常會接著初始化 iframe、字體或大型畫布。
    先以共用視窗接住切換，再由真正的載入流程覆蓋進度；一般頁面至少等一個繪製週期才淡出。 */
 function appLoadingStartView(name) {
-  var labels = { home: '首頁', generator: '工單生成器', upload: '匯入工單', import: '活動頁資源', exposure: '曝光資源', color: '取色工具', bottom: '吸底工具', maint: '維修' };
+  var labels = { home: '首頁', generator: '工單生成器', upload: '匯入工單', import: '活動頁資源', exposure: '曝光資源', color: '活動頁配色', bottom: '吸底工具', maint: '維修' };
   APP_LOADING.viewToken++;
   var token = APP_LOADING.viewToken;
   appLoadingStart('LOADING · 正在開啟' + (labels[name] || '工具'), 12, '正在準備畫面與必要資源…');
@@ -15096,6 +15115,7 @@ function auditImportShadowCanvasAssets() {
         if (!key) return part;
         result.checked++;
         var asset = importShadowAssetForCanvasValue(key);
+        if (importNoShadowAssetUrls[key] || (asset && asset.skipShadow)) return part;
         var location = String(col.header || def.name || col.blockId) + '／' + String(field.label || field.key);
         function trackShadowBase(item, geometry) {
           if (!item.shadowGeom) item.shadowGeom = geometry;
@@ -15429,7 +15449,13 @@ function reapplyImportShadowToUploads(commit) {
     if (!def || !col.data) return;
     (def.fields || []).forEach(function (field) {
       if (field.type !== 'image' || !isImportShadowFieldKey(field.key)) return;
-      splitImageList(col.data[field.key] || '').forEach(function (part) { productUsed[String(part || '').trim()] = true; });
+      splitImageList(col.data[field.key] || '').forEach(function (part) {
+        var key = String(part || '').trim();
+        if (!key || importNoShadowAssetUrls[key]) return;
+        var asset = importShadowAssetForCanvasValue(key);
+        if (asset && asset.skipShadow) return;
+        productUsed[key] = true;
+      });
     });
   });
   /* 編輯過的素材可能已換成新的 dataURL；用同一素材名稱再比一次，不能因此漏掉重烘。
@@ -15447,6 +15473,7 @@ function reapplyImportShadowToUploads(commit) {
   });
   var seenBases = new Set();
   var list = (uploadedImages || []).filter(function (img) {
+    if (img && img.skipShadow) return false;
     if (!(img && img.url && img.baseUrl)) return false;
     if (productUsed[img.url] || productUsed[img.baseUrl] || (img.logoUrl && productUsed[img.logoUrl])) return true;
     return usedNameUrls.has(img.url) || usedNameUrls.has(img.baseUrl);
@@ -16353,10 +16380,12 @@ function importLogoRefresh() {
 function importUploadStateFields(img) {
   var out = {};
   ['logoBg', 'logoUrl', 'logoMode', 'logoAuto', 'logoKey', 'shadowGeom', 'shadowKey'].forEach(function (k) { if (img[k]) out[k] = img[k]; });
+  if (img.skipShadow) out.skipShadow = true;
   return out;
 }
 function importUploadFromState(img) {
   var out = Object.assign({ name: img.name, url: img.url, baseUrl: img.baseUrl || '' }, importUploadStateFields(img));
+  if (out.skipShadow && out.url) importNoShadowAssetUrls[out.url] = true;
   importShadowGeometryFromState(out);
   return out;
 }
@@ -16372,6 +16401,7 @@ function importUploadsForBottomPersist() {
 }
 function importUploadFromPersist(img) {
   var out = Object.assign({ name: img.name, url: img.shadowUrl || img.url, baseUrl: img.orig ? img.url : '' }, importUploadStateFields(img));
+  if (out.skipShadow && out.url) importNoShadowAssetUrls[out.url] = true;
   importShadowGeometryFromState(out);
   return out;
 }
@@ -17421,6 +17451,463 @@ function isUsableImageValue(v) {
   return splitImageList(v).some(function (p) { return /^(data:|https?:|blob:)/i.test(p); });
 }
 
+var IMPORT_ICON_PICKER_FILES = [
+  'icon/icon_全站優惠券.png',
+  'icon/icon_免運.png',
+  'icon/icon_折扣_紅.png',
+  'icon/icon_折扣_黃.png',
+  'icon/icon_折扣_綠.png',
+  'icon/icon_折扣_橘.png',
+  'icon/icon_折扣_藍.png',
+  'icon/icon_店家券_紅.png',
+  'icon/icon_店家券_橘.png',
+  'icon/icon_直播_紅.png',
+  'icon/icon_直播_黃.png',
+  'icon/icon_直播_綠.png',
+  'icon/icon_直播_橘.png',
+  'icon/icon_直播_藍.png',
+  'icon/icon_商城優惠券.png',
+  'icon/icon_蝦幣.png',
+  'icon/icon_優惠券_紅.png',
+  'icon/icon_優惠券_黃.png',
+  'icon/icon_優惠券_綠.png',
+  'icon/icon_優惠券_橘.png',
+  'icon/icon_優惠券_藍.png',
+  'icon/icon_點數.png',
+  'icon/icon_禮物_紅.png',
+  'icon/icon_禮物_黃.png',
+  'icon/icon_禮物_綠.png',
+  'icon/icon_禮物_橘.png',
+  'icon/icon_禮物_藍.png',
+  'icon/icon_關注_紅.png',
+  'icon/icon_關注_黃.png',
+  'icon/icon_關注_綠.png',
+  'icon/icon_關注_橘.png',
+  'icon/icon_關注_藍.png'
+];
+var importIconPickerTarget = null;
+var importIconDataUrlCache = {};
+var importNoShadowAssetUrls = {};
+
+function importIconNameFromPath(path) {
+  var name = String(path || '').split('/').pop() || '';
+  try { name = decodeURIComponent(name); } catch (_) {}
+  return name.replace(/\.[^.]+$/, '').replace(/^icon_/, '').replace(/_/g, ' ');
+}
+function importIconFieldCanUsePicker(key, label) {
+  var text = (String(key || '') + ' ' + String(label || '')).toLowerCase();
+  if (/logo|代言|人物|簽名|endorser|signature/.test(text)) return false;
+  return true;
+}
+function firstImportIconReplaceIndex(raw) {
+  var parts = splitImageList(raw || '');
+  if (!parts.length) return 0;
+  for (var i = 0; i < parts.length; i++) {
+    if (!isUsableImageValue(parts[i])) return i;
+  }
+  return 0;
+}
+function iconFileToDataUrl(path) {
+  if (importIconDataUrlCache[path]) return Promise.resolve(importIconDataUrlCache[path]);
+  return fetch(path, { cache: 'no-store' })
+    .then(function (response) {
+      if (!response.ok) throw new Error('找不到 icon 圖片：' + path);
+      return response.blob();
+    })
+    .then(function (blob) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          importIconDataUrlCache[path] = reader.result;
+          resolve(reader.result);
+        };
+        reader.onerror = function () { reject(reader.error || new Error('icon 圖片讀取失敗')); };
+        reader.readAsDataURL(blob);
+      });
+    }).catch(function () {
+      return new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.onload = function () {
+          try {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            var dataUrl = canvas.toDataURL('image/png');
+            importIconDataUrlCache[path] = dataUrl;
+            resolve(dataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = function () { reject(new Error('icon 圖片讀取失敗：' + path)); };
+        img.src = path;
+      });
+    });
+}
+function placeImportIconPicker(el, anchor) {
+  if (!el || !anchor || !anchor.getBoundingClientRect) return;
+  var rect = anchor.getBoundingClientRect();
+  var margin = 10;
+  var width = el.offsetWidth || 292;
+  var height = el.offsetHeight || 360;
+  var left = rect.left + rect.width / 2 - width / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+  var top = rect.bottom + margin;
+  if (top + height > window.innerHeight - margin) top = Math.max(margin, rect.top - height - margin);
+  el.style.left = Math.round(left + window.scrollX) + 'px';
+  el.style.top = Math.round(top + window.scrollY) + 'px';
+}
+function renderImportIconPickerGrid(filterText) {
+  var picker = document.getElementById('import-icon-picker');
+  var grid = picker && picker.querySelector('.import-icon-picker-grid');
+  if (!grid) return;
+  var query = String(filterText || '').trim().toLowerCase();
+  var files = IMPORT_ICON_PICKER_FILES.filter(function (path) {
+    return !query || importIconNameFromPath(path).toLowerCase().indexOf(query) !== -1;
+  });
+  grid.innerHTML = files.length ? files.map(function (path) {
+    var name = importIconNameFromPath(path);
+    return '<button type="button" class="import-icon-picker-item" data-icon-path="' + esc(path) + '" title="' + esc(name) + '">' +
+      '<img src="' + esc(path) + '" alt="">' +
+      '<span>' + esc(name) + '</span>' +
+    '</button>';
+  }).join('') : '<div class="import-icon-picker-empty">沒有符合的 icon</div>';
+  grid.querySelectorAll('.import-icon-picker-item[data-icon-path]').forEach(function (btn) {
+    btn.addEventListener('click', function () { applyImportIconPickerChoice(btn.getAttribute('data-icon-path')); });
+  });
+}
+function ensureImportIconPicker() {
+  var picker = document.getElementById('import-icon-picker');
+  if (picker) return picker;
+  picker = document.createElement('div');
+  picker.id = 'import-icon-picker';
+  picker.className = 'import-icon-picker';
+  picker.hidden = true;
+  picker.innerHTML =
+    '<div class="import-icon-picker-head"><span>選擇 ICON</span><button type="button" class="import-icon-picker-close" aria-label="關閉">×</button></div>' +
+    '<input class="import-icon-picker-search" type="search" placeholder="搜尋 icon">' +
+    '<div class="import-icon-picker-grid"></div>' +
+    '<div class="import-icon-picker-note">來源：主程式 icon 資料夾。選好後會比照一般商品圖，可移動、縮放、更換與刪除。</div>';
+  document.body.appendChild(picker);
+  picker.querySelector('.import-icon-picker-close').addEventListener('click', closeImportIconPicker);
+  picker.querySelector('.import-icon-picker-search').addEventListener('input', function (e) {
+    renderImportIconPickerGrid(e.target.value);
+  });
+  return picker;
+}
+function closeImportIconPicker() {
+  var picker = document.getElementById('import-icon-picker');
+  if (picker) picker.hidden = true;
+  importIconPickerTarget = null;
+}
+function openImportIconPicker(target, anchor) {
+  importIconPickerTarget = target;
+  var picker = ensureImportIconPicker();
+  var search = picker.querySelector('.import-icon-picker-search');
+  if (search) search.value = '';
+  renderImportIconPickerGrid('');
+  picker.hidden = false;
+  placeImportIconPicker(picker, anchor);
+  setTimeout(function () { if (search) search.focus(); }, 0);
+}
+function applyImportIconPickerChoice(path) {
+  var target = importIconPickerTarget;
+  if (!target || !path) return;
+  iconFileToDataUrl(path).then(function (dataUrl) {
+    var ctx = canvasCtx(target.ctxName || 'import');
+    var col = ctx.columns()[target.idx];
+    if (!col) return;
+    var key = target.key;
+    var parts = splitImageList(col.data[key] || '');
+    if (!parts.length) parts = [''];
+    var imageIndex = Number(target.imageIndex);
+    if (!isFinite(imageIndex) || imageIndex < 0) imageIndex = firstImportIconReplaceIndex(col.data[key] || '');
+    imageIndex = Math.floor(imageIndex);
+    while (parts.length <= imageIndex) parts.push('');
+    parts[imageIndex] = dataUrl;
+    var name = importIconNameFromPath(path) + '.png';
+    importNoShadowAssetUrls[dataUrl] = true;
+    if (!uploadedImages.some(function (img) { return img.url === dataUrl; })) {
+      uploadedImages.push({ name: name, url: dataUrl, baseUrl: dataUrl, skipShadow: true });
+      renderImageGallery();
+    }
+    closeImportIconPicker();
+    setImportFieldImages(target.idx, key, parts, target.ctxName || 'import');
+  }).catch(function (err) {
+    alert('icon 圖片讀取失敗：' + (err && err.message ? err.message : err));
+  });
+}
+function importIsNoShadowIconUrl(url) {
+  var key = String(url || '').trim();
+  if (!key) return false;
+  if (importNoShadowAssetUrls[key]) return true;
+  var asset = importShadowAssetForCanvasValue(key);
+  return !!(asset && asset.skipShadow);
+}
+function importRootLocalRect(root, el) {
+  if (!root || !el || !root.getBoundingClientRect || !el.getBoundingClientRect) return null;
+  var rootRect = root.getBoundingClientRect();
+  var rect = el.getBoundingClientRect();
+  var rootW = root.offsetWidth || parseFloat(root.style && root.style.width) || rootRect.width || 0;
+  var rootH = root.offsetHeight || parseFloat(root.style && root.style.height) || rootRect.height || 0;
+  var sx = rootRect.width ? rootW / rootRect.width : 1;
+  var sy = rootRect.height ? rootH / rootRect.height : 1;
+  if (!isFinite(sx) || sx <= 0) sx = 1;
+  if (!isFinite(sy) || sy <= 0) sy = 1;
+  var left = (rect.left - rootRect.left) * sx;
+  var top = (rect.top - rootRect.top) * sy;
+  var width = rect.width * sx;
+  var height = rect.height * sy;
+  if (!(width > 0) || !(height > 0)) return null;
+  return { left: left, top: top, right: left + width, bottom: top + height, width: width, height: height };
+}
+function importVisibleLocalRect(root, el) {
+  if (!el) return null;
+  if (window.getComputedStyle) {
+    var cs = window.getComputedStyle(el);
+    if (!cs || cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return null;
+  }
+  return importRootLocalRect(root, el);
+}
+function importSafeRectInset(rect, margin) {
+  if (!rect) return null;
+  return {
+    left: rect.left + margin,
+    top: rect.top + margin,
+    right: rect.right - margin,
+    bottom: rect.bottom - margin,
+    width: Math.max(0, rect.width - margin * 2),
+    height: Math.max(0, rect.height - margin * 2)
+  };
+}
+function importRectsOverlapY(a, b) {
+  return !!(a && b && a.bottom > b.top && a.top < b.bottom);
+}
+function importSetSubareaIconImageFit(box) {
+  if (!box) return;
+  var group = box.querySelector && box.querySelector('.bn-imggroup');
+  if (group) {
+    group.style.width = '100%';
+    group.style.height = '100%';
+    group.style.alignItems = 'center';
+    group.style.justifyContent = 'center';
+    group.style.overflow = 'visible';
+  }
+  Array.prototype.forEach.call(box.querySelectorAll('img.bn-imggroup-img'), function (img) {
+    if (!importIsNoShadowIconUrl(img.getAttribute('src') || img.src)) return;
+    img.setAttribute('data-import-icon-asset', '1');
+    img.style.objectFit = 'contain';
+  });
+}
+function importSubareaIconCtaObstacles(root, box) {
+  if (!root || !root.querySelectorAll) return [];
+  var rootW = root.offsetWidth || parseFloat(root.style && root.style.width) || 0;
+  var list = [];
+  function add(el) {
+    if (!el || el === box || (box && box.contains(el)) || list.indexOf(el) !== -1) return;
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect || rect.width < 8 || rect.height < 8) return;
+    list.push(el);
+  }
+  Array.prototype.forEach.call(root.querySelectorAll('[data-theme-color-role], [data-color-field], [data-field], [data-text-field]'), function (el) {
+    var key = [
+      el.getAttribute('data-theme-color-role'),
+      el.getAttribute('data-color-field'),
+      el.getAttribute('data-field'),
+      el.getAttribute('data-text-field')
+    ].join(' ');
+    if (/cta/i.test(key)) add(el);
+  });
+  Array.prototype.forEach.call(root.children || [], function (el) {
+    if (el === box || (box && box.contains(el))) return;
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect) return;
+    var cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
+    var clip = cs ? String(cs.clipPath || '') : String(el.style && el.style.clipPath || '');
+    var radius = cs ? Math.max(
+      parseFloat(cs.borderTopLeftRadius) || 0,
+      parseFloat(cs.borderTopRightRadius) || 0,
+      parseFloat(cs.borderBottomRightRadius) || 0,
+      parseFloat(cs.borderBottomLeftRadius) || 0
+    ) : 0;
+    var centerX = (rect.left + rect.right) / 2;
+    var isRightSide = rootW ? centerX > rootW * 0.52 : true;
+    var looksLikeCtaTriangle = /polygon/i.test(clip) && isRightSide && rect.width <= 80 && rect.height <= 80;
+    var looksLikeCtaCircle = isRightSide && rect.width >= 18 && rect.width <= 92 && rect.height >= 18 && rect.height <= 92 &&
+      Math.abs(rect.width - rect.height) <= 24 && radius >= Math.min(rect.width, rect.height) * 0.35;
+    if (looksLikeCtaTriangle || looksLikeCtaCircle) add(el);
+  });
+  return list;
+}
+function importRectIntersects(a, b, gap) {
+  gap = Number(gap) || 0;
+  return !!(a && b && a.right + gap > b.left && a.left - gap < b.right && a.bottom + gap > b.top && a.top - gap < b.bottom);
+}
+function fitSubareaIconAwayFromCta(box) {
+  if (!box) return;
+  var root = box.closest && box.closest('[data-bn-schema-id]');
+  if (!root) return;
+  var obstacles = importSubareaIconCtaObstacles(root, box);
+  if (!obstacles.length) return;
+  Array.prototype.forEach.call(box.querySelectorAll('img.bn-imggroup-img[data-import-icon-asset="1"]'), function (img) {
+    if (!img || !img.getBoundingClientRect) return;
+    var currentTransform = img.style.transform || '';
+    if (img.dataset.importIconCtaFitApplied === '1' && currentTransform === (img.dataset.importIconCtaFitTransform || '')) {
+      currentTransform = img.dataset.importIconCtaFitBaseTransform || '';
+      img.style.transform = currentTransform;
+    }
+    var imgRect = img.getBoundingClientRect();
+    if (!imgRect.width || !imgRect.height) return;
+    var cx = imgRect.left + imgRect.width / 2;
+    var cy = imgRect.top + imgRect.height / 2;
+    var factor = 1;
+    obstacles.forEach(function (obstacle) {
+      var obRect = obstacle.getBoundingClientRect();
+      if (!obRect.width || !obRect.height || !importRectIntersects(imgRect, obRect, 3)) return;
+      var limits = [];
+      if (obRect.left >= cx) limits.push((obRect.left - 3 - cx) / (imgRect.width / 2));
+      else if (obRect.right <= cx) limits.push((cx - obRect.right - 3) / (imgRect.width / 2));
+      if (obRect.top >= cy) limits.push((obRect.top - 3 - cy) / (imgRect.height / 2));
+      else if (obRect.bottom <= cy) limits.push((cy - obRect.bottom - 3) / (imgRect.height / 2));
+      limits = limits.filter(function (v) { return isFinite(v) && v > 0; });
+      if (limits.length) factor = Math.min(factor, Math.max(0.05, Math.min.apply(Math, limits)));
+      else factor = Math.min(factor, 0.78);
+    });
+    if (factor < 0.995) {
+      factor = Math.max(0.05, Math.min(1, factor));
+      var nextTransform = (currentTransform ? currentTransform + ' ' : '') + 'scale(' + (Math.floor(factor * 10000) / 10000) + ')';
+      img.style.transformOrigin = 'center center';
+      img.style.transform = nextTransform;
+      img.dataset.importIconCtaFitApplied = '1';
+      img.dataset.importIconCtaFitBaseTransform = currentTransform;
+      img.dataset.importIconCtaFitTransform = nextTransform;
+    } else {
+      delete img.dataset.importIconCtaFitApplied;
+      delete img.dataset.importIconCtaFitBaseTransform;
+      delete img.dataset.importIconCtaFitTransform;
+    }
+  });
+}
+function scheduleSubareaIconCtaFit(box) {
+  if (!box) return;
+  var run = function () { fitSubareaIconAwayFromCta(box); };
+  if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(run); });
+  else setTimeout(run, 32);
+}
+function refreshSubareaIconLayout(box) {
+  if (!box || !window.BNImageLayout || typeof BNImageLayout.refreshEditedImage !== 'function') return;
+  Array.prototype.forEach.call(box.querySelectorAll('img.bn-imggroup-img[data-import-icon-asset="1"]'), function (img) {
+    var refresh = function () {
+      BNImageLayout.refreshEditedImage(img, { reflow: true, resetSlots: true });
+      if (typeof BNImageLayout.refreshTransformControls === 'function') BNImageLayout.refreshTransformControls();
+      scheduleSubareaIconCtaFit(box);
+    };
+    if (img.complete && img.naturalWidth) refresh();
+    else img.addEventListener('load', refresh, { once: true });
+  });
+}
+function applySubareaIconPlacementZone(box) {
+  if (!box) return;
+  var root = box.closest && box.closest('[data-bn-schema-id]');
+  if (!root) return;
+  var rootW = root.offsetWidth || parseFloat(root.style && root.style.width) || 0;
+  var rootH = root.offsetHeight || parseFloat(root.style && root.style.height) || 0;
+  if (!(rootW > 0) || !(rootH > 0)) return;
+  var margin = Math.max(6, Math.min(12, Math.round(Math.min(rootW, rootH) * 0.025)));
+  var card = root.querySelector('[data-color-field="bgColor"]') || root.querySelector('[data-color-field*="card"]');
+  var baseRect = importVisibleLocalRect(root, card) || { left: 0, top: 0, right: rootW, bottom: rootH, width: rootW, height: rootH };
+  var safe = importSafeRectInset(baseRect, margin) || baseRect;
+  var contentEls = Array.prototype.slice.call(root.querySelectorAll('[data-field], [data-text-field], [data-color-field]'));
+  contentEls.forEach(function (el) {
+    if (box.contains(el)) return;
+    var key = String(el.getAttribute('data-field') || el.getAttribute('data-text-field') || el.getAttribute('data-color-field') || '');
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect) return;
+    if (/(promo|title|headline|heading|logo)/i.test(key) && rect.top < rootH * 0.42) {
+      safe.top = Math.max(safe.top, rect.bottom + margin);
+    }
+    if (/(name|warn|desc|description|subtitle|note|notice|caption)/i.test(key) && rect.top > rootH * 0.42) {
+      safe.bottom = Math.min(safe.bottom, rect.top - margin);
+    }
+  });
+  var verticalBand = { top: safe.top, bottom: safe.bottom };
+  contentEls.forEach(function (el) {
+    if (box.contains(el)) return;
+    var key = String(el.getAttribute('data-field') || el.getAttribute('data-text-field') || el.getAttribute('data-color-field') || '');
+    if (!/(badge|circle|round|sticker|coupon|tag)/i.test(key)) return;
+    var rect = importVisibleLocalRect(root, el);
+    if (!rect || !importRectsOverlapY(verticalBand, rect)) return;
+    if ((rect.left + rect.right) / 2 < (safe.left + safe.right) / 2) safe.left = Math.max(safe.left, rect.right + margin);
+    else safe.right = Math.min(safe.right, rect.left - margin);
+  });
+  if (!(safe.right - safe.left > 24) || !(safe.bottom - safe.top > 24)) {
+    safe = importSafeRectInset(baseRect, margin) || baseRect;
+  }
+  box.setAttribute('data-image-boundary', 'own');
+  box.setAttribute('data-import-icon-zone', 'subarea-center');
+  box.style.left = Math.round(safe.left) + 'px';
+  box.style.top = Math.round(safe.top) + 'px';
+  box.style.width = Math.max(24, Math.round(safe.right - safe.left)) + 'px';
+  box.style.height = Math.max(24, Math.round(safe.bottom - safe.top)) + 'px';
+  box.style.background = 'transparent';
+  box.style.overflow = 'visible';
+  box.style.clipPath = 'none';
+  importSetSubareaIconImageFit(box);
+  refreshSubareaIconLayout(box);
+}
+function decorateImportPlacedIconImages(mountEl, col, ctxName) {
+  if (!mountEl || !col || !col.data || ctxName !== 'import') return;
+  var isSubarea = /^subarea_/i.test(String(col.blockId || ''));
+  Array.prototype.forEach.call(mountEl.querySelectorAll('[data-img-field]'), function (box) {
+    var imgs = Array.prototype.slice.call(box.querySelectorAll('img.bn-imggroup-img'));
+    if (!imgs.length) return;
+    var hasIcon = imgs.some(function (img) {
+      return importIsNoShadowIconUrl(img.getAttribute('src') || img.src);
+    });
+    if (!hasIcon) return;
+    box.setAttribute('data-import-icon-asset', '1');
+    imgs.forEach(function (img) {
+      if (importIsNoShadowIconUrl(img.getAttribute('src') || img.src)) img.setAttribute('data-import-icon-asset', '1');
+    });
+    if (isSubarea) applySubareaIconPlacementZone(box);
+  });
+}
+function decorateImportMissingIconPickers(mountEl, col, idx, ctxName) {
+  if (!mountEl || !col || !col.data || ctxName !== 'import') return;
+  decorateImportPlacedIconImages(mountEl, col, ctxName);
+  var def = BNCore.getBlock(col.blockId);
+  var fieldLabels = {};
+  (def && def.fields || []).forEach(function (f) { if (f.type === 'image') fieldLabels[f.key] = f.label || f.key; });
+  mountEl.querySelectorAll('.import-missing-icon-pick').forEach(function (btn) { btn.remove(); });
+  mountEl.querySelectorAll('.import-icon-empty-slot').forEach(function (box) { box.classList.remove('import-icon-empty-slot'); });
+  Array.prototype.forEach.call(mountEl.querySelectorAll('[data-img-field]'), function (box) {
+    if (box.hasAttribute('data-bn-boundary-only')) return;
+    var key = box.getAttribute('data-img-field') || '';
+    if (!key || !(key in fieldLabels)) return;
+    if (!importIconFieldCanUsePicker(key, fieldLabels[key])) return;
+    var raw = col.data[key] || '';
+    if (isUsableImageValue(raw) || box.querySelector('img.bn-imggroup-img')) return;
+    box.classList.add('import-icon-empty-slot');
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'import-missing-icon-pick';
+    btn.innerHTML = lineIcon('image') + '<span>選擇 ICON</span>';
+    btn.title = '從 icon 資料夾選一張圖放進這個欄位';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openImportIconPicker({
+        idx: idx,
+        key: key,
+        imageIndex: firstImportIconReplaceIndex(raw),
+        ctxName: ctxName
+      }, box);
+    });
+    box.appendChild(btn);
+  });
+}
+
 /* 圖片欄位的「✏️ 編輯」：
    找到畫布上目前實際渲染出來的<img>，交給外掛編輯器(JS/editor-plugin.js)處理
    （裁切／去背／擦除／影子）。外掛編輯完成後會直接把新結果寫進那個<img>的
@@ -17809,6 +18296,7 @@ function rerenderCanvasMount(ctxName, idx) {
   if (ctxName === 'maint') applyDynamicStageSize(mount, col);
   if (ctxName === 'preview') resizePreviewAllMount(mount, col, idx);
   bindCanvasInteractions(mount, col, idx, ctxName);
+  decorateImportMissingIconPickers(mount, col, idx, ctxName);
   return mount;
 }
 
@@ -18290,13 +18778,30 @@ function writeSharedCanvasBg(hex) {
   try { prevBg = String(localStorage.getItem(SHARED_CANVAS_BG_KEY) || '').toLowerCase(); } catch (e) {}
   try { localStorage.setItem(SHARED_CANVAS_BG_KEY, hex); } catch (e) {}
   /* 背景換了，手動指定的主標／副標色改回交給自動規則 */
-  if (prevBg && prevBg !== String(hex).toLowerCase()) clearSharedTextManual();
+  if (prevBg && prevBg !== String(hex).toLowerCase()) {
+    clearSharedTextManual();
+    bodaColorLogPush('底色', prevBg + ' → ' + String(hex).toLowerCase(), (new Error().stack.split('\n')[2] || '').trim().replace(/^at\s+/, '').replace(/\s*\(.*$/, ''));
+  }
   return true;
 }
 /* 2026-11-14：記住主標／副標是不是使用者手動指定的（曝光資源手動改色、取色工具手動選）。
    取色工具開啟時會依背景自動算一組主標／副標並送回來；手動指定過的就不能被這組自動色蓋掉，
    改成把手動色送回取色工具顯示。 */
 var SHARED_TEXT_MANUAL_KEY = 'wo_shared_text_manual_v1';
+/* 配色變動紀錄（除錯用）：在主控台輸入 bodaColorLog() 可看到最近 60 筆共用色的變動、來源與當時所在頁面 */
+var _bodaColorLog = [];
+function bodaColorLogPush(what, value, source) {
+  try {
+    var step = (typeof currentWorkflowStepKey === 'function' && currentWorkflowStepKey()) || '';
+    var t = new Date();
+    _bodaColorLog.push({ time: t.toTimeString().slice(0, 8), page: step, what: what, value: value, source: source || '' });
+    if (_bodaColorLog.length > 60) _bodaColorLog.shift();
+  } catch (e) {}
+}
+window.bodaColorLog = function () {
+  try { console.table(_bodaColorLog); } catch (e) {}
+  return _bodaColorLog.map(function (r) { return r.time + ' [' + r.page + '] ' + r.what + ' → ' + r.value + '（' + r.source + '）'; }).join('\n');
+};
 function readSharedTextManual() {
   try { return JSON.parse(localStorage.getItem(SHARED_TEXT_MANUAL_KEY) || '{}') || {}; } catch (e) { return {}; }
 }
@@ -18558,6 +19063,35 @@ function rememberExposureAssetSig(sig) {
   _exposureOverviewAssetSentSig = sig;
   try { if (sig) localStorage.setItem(EXPOSURE_ASSET_SIG_KEY, sig); else localStorage.removeItem(EXPOSURE_ASSET_SIG_KEY); } catch (e) {}
 }
+function exposureOverviewAssetSigPart(asset) {
+  if (!asset) return '';
+  return [
+    asset.name || '',
+    importShadowFingerprint(asset.src || ''),
+    importShadowFingerprint(asset.baseSrc || ''),
+    importShadowFingerprint(asset.logoSrc || ''),
+    asset.logoBg || ''
+  ].join('|');
+}
+function exposureOverviewAssetSigPartsFromStored(raw) {
+  if (!raw) return null;
+  try {
+    var parsed = JSON.parse(raw);
+    if (parsed && parsed.v === 2) return parsed;
+    /* 舊版簽章格式：
+       [logoNames, logoAssets.length, productNames, productAssets.length, endorserNames, endorserAssets.length, endorserNote]
+       轉成分類簽章，讓新版第一次重送 LOGO 時，不會誤判商品也變了而覆蓋商品位置。 */
+    if (Array.isArray(parsed)) {
+      return {
+        v: 2,
+        logo: JSON.stringify([parsed[0] || [], parsed[1] || 0]),
+        product: JSON.stringify([parsed[2] || [], parsed[3] || 0]),
+        endorser: JSON.stringify([parsed[4] || [], parsed[5] || 0, parsed[6] || ''])
+      };
+    }
+  } catch (e) {}
+  return null;
+}
 function pushExposureOverviewAssets(payload, force) {
   payload = payload || readSharedExposureOverviewText();
   if (!payload) return false;
@@ -18569,8 +19103,19 @@ function pushExposureOverviewAssets(payload, force) {
   var endorserNote = String(payload.endorserNote == null ? '' : payload.endorserNote).trim();
   if (!logoNames.length && !productNames.length && !endorserNames.length && !endorserNote) return false;
   var endorserAssets = exposureEndorserAssets(endorserNames);
-  var sentSig = JSON.stringify([logoNames, logoAssets.length, productNames, productAssets.length,
-    endorserNames, endorserAssets.length, endorserNote]);
+  /* 2026-11-17 修正：曝光 LOGO 同步不能只看「檔名＋數量」。
+     例如工單總覽寫「順發」、圖片資料夾後來才讀到順發.png，或暫存／舊狀態曾記過同名同數量時，
+     只用數量會被判定已送過，導致曝光資源沒有重新套用真正的 LOGO 圖。
+     LOGO 改成簽章包含實際圖片內容指紋；檔名相同但圖片內容補齊／改變時會重新推送。
+     商品則維持「檔名＋找到幾張」判斷，避免換背景重烘影子時又整組重送商品、覆蓋使用者已調整的位置大小。 */
+  var logoSig = JSON.stringify([logoNames, logoAssets.map(exposureOverviewAssetSigPart)]);
+  var productSig = JSON.stringify([productNames, productAssets.length]);
+  var endorserSig = JSON.stringify([endorserNames, endorserAssets.length, endorserNote]);
+  var sentSig = JSON.stringify({ v: 2, logo: logoSig, product: productSig, endorser: endorserSig });
+  var oldSigParts = exposureOverviewAssetSigPartsFromStored(_exposureOverviewAssetSentSig);
+  var logoChanged = force || !oldSigParts || oldSigParts.logo !== logoSig;
+  var productChanged = force || !oldSigParts || oldSigParts.product !== productSig;
+  var endorserChanged = force || !oldSigParts || oldSigParts.endorser !== endorserSig;
   if (!force && sentSig === _exposureOverviewAssetSentSig) return false;
   if (!_exposureFrameReadyForAssets) return false;   /* 曝光資源載入後會再呼叫一次 */
   rememberExposureAssetSig(sentSig);
@@ -18583,14 +19128,14 @@ function pushExposureOverviewAssets(payload, force) {
       }),
       products: productAssets,
       /* LOGO 仍等工單列出的檔案全數讀完才取代，避免載入中途暫時清空。 */
-      replaceLogos: logoNames.length > 0 && logoAssets.length === logoNames.length,
+      replaceLogos: logoChanged && logoNames.length > 0 && logoAssets.length === logoNames.length,
       /* 工單可列 1～3 品，但使用者可能只上傳其中幾張。只要有成功命中的商品就先送進曝光資源；
          其他圖片後續讀完時 handleImageFiles 會再推送完整清單。 */
-      replaceProducts: productNames.length > 0 && productAssets.length > 0,
+      replaceProducts: productChanged && productNames.length > 0 && productAssets.length > 0,
       /* 代言人照＋簽名檔：照工單欄位順序送，曝光資源再依檔名／圖片內容分辨哪張是照片、哪張是簽名。
          只找到其中一張也先送；另一張讀完後簽章不同會再套一次。 */
       endorsers: endorserAssets,
-      replaceEndorser: endorserAssets.length > 0,
+      replaceEndorser: endorserChanged && endorserAssets.length > 0,
       endorserNote: endorserNote
     }
   };
@@ -18823,6 +19368,12 @@ function writeSharedExposureTextPalette(palette) {
     if (/^#[0-9a-fA-F]{6}$/.test(palette[key] || '')) out[key] = palette[key];
   });
   if (!Object.keys(out).length) return false;
+  ['mainText', 'subText'].forEach(function (k) {
+    if (out[k] && String(out[k]).toLowerCase() !== String(current[k] || '').toLowerCase() && typeof bodaColorLogPush === 'function') {
+      bodaColorLogPush(k === 'mainText' ? '共用主標' : '共用副標', String(current[k] || '（無）').toLowerCase() + ' → ' + String(out[k]).toLowerCase(),
+        (new Error().stack.split('\n')[2] || '').trim().replace(/^at\s+/, '').replace(/\s*\(.*$/, ''));
+    }
+  });
   try { localStorage.setItem(SHARED_EXPOSURE_TEXT_PALETTE_KEY, JSON.stringify(out)); } catch (e) {}
   if (/^#[0-9a-fA-F]{6}$/.test(out.subText || '')) {
     try { localStorage.setItem(SHARED_EXPOSURE_SUB_TEXT_COLOR_KEY, out.subText); } catch (e) {}
@@ -19207,7 +19758,8 @@ function pushMainTextColorToColorTool(hex, options) {
 function applySharedMainTextColor(hex, source) {
   hex = normalizeSharedHexColor(hex);
   if (!hex) return false;
-  if (keepManualSharedText('mainText', hex, source)) return false;
+  if (keepManualSharedText('mainText', hex, source)) { bodaColorLogPush('主標（擋下自動色）', hex, source); return false; }
+  bodaColorLogPush('主標', hex, source);
   /* 品牌名跟主標同一組：曝光資源的品牌色原本就等於主標（沒有另外指定）時，一起換。
      要在任何寫入共用值之前讀「改之前」的主標（曝光資源手動改色時，它自己的主標已經是新色）。 */
   var prevShared = readSharedExposureTextPalette() || {};
@@ -19256,7 +19808,8 @@ function applySharedMainTextColor(hex, source) {
 function applySharedSubTextColor(hex, source) {
   hex = normalizeSharedHexColor(hex);
   if (!hex) return false;
-  if (keepManualSharedText('subText', hex, source)) return false;
+  if (keepManualSharedText('subText', hex, source)) { bodaColorLogPush('副標（擋下自動色）', hex, source); return false; }
+  bodaColorLogPush('副標', hex, source);
   /* 日期跟副標同一組：曝光資源的日期原本就等於副標（沒有另外指定）時，一起換。 */
   var prevShared = readSharedExposureTextPalette() || {};
   var liveBefore = exposureLiveTextPalette();
@@ -21236,6 +21789,7 @@ function renderImportColumns(columns, skipPreviewRerender) {
     if (mountEl) {
       mountEl.innerHTML = BNCore.renderInstance(col.blockId, col.data, importRenderOpts(true, 'import', col));
       bindCanvasInteractions(mountEl, col, idx, 'import');
+      decorateImportMissingIconPickers(mountEl, col, idx, 'import');
     }
   });
 
@@ -24006,6 +24560,124 @@ function parseLargeJsonBlob(blob, onProgress, chunkSize) {
   if (!size) return Promise.reject(new Error('暫存檔是空的（0 位元組）'));
   return readNext();
 }
+/* 匯入新的 xlsx 工單前先做一次「不重新整理頁面」的乾淨重置。
+   使用者明確要求：工單匯入時，先重置，再載入工單資料。
+   注意：這只套用 xlsx 工單；上傳 wo_import_snapshot 暫存檔時不能先清，否則會把要還原的內容洗掉。 */
+var WORKORDER_IMPORT_RESET_KEEP_KEYS = { 'bn-layouts': 1, 'bn-layout-selection-version': 1, 'bn_feedback_draft_v2': 1, 'jbp_whatsnew_seen': 1,
+  /* 2026-11-17：新手導覽的「看過了」與進行中狀態不能被匯入工單清掉，否則每匯入一次工單，下次開啟又會自動跑導覽 */
+  'boda_onboarding_tour_v1': 1, 'boda_tour_resume_after_reset': 1, 'boda_tour_section': 1 };
+var WORKORDER_IMPORT_RESET_IDB = ['boda-import-persist', 'boda-bottom-persist', 'bn_editor_state_db', 'hbn-color-tool'];
+function isWorkorderImportResetToolKey(key) {
+  return /^(wo_|bn|boda|hbn-)/i.test(String(key || ''));
+}
+function clearWorkorderImportBrowserStorage() {
+  [window.localStorage, window.sessionStorage].forEach(function (store) {
+    if (!store) return;
+    try {
+      Object.keys(store).forEach(function (key) {
+        if (isWorkorderImportResetToolKey(key) && !WORKORDER_IMPORT_RESET_KEEP_KEYS[key]) store.removeItem(key);
+      });
+    } catch (e) {}
+  });
+  /* 版位清單保留 id／檔名對照；只清掉使用者勾選結果，避免舊暫存勾選蓋過新工單。 */
+  try {
+    var raw = localStorage.getItem('bn-layouts');
+    if (raw) {
+      var list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        list.forEach(function (layout) { if (layout && Object.prototype.hasOwnProperty.call(layout, 'checked')) delete layout.checked; });
+        localStorage.setItem('bn-layouts', JSON.stringify(list));
+      }
+    }
+  } catch (e) {}
+}
+function deleteWorkorderImportDatabase(name) {
+  return new Promise(function (done) {
+    try {
+      var req = indexedDB.deleteDatabase(name);
+      req.onsuccess = req.onerror = req.onblocked = function () { done(); };
+    } catch (e) { done(); }
+  });
+}
+function resetBeforeWorkorderImport() {
+  appLoadingUpdate(28, 'LOADING · 匯入工單', '正在重置上一份工單與各工具暫存…', 38);
+  try { window.__bodaResetting = true; } catch (e) {}
+  try { importPersistDisabled = true; } catch (e) {}
+  try { clearTimeout(importStateSaveTimer); } catch (e) {}
+  try { clearTimeout(bottomPersistTimer); } catch (e) {}
+  try {
+    var exposureFrame = document.getElementById('exposure-frame');
+    var exposureWin = exposureFrame && exposureFrame.contentWindow;
+    if (exposureWin) {
+      exposureWin._bnClearingState = true;
+      clearTimeout(exposureWin._bnSaveTimer);
+    }
+    /* 若曝光資源已載入，先卸下 iframe，關閉它對 IndexedDB 的連線；下一次進曝光頁會重新載入。 */
+    if (exposureFrame && exposureFrame.getAttribute('src')) exposureFrame.src = 'about:blank';
+    exposureLoaded = false;
+    _exposureFrameReadyForAssets = false;
+  } catch (e) {}
+  try {
+    var colorFrame = document.getElementById('color-frame');
+    if (colorFrame && colorFrame.getAttribute('src')) colorFrame.src = 'about:blank';
+    colorToolLoaded = false;
+  } catch (e) {}
+
+  clearWorkorderImportBrowserStorage();
+  return Promise.all(WORKORDER_IMPORT_RESET_IDB.map(deleteWorkorderImportDatabase)).then(function () {
+    clearWorkorderImportBrowserStorage();
+    currentImportColumns = [];
+    uploadedImages = [];
+    currentImportWorkbook = null;
+    currentImportWorkbookName = '';
+    currentImportActivityName = '';
+    currentImportSource = '';
+    currentGeneratorSignature = '';
+    currentImportedWorkOrderSpec = null;
+    currentImportHasBottomWorkOrder = false;
+    latestBottomWorkOrder = null;
+    importBottomPreviewResult = null;
+    bottomSharedStateJson = '';
+    bottomLastEditedStateJson = '';
+    bottomGeneratorStateJson = '';
+    bottomStandaloneStateJson = '';
+    try { if (typeof rememberExposureAssetSig === 'function') rememberExposureAssetSig(''); } catch (e) {}
+    try { if (window.BNImageLayout && typeof BNImageLayout.hideTransformControls === 'function') BNImageLayout.hideTransformControls(); } catch (e) {}
+    try { if (window.BNImageLayout && typeof BNImageLayout.setWeights === 'function') BNImageLayout.setWeights({}); } catch (e) {}
+    try { if (window.BNImageLayout && typeof BNImageLayout.setOffsets === 'function') BNImageLayout.setOffsets({}); } catch (e) {}
+    try { beginImportImageLayoutDocument(false); } catch (e) {}
+    IMPORT_COLOR_ITEMS.forEach(function (it) { importTheme[it.key] = ''; });
+    importTheme.endorserText = '';
+    importTheme.bgAuto = false;
+    try { resetWorkflowStatus(); } catch (e) {}
+    try { if (typeof window.bodaResetUploadLevelChoice === 'function') window.bodaResetUploadLevelChoice(); } catch (e) {}
+    try { if (typeof window.bodaMarkUploadReady === 'function') { window.bodaMarkUploadReady('workorder', false); window.bodaMarkUploadReady('snapshot', false); } } catch (e) {}
+    try { setUploadStepState('import-drop', 'idle', ''); } catch (e) {}
+    try { setUploadStepState('import-img-drop', 'idle', ''); } catch (e) {}
+    try { renderImportColumns(currentImportColumns); } catch (e) {}
+    try { renderImageGallery(); } catch (e) {}
+    try { renderUploadExposurePlacementStatus(null, null); } catch (e) {}
+    try { hideImportBottomPreview(); } catch (e) {}
+    try { broadcastBottomImageAssets(); } catch (e) {}
+    try {
+      var frame = document.getElementById('exposure-frame');
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage({
+          type: 'wo-workorder-overview-assets',
+          assets: { logos: [], products: [], endorsers: [], endorserNote: '', replaceLogos: true, replaceProducts: true, replaceEndorser: true }
+        }, '*');
+      }
+    } catch (e) {}
+    importPersistDisabled = false;
+    window.__bodaResetting = false;
+    appLoadingUpdate(38, 'LOADING · 匯入工單', '重置完成，正在解析新工單…', 45);
+  }, function () {
+    importPersistDisabled = false;
+    window.__bodaResetting = false;
+    appLoadingUpdate(38, 'LOADING · 匯入工單', '重置完成，正在解析新工單…', 45);
+  });
+}
+
 /* 讀進來的 JSON：匯入暫存檔就還原，否則當作本工具的 JSON 工單。 */
 function applyImportedJsonValue(parsed) {
   currentImportWorkbook = null;
@@ -24061,7 +24733,9 @@ function handleImportFile(file) {
       } else {
         /* 同一份工單也交給吸底工具原本的 WorkOrderImporter；如果使用者尚未開啟
            「吸底」頁簽，先暫存在記憶體，第一次開啟時再自動帶入。 */
-        parseImportXlsx(reader.result, { filename: file.name }).then(function (raw) {
+        resetBeforeWorkorderImport().then(function () {
+          return parseImportXlsx(reader.result, { filename: file.name });
+        }).then(function (raw) {
           /* 成功與否由 afterImportParsed 顯示（有沒有讀到版位）。 */
           /* 新工單＝新的一輪製作流程：左側各步驟的完成／略過狀態重設。 */
           if (typeof resetWorkflowStatus === 'function') resetWorkflowStatus();
@@ -24119,7 +24793,156 @@ function inlineBlobUrls(value) {
   })).then(function (converted) { return converted.join(','); });
 }
 
+var exposureSnapshotRequestSeq = 0;
+var exposureSnapshotRequestWaiters = {};
+var exposureSnapshotApplySeq = 0;
+var pendingExposureSnapshotState = null;
+var pendingExposureSnapshotApplyAttempts = 0;
+function exposureFrameWindowForSnapshot() {
+  var frame = document.getElementById('exposure-frame');
+  return frame && frame.contentWindow ? frame.contentWindow : null;
+}
+function collectExposureStateFromFrameDirect(win) {
+  var plugin = null;
+  try { plugin = win && win._bnStatePlugin; } catch (e) { plugin = null; }
+  if (!plugin || typeof plugin.collect !== 'function') return null;
+  var syncPromise = Promise.resolve();
+  try {
+    if (typeof win._bnSyncLayoutSnapshot === 'function') syncPromise = win._bnSyncLayoutSnapshot(900);
+  } catch (e) { syncPromise = Promise.resolve(); }
+  return Promise.resolve(syncPromise).then(function () {
+    return plugin.collect();
+  }).catch(function (err) {
+    console.warn('[BODA] 曝光資源暫存收集失敗：', err);
+    return null;
+  });
+}
+function requestExposureStateForSnapshot() {
+  if (pendingExposureSnapshotState) return Promise.resolve(pendingExposureSnapshotState);
+  var win = exposureFrameWindowForSnapshot();
+  if (!exposureLoaded || !win) return Promise.resolve(null);
+  var direct = collectExposureStateFromFrameDirect(win);
+  if (direct) return direct;
+  return new Promise(function (resolve) {
+    var requestId = 'exposure-snapshot-' + Date.now().toString(36) + '-' + (++exposureSnapshotRequestSeq);
+    var timer = setTimeout(function () {
+      if (!exposureSnapshotRequestWaiters[requestId]) return;
+      delete exposureSnapshotRequestWaiters[requestId];
+      resolve(null);
+    }, 6500);
+    exposureSnapshotRequestWaiters[requestId] = {
+      resolve: function (state) {
+        clearTimeout(timer);
+        resolve(state || null);
+      }
+    };
+    try {
+      win.postMessage({ source: 'BODA_PARENT', type: 'BODA_EXPOSURE_STATE_REQUEST', requestId: requestId }, '*');
+    } catch (e) {
+      clearTimeout(timer);
+      delete exposureSnapshotRequestWaiters[requestId];
+      resolve(null);
+    }
+  });
+}
+function schedulePendingExposureSnapshotStateApply(delay) {
+  setTimeout(tryApplyPendingExposureSnapshotState, Math.max(0, Number(delay) || 0));
+}
+function queueExposureSnapshotStateApply(state, reason) {
+  if (!state || typeof state !== 'object') return;
+  pendingExposureSnapshotState = state;
+  pendingExposureSnapshotApplyAttempts = 0;
+  [0, 700, 1700, 3200].forEach(schedulePendingExposureSnapshotStateApply);
+}
+function tryApplyPendingExposureSnapshotState() {
+  if (!pendingExposureSnapshotState) return false;
+  var win = exposureFrameWindowForSnapshot();
+  if (!win) return false;
+  pendingExposureSnapshotApplyAttempts++;
+  try {
+    var plugin = win._bnStatePlugin;
+    if (plugin && typeof plugin.apply === 'function') {
+      plugin.apply(pendingExposureSnapshotState, { source: 'upload', forceColors: true });
+      if (typeof plugin.save === 'function') setTimeout(plugin.save, 2300);
+      pendingExposureSnapshotState = null;
+      pendingExposureSnapshotApplyAttempts = 0;
+      return true;
+    }
+  } catch (e) { /* 跨來源時改走 postMessage */ }
+  try {
+    win.postMessage({
+      source: 'BODA_PARENT',
+      type: 'BODA_EXPOSURE_STATE_APPLY',
+      requestId: 'exposure-apply-' + Date.now().toString(36) + '-' + (++exposureSnapshotApplySeq),
+      state: pendingExposureSnapshotState
+    }, '*');
+    if (pendingExposureSnapshotState && pendingExposureSnapshotApplyAttempts < 6) {
+      schedulePendingExposureSnapshotStateApply(1200);
+    }
+    return true;
+  } catch (err) {
+    if (pendingExposureSnapshotApplyAttempts < 6) schedulePendingExposureSnapshotStateApply(1200);
+    return false;
+  }
+}
+window.addEventListener('message', function (event) {
+  var msg = event && event.data || {};
+  if (!msg || msg.source !== 'BODA_EXPOSURE') return;
+  var frame = document.getElementById('exposure-frame');
+  if (frame && frame.contentWindow && event.source !== frame.contentWindow) return;
+  if (msg.type === 'BODA_EXPOSURE_STATE_RESPONSE') {
+    var waiter = exposureSnapshotRequestWaiters[msg.requestId || ''];
+    if (!waiter) return;
+    delete exposureSnapshotRequestWaiters[msg.requestId || ''];
+    waiter.resolve(msg.ok ? msg.state : null);
+  } else if (msg.type === 'BODA_EXPOSURE_STATE_APPLIED') {
+    if (msg.ok) {
+      pendingExposureSnapshotState = null;
+      pendingExposureSnapshotApplyAttempts = 0;
+    } else if (pendingExposureSnapshotState && pendingExposureSnapshotApplyAttempts < 6) {
+      schedulePendingExposureSnapshotStateApply(1200);
+    }
+  }
+});
+function syncImportIconDomStateToColumns() {
+  if (!currentImportColumns || !currentImportColumns.length) return;
+  var addedAsset = false;
+  Array.prototype.forEach.call(document.querySelectorAll('[id^="imp-mount-"]'), function (mount) {
+    var m = /^imp-mount-(\d+)$/i.exec(mount.id || '');
+    var idx = m ? Number(m[1]) : NaN;
+    var col = Number.isFinite(idx) ? currentImportColumns[idx] : null;
+    if (!col || !col.data) return;
+    Array.prototype.forEach.call(mount.querySelectorAll('[data-img-field]'), function (box) {
+      var key = box.getAttribute('data-img-field') || '';
+      if (!key) return;
+      var imgs = Array.prototype.slice.call(box.querySelectorAll('img.bn-imggroup-img'));
+      var iconImgs = imgs.filter(function (img) {
+        return img.getAttribute('data-import-icon-asset') === '1' ||
+          importIsNoShadowIconUrl(img.getAttribute('src') || img.src);
+      });
+      if (!iconImgs.length) return;
+      var urls = imgs.map(function (img) { return img.getAttribute('src') || img.src || ''; })
+        .filter(Boolean);
+      if (!urls.length) return;
+      iconImgs.forEach(function (img) {
+        var url = img.getAttribute('src') || img.src || '';
+        if (!url) return;
+        importNoShadowAssetUrls[url] = true;
+        if (!uploadedImages.some(function (asset) { return asset && sameImageAsset(asset.url, url); })) {
+          uploadedImages.push({ name: img.getAttribute('alt') || img.getAttribute('title') || 'ICON.png', url: url, baseUrl: url, skipShadow: true });
+          addedAsset = true;
+        }
+      });
+      var current = splitImageList(col.data[key] || '').join(',');
+      var next = urls.join(',');
+      if (next && next !== current) col.data[key] = next;
+    });
+  });
+  if (addedAsset) renderImageGallery();
+}
+
 function buildImportSnapshot() {
+  try { syncImportIconDomStateToColumns(); } catch (e) { console.warn('[BODA] ICON 暫存回寫失敗：', e); }
   appLoadingUpdate(84, 'LOADING · 建立暫存檔', '正在轉換圖片與欄位資料…');
   var columnJobs = currentImportColumns.map(function (col) {
     var dataCopy = {};
@@ -24146,11 +24969,12 @@ function buildImportSnapshot() {
     return (img.url.indexOf('blob:') === 0 ? urlToDataUrl(img.url).catch(function () { return img.url; }) : Promise.resolve(img.url))
       .then(function (u) { return Object.assign({ name: img.name, url: u, baseUrl: img.baseUrl || '' }, importUploadStateFields(img)); }); /* baseUrl＝編輯前的原圖，之後再編輯可以從原圖重來 */
   });
-  return Promise.all([Promise.all(columnJobs), Promise.all(imageJobs)]).then(function (res) {
+  var exposureStateJob = requestExposureStateForSnapshot();
+  return Promise.all([Promise.all(columnJobs), Promise.all(imageJobs), exposureStateJob]).then(function (res) {
     appLoadingUpdate(94, 'LOADING · 建立暫存檔', '資料整理完成，正在輸出暫存檔…');
     return {
       type: 'wo_import_snapshot',
-      version: 2,
+      version: 3,
       savedAt: new Date().toISOString(),
       source: currentImportSource,
       generatorSignature: currentGeneratorSignature,
@@ -24172,6 +24996,8 @@ function buildImportSnapshot() {
         });
         return out;
       })(),
+      /* 曝光資源完整狀態（版位勾選、商品/LOGO/背景/文字/位置/裁切）一起存，避免上傳暫存後曝光資源空白。 */
+      exposureState: res[2] || null,
       imageZoomWeights: (window.BNImageLayout && BNImageLayout.getWeights) ? BNImageLayout.getWeights() : {},
       imageOffsets: (window.BNImageLayout && BNImageLayout.getOffsets) ? BNImageLayout.getOffsets() : {}, /* 每張圖被拖曳過的位置 */
       /* 吸底編輯現況（含自訂 LOGO）也一起存，上傳暫存檔時吸底一起還原 */
@@ -24651,6 +25477,8 @@ function restoreImportSnapshot(snap) {
   appLoadingUpdate(55, 'LOADING · 還原暫存檔', '正在整理圖片與版位資料…');
   hideImportBottomPreview();
   currentImportHasBottomWorkOrder = false;
+  pendingExposureSnapshotState = null;
+  pendingExposureSnapshotApplyAttempts = 0;
   if (snap.bottomState) {
     /* 暫存檔帶著吸底：沒有 xlsx 原檔，直接以存下來的吸底 state 為準 */
     latestBottomWorkOrder = null;
@@ -24663,6 +25491,9 @@ function restoreImportSnapshot(snap) {
     syncBottomAfterImportAction('snapshot-restore');
     if (bottomPreviewBridgeReady) dispatchBottomPreviewForExport();
     queueBottomPersist();
+  }
+  if (snap.exposureState && typeof snap.exposureState === 'object') {
+    queueExposureSnapshotStateApply(snap.exposureState, 'snapshot-restore');
   }
   var importLog = document.getElementById('import-log');
   uploadedImages = (snap.uploadedImages || []).map(importUploadFromState)
@@ -24733,6 +25564,11 @@ function restoreImportSnapshot(snap) {
        圖片大小、位置與商品編輯狀態（依圖片網址對應）就都對不回存檔時的樣子。 */
     return Promise.resolve(restoredColumns).then(function () {
       currentImportColumns = restoredColumns;
+      setUploadStepState('import-drop', 'done',
+        '已從暫存檔還原 ' + currentImportColumns.length + ' 格（含編輯結果）');
+      uploadImportSummary.activity = countUploadActivityResources(currentImportColumns, currentImportHasBottomWorkOrder);
+      renderUploadImportSummary();
+      if (typeof window.bodaUnlockWorkflow === 'function') window.bodaUnlockWorkflow();
       beginImportImageLayoutDocument(true);
       saveImportImageLayout();
       renderImportColumns(currentImportColumns);
@@ -24766,6 +25602,11 @@ function restoreImportSnapshot(snap) {
         data: c.data || {}
       };
     });
+    setUploadStepState('import-drop', 'done',
+      '已從暫存檔還原 ' + currentImportColumns.length + ' 格（含編輯結果）');
+    uploadImportSummary.activity = countUploadActivityResources(currentImportColumns, currentImportHasBottomWorkOrder);
+    renderUploadImportSummary();
+    if (typeof window.bodaUnlockWorkflow === 'function') window.bodaUnlockWorkflow();
     renderImportColumns(currentImportColumns);
     importLog.innerHTML = '<span class="ok">' + lineIcon('done') + ' 已從暫存檔還原 ' + currentImportColumns.length + ' 格（含編輯結果）</span>' +
       (hasDeadBlob ? '<br><span class="err">' + lineIcon('warning') + ' 這個暫存檔是舊版本存的，部分圖片連結已失效，請重新上傳那些圖片素材後再存一次新的暫存檔。</span>' : '');
@@ -26679,6 +27520,8 @@ function ensureStandaloneBottomLoaded(forceReload) {
       }
       if (standaloneBottomBridgeReady && latestBottomWorkOrder) {
         sendLatestWorkOrderToStandaloneBottom('standalone-loaded');
+      } else if (standaloneBottomBridgeReady && getBottomStateForSync()) {
+        postToStandaloneBottom({ source: 'BODA_PARENT', type: 'BOTTOM_STATE', state: getBottomStateForSync() });
       } else if (standaloneBottomBridgeReady) {
         postToStandaloneBottom({
           source: 'BODA_PARENT', type: 'NO_WORKORDER',
@@ -28160,6 +29003,12 @@ function applyCanvasZoom(el) {
   /* 首頁「開始編輯」要知道等級選了沒（上傳頁顯示「未選擇」時＝還沒選）、選的是哪個等級 */
   window.bodaUploadLevelChosen = function () { return uploadLevelChosen; };
   window.bodaCurrentLevelId = function () { return currentLevelId; };
+  window.bodaResetUploadLevelChoice = function () {
+    uploadLevelChosen = false;
+    syncLevelSelects();
+    paintHint();
+    if (typeof refreshUploadStartState === 'function') refreshUploadStartState();
+  };
   /* 等級決定左側「活動頁資源／吸底工具」要不要做（規則在製作流程那段 ACTIVITY_PAGE_RULES）。
      製作流程的程式比這裡晚載入時，先記下來，載入後補套。 */
   function notifyActivityPageRule(levelId, source) {
@@ -28965,6 +29814,10 @@ function ensureExposureLoaded(options) {
         }, 2500);
       }
       syncExposureShadowBackgroundSoon(resolvedImportBg(), 900);
+      if (pendingExposureSnapshotState) {
+        pendingExposureSnapshotApplyAttempts = 0;
+        [200, 950, 1900, 3300].forEach(schedulePendingExposureSnapshotStateApply);
+      }
       if (!exposureChildLoading) appLoadingFinish('曝光資源已載入');
     }, 400);
   });
@@ -29296,7 +30149,7 @@ var WORKFLOW_STEPS = [
   { key: 'upload', label: '匯入工單', view: 'upload' },
   { key: 'exposure', label: '曝光資源', view: 'exposure' },
   { key: 'import', label: '活動頁資源', view: 'import' },
-  { key: 'color', label: '取色工具', view: 'color' },
+  { key: 'color', label: '活動頁配色', view: 'color' },
   { key: 'bottom', label: '吸底工具', view: 'bottom' }
 ];
 var WORKFLOW_STATUS_KEY = 'boda_workflow_step_status_v1';
@@ -29406,6 +30259,32 @@ function refreshUploadStartState() {
     if (warn) warn.hidden = !needWorkorder;
     if (drop) drop.classList.toggle('is-required', needWorkorder);
   }
+  /* 2026-11-17：沒有活動頁的等級（例如 AD單買(BN Only)），曝光資源可直接製作——
+     「02 工單匯入」「03 圖片素材」標「可略」，樣式比照「必填」。 */
+  var optional = chosen && !activityPageRequired() && !uploadReady.snapshot;
+  [['upload-workorder-head', 'upload-workorder-optional'], ['import-img-head', 'upload-img-optional']].forEach(function (pair) {
+    var h = document.getElementById(pair[0]);
+    if (!h) return;
+    var t = document.getElementById(pair[1]);
+    if (!t) {
+      t = document.createElement('span');
+      t.id = pair[1];
+      t.className = 'upload-optional-tag';
+      t.textContent = '可略';
+      h.appendChild(t);
+    }
+    t.hidden = !optional;
+  });
+  var wDrop = document.getElementById('import-drop');
+  var oNote = document.getElementById('upload-workorder-optional-note');
+  if (!oNote && wDrop) {
+    oNote = document.createElement('div');
+    oNote.id = 'upload-workorder-optional-note';
+    oNote.className = 'upload-optional-note';
+    oNote.textContent = '這個活動等級沒有活動頁，曝光資源可直接製作；匯入工單可自動帶入內容，但非必須。';
+    wDrop.parentNode.insertBefore(oNote, wDrop);
+  }
+  if (oNote) oNote.hidden = !optional;
 }
 /* 製作步驟還沒按「完成」就切到別頁：先問做完了沒。
    確認完成＝標 ✓ 再前往；還沒＝留在這一頁繼續做。回傳 true 表示已經接手（等使用者回答）。 */
@@ -30023,7 +30902,7 @@ document.getElementById('btn-deep-clear-all').addEventListener('click', deepClea
      「取消」＝這次修改作廢：活動頁改回修改前的顏色、子工具也送回原本的顏色，兩邊維持一致。
    頁面剛載入時的對齊（同一管道第一次送）不算修改；換到別的步驟後重新詢問。 */
 (function () {
-  var STEP_LABEL = { exposure: '曝光資源', import: '活動頁資源', color: '取色工具', bottom: '吸底工具' };
+  var STEP_LABEL = { exposure: '曝光資源', import: '活動頁資源', color: '活動頁配色', bottom: '吸底工具' };
   var SHARED_STORAGE_KEYS = [SHARED_CANVAS_BG_KEY, SHARED_CTA_BG_KEY, SHARED_CTA_TEXT_KEY, SHARED_EXPOSURE_TEXT_PALETTE_KEY];
   var SHARED_THEME_FIELDS = ['bg', 'bgAuto', 'ctaBg', 'ctaText'];
   var lastSig = {};
@@ -30390,6 +31269,7 @@ ensureBlocksLoaded(function () {
 #boda-help-flyout{position:fixed;z-index:100001;min-width:132px;padding:6px;border-radius:10px;background:#1b1f1e;border:1px solid #3a4441;
   box-shadow:0 10px 28px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:2px;}
 #boda-help-flyout[hidden]{display:none;}
+#boda-help-flyout .boda-help-soon{margin-left:auto;padding-left:8px;font-size:11px;color:#9aa5a1;white-space:nowrap;}
 #boda-help-flyout button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:7px;background:transparent;
   color:#e8eeec;font:inherit;font-size:13px;cursor:pointer;text-align:left;}
 #boda-help-flyout button:hover,#boda-help-flyout button:focus-visible{background:rgba(255,255,255,.08);outline:none;}
@@ -30423,16 +31303,16 @@ ensureBlocksLoaded(function () {
   guideButton.parentNode.insertBefore(helpMenu,guideButton);
   var flyout=document.createElement('div');
   flyout.id='boda-help-flyout';flyout.setAttribute('role','menu');flyout.hidden=true;
-  function flyItem(label,svgFrom,target){
+  function flyItem(label,svgFrom,target,note){
     var b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');
     var src=svgFrom&&svgFrom.querySelector('svg');
-    b.innerHTML=(src?src.outerHTML:HELP_ICON)+'<span>'+label+'</span>';
+    b.innerHTML=(src?src.outerHTML:HELP_ICON)+'<span>'+label+'</span>'+(note?'<small class="boda-help-soon">'+note+'</small>':'');
     b.addEventListener('click',function(){closeHelpMenu();var t=target();if(t)t.click();});
     flyout.appendChild(b);
   }
   flyItem('導覽',null,function(){return document.getElementById('boda-tour-launch')||document.querySelector('[data-tour-launch]');});
   flyItem('手冊',guideButton,function(){return guideButton;});
-  flyItem('影片',videoButton,function(){return videoButton;});
+  flyItem('影片',videoButton,function(){return videoButton;},videoUrl?'':'(11/19上架)'); /* 2026-11-17：影片還沒上線前，選單旁小字註明上架日；填了 videoUrl 就自動消失 */
   document.body.appendChild(flyout);
   function placeHelpMenu(){
     var r=helpMenu.getBoundingClientRect();
@@ -30558,8 +31438,7 @@ ensureBlocksLoaded(function () {
 })();
 </script>
 <!-- 獨立操作導覽：只展示介面與動畫，不修改工單或觸發上傳／下載。 -->
-<!-- 舊導覽（boda-tour-script）在 demo 裡停用，改用 tour/tour.js -->
-<!-- 新手導覽：引擎＋步驟 -->
+<!-- 2026-11-16：舊導覽（boda-tour-script v1.11）停用，改用新手導覽 tour/（引擎 tour-guide.js＋步驟 tour.js；示範資料 tour/demo-data.js 只在導覽時載入） -->
 <script src="tour/tour-guide.js?v=1.0.0"></script>
 <script src="tour/tour.js?v=20261116x"></script>
 </body>
