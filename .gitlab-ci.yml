@@ -1,0 +1,13 @@
+pages:
+  stage: deploy
+  script:
+    - mkdir .public
+    - cp -r * .public/ || true
+    # 網站用不到的檔案不發佈：備份檔、文件、Apps Script、樣式草稿
+    - rm -f .public/index.html.bak-* .public/*.docx .public/*.gs .public/*.md .public/_do.py .public/msbn-css-v13.txt .public/css-template.txt
+    - mv .public public
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
