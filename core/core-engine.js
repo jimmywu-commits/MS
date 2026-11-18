@@ -1,0 +1,271 @@
+/* ════════════════════════════════════════
+   BN Core Engine — 積木式版位管理核心
+   ────────────────────────────────────────
+   每個「版位」是一個獨立的積木（block），存放在 /blocks/{id}/block.js。
+   block.js 只需呼叫 BNCore.registerBlock({...}) 註冊自己，
+   core 不需要認識任何版位的細節（欄位、樣式、結構都由積木自己定義）。
+
+   積木定義格式：
+   BNCore.registerBlock({
+     id:     'msbn3p',        // 唯一代號，同時對應資料夾名稱
+     name:   '三品比對 3P',    // 顯示名稱
+     width:  1200,
+     height: 400,
+     fields: [                // 可編輯欄位（core 依此自動產生設定面板）
+       { key:'productName', label:'品名', type:'text', default:'商品名稱' },
+       { key:'bgImage',     label:'底圖網址', type:'image', default:'' },
+       { key:'themeColor',  label:'主色', type:'color', default:'#9f2f67' }
+     ],
+     style:  '.blk-msbn3p{...}',   // 純 CSS 字串，整段只注入一次
+     render: function(data){ return '<div class="blk-msbn3p">...</div>'; }
+   });
+════════════════════════════════════════ */
+(function (global) {
+  var registry = {};      // { blockId: blockDef }
+  var listeners = [];     // 註冊完成後要通知的 callback
+
+  var BNCore = {
+    /* 積木註冊 */
+    registerBlock: function (def) {
+      if (!def || !def.id) { console.error('[BNCore] registerBlock 缺少 id'); return; }
+      if (!def.fields) def.fields = [];
+      if (typeof def.render !== 'function') {
+        console.error('[BNCore] 積木 "' + def.id + '" 缺少 render()');
+        return;
+      }
+      registry[def.id] = def;
+
+      /* 把積木自己的 CSS 注入頁面（每個積木只注入一次） */
+      if (def.style && !document.getElementById('bn-style-' + def.id)) {
+        var styleTag = document.createElement('style');
+        styleTag.id = 'bn-style-' + def.id;
+        styleTag.textContent = def.style;
+        document.head.appendChild(styleTag);
+      }
+
+      listeners.forEach(function (fn) { fn(def); });
+    },
+
+    /* 取得所有已註冊積木 */
+    getBlocks: function () {
+      return Object.keys(registry).map(function (id) { return registry[id]; });
+    },
+
+    getBlock: function (id) { return registry[id] || null; },
+
+    /* 積木註冊完成後通知（core.html 用來刷新工具列） */
+    onRegister: function (fn) { listeners.push(fn); },
+
+    /* 依 data 渲染單一積木實例，回傳 HTML 字串
+       opts.editable=true 時，文字圖層會加上 contenteditable，可以直接在畫布上點擊編輯 */
+    renderInstance: function (blockId, data, opts) {
+      var def = registry[blockId];
+      if (!def) return '<div style="padding:20px;color:#f66">找不到積木：' + blockId + '</div>';
+
+      /* 補齊預設值，缺的欄位用 field.default 補上 */
+      var merged = {};
+      def.fields.forEach(function (f) { merged[f.key] = f.default; });
+      Object.assign(merged, data || {});
+
+      return def.render(merged, opts);
+    },
+
+    /* 依積木欄位定義，取得該積木的預設資料物件 */
+    defaultData: function (blockId) {
+      var def = registry[blockId];
+      if (!def) return {};
+      var data = {};
+      def.fields.forEach(function (f) { data[f.key] = f.default; });
+      return data;
+    }
+  };
+
+  global.BNCore = BNCore;
+})(window);
+
+/* ════════════════════════════════════════
+   積木清單載入：讀取 /blocks/index.js（BN_BLOCKS 陣列）
+   再依序動態載入每個 /blocks/{id}/block.js
+════════════════════════════════════════ */
+var BN_BLOCKS_RELEASE = 'blocks-c2f67ca46169f340';
+var bnBlockCatalogueTasks = Object.create(null);
+function bnLoadAllBlocks(onDone, basePath, onProgress, options) {
+  options = options || {};
+  if (!options.forceSources && !options.forceRefresh) {
+    var catalogueBase = new URL(basePath || '../blocks/', document.baseURI).href;
+    if (catalogueBase.charAt(catalogueBase.length - 1) !== '/') catalogueBase += '/';
+    function reportCatalogue(loaded, total, succeeded) {
+      if (typeof onProgress === 'function') onProgress({ loaded: loaded, total: total, succeeded: succeeded });
+    }
+    function registerCatalogue(catalogue) {
+      var cursor = 0, succeeded = 0;
+      reportCatalogue(0, catalogue.ids.length, 0);
+      return new Promise(function (resolve) {
+        function registerBatch() {
+          var end = Math.min(cursor + 12, catalogue.ids.length);
+          while (cursor < end) {
+            try {
+              var id = catalogue.ids[cursor];
+              if (!window.BNCore.getBlock(id)) {
+                window.BNSchemaRenderer.registerFromSchema(JSON.parse(JSON.stringify(catalogue.schemas[cursor])));
+              }
+              if (window.BNCore.getBlock(id)) succeeded++;
+            } catch (error) { console.error('[BNCore] 註冊積木失敗：' + catalogue.ids[cursor], error); }
+            cursor++;
+            reportCatalogue(cursor, catalogue.ids.length, succeeded);
+          }
+          if (cursor < catalogue.ids.length) setTimeout(registerBatch, 0);
+          else resolve({ total: catalogue.ids.length, succeeded: succeeded, source: 'bundle', version: catalogue.version });
+        }
+        registerBatch();
+      });
+    }
+    function loadCatalogue() {
+      if (bnBlockCatalogueTasks[catalogueBase]) return bnBlockCatalogueTasks[catalogueBase];
+      var task = new Promise(function (resolve, reject) {
+        var script = document.createElement('script'), settled = false;
+        var timer = setTimeout(function () { finish(new Error('版位 bundle 載入逾時')); }, 15000);
+        function finish(error) {
+          if (settled) return;
+          settled = true; clearTimeout(timer); script.onload = script.onerror = null; script.remove();
+          if (error) { reject(error); return; }
+          var catalogues = window.BN_BLOCK_CATALOGUES || {};
+          var catalogue = catalogues[catalogueBase];
+          var expectedVersion = String(BN_BLOCKS_RELEASE).replace(/^blocks-/, '');
+          if (!catalogue || catalogue.format !== 'boda-block-catalogue' || catalogue.version !== expectedVersion ||
+              !Array.isArray(catalogue.ids) || !Array.isArray(catalogue.schemas) || catalogue.ids.length !== catalogue.schemas.length ||
+              !catalogue.ids.every(function (id, index) { return catalogue.schemas[index] && catalogue.schemas[index].id === id; })) {
+            reject(new Error('版位 bundle 不完整或版本不符')); return;
+          }
+          resolve(catalogue);
+        }
+        script.async = true;
+        script.src = catalogueBase + 'catalogue.bundle.js?v=' + encodeURIComponent(BN_BLOCKS_RELEASE);
+        script.onload = function () { finish(); };
+        script.onerror = function () { finish(new Error('版位 bundle 載入失敗')); };
+        document.head.appendChild(script);
+      });
+      bnBlockCatalogueTasks[catalogueBase] = task;
+      task.catch(function () { if (bnBlockCatalogueTasks[catalogueBase] === task) delete bnBlockCatalogueTasks[catalogueBase]; });
+      return task;
+    }
+    reportCatalogue(0, 0, 0);
+    var catalogueTask = loadCatalogue().then(registerCatalogue).catch(function (error) {
+      console.warn('[BNCore] 改用來源版位：', error);
+      return bnLoadAllBlocks(null, basePath, onProgress, { forceSources: true, forceRefresh: options.forceRefresh });
+    }).then(function (result) {
+      if (onDone) onDone(result);
+      return result;
+    });
+    return catalogueTask;
+  }
+  /* 網路、檔案伺服器或單一版位檔異常時，不能讓整個匯入流程永遠等下去。
+     逾時後仍回報這次結果，使用者可以立即看到可用版位並按重試。 */
+  function fetchWithTimeout(url, timeoutMs, fetchOptions) {
+    return new Promise(function (resolve, reject) {
+      var finished = false;
+      var controller = typeof AbortController === 'function' ? new AbortController() : null;
+      var timer = setTimeout(function () {
+        if (finished) return;
+        finished = true;
+        if (controller) controller.abort();
+        reject(new Error('讀取逾時：' + url));
+      }, timeoutMs || 15000);
+      var requestOptions = {};
+      Object.keys(fetchOptions || {}).forEach(function (key) { requestOptions[key] = fetchOptions[key]; });
+      if (!requestOptions.cache) requestOptions.cache = 'default';
+      if (controller) requestOptions.signal = controller.signal;
+      fetch(url, requestOptions).then(function (response) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        resolve(response);
+      }).catch(function (err) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
+  }
+  function report(loaded, total, succeeded) {
+    if (typeof onProgress === 'function') onProgress({
+      loaded: loaded, total: total, succeeded: succeeded
+    });
+  }
+  function done(result) {
+    if (sourceSettled) return;
+    sourceSettled = true;
+    if (onDone) onDone(result);
+    sourceResolve(result);
+  }
+  var sourceResolve, sourceSettled = false;
+  var sourceTask = new Promise(function (resolve) { sourceResolve = resolve; });
+  report(0, 0, 0);
+  var sourceQuery = '?v=' + encodeURIComponent(BN_BLOCKS_RELEASE);
+  if (options.forceRefresh) sourceQuery += '&refresh=' + Date.now();
+  var sourceFetchOptions = { cache: options.forceRefresh ? 'reload' : 'default' };
+  basePath = basePath || '../blocks/'; /* core.html / canvas.html 放在 /core/ 下，往上一層找 blocks/；
+                                           若頁面本身就在根目錄（如 index.html），呼叫時傳 'blocks/' */
+  fetchWithTimeout(basePath + 'index.js' + sourceQuery, 15000, sourceFetchOptions)
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(function (text) {
+      /* blocks/index.js 內容是 window._bn_blocks_manifest_cb([...]);
+         直接執行這段文字取得陣列，格式不變，沿用舊的 manifest 檔案即可 */
+      var ids = null;
+      window._bn_blocks_manifest_cb = function (arr) { ids = arr; };
+      (0, eval)(text);
+      if (!Array.isArray(ids)) {
+        console.error('[BNCore] blocks/index.js 應輸出陣列');
+        done({ total: 0, succeeded: 0, source: 'source' });
+        return;
+      }
+
+      var seenIds = Object.create(null);
+      ids = ids.filter(function (id) {
+        if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(id) || seenIds[id]) return false;
+        seenIds[id] = true;
+        return true;
+      });
+
+      var remain = ids.length;
+      if (!remain) { done({ total: 0, succeeded: 0, source: 'source' }); return; }
+      var loaded = 0, succeeded = 0, nextIndex = 0, active = 0;
+      report(0, ids.length, 0);
+      function loadNextBatch() {
+        while (active < 6 && nextIndex < ids.length) {
+          (function (id) {
+          active++;
+          fetchWithTimeout(basePath + id + '/block.json' + sourceQuery, 15000, sourceFetchOptions)
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (schema) {
+            window.BNSchemaRenderer.registerFromSchema(schema);
+            succeeded++;
+          })
+          .catch(function (err) {
+            console.error('[BNCore] 載入積木失敗：' + id, err);
+          })
+          .then(function () {
+            active--;
+            loaded++;
+            report(loaded, ids.length, succeeded);
+            if (--remain <= 0) done({ total: ids.length, succeeded: succeeded, source: 'source' });
+            else loadNextBatch();
+          });
+          })(ids[nextIndex++]);
+        }
+      }
+      loadNextBatch();
+    })
+    .catch(function (err) {
+      console.error('[BNCore] blocks/index.js 讀取失敗', err);
+      done({ total: 0, succeeded: 0, source: 'source' });
+    });
+  return sourceTask;
+}
