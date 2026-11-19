@@ -31444,7 +31444,7 @@ ensureBlocksLoaded(function () {
     ? '../shopee2/JBP編輯器使用說明書.pdf#view=FitH'
     : 'https://jimmywu-commits.github.io/shopee2/JBP編輯器使用說明書.pdf#view=FitH';
   var guideUrl='manual/index.html';
-  var videoUrl=''; /* 教學影片網址：影片上線後填在這裡，按鈕就會直接開影片 */
+  var videoUrl='mov/index.html'; /* 教學影片頁：由影片選單開啟獨立播放頁 */
   var feedbackButton=document.getElementById('boda-help-feedback'),manualButton=document.getElementById('boda-help-manual');
   var guideButton=document.getElementById('boda-help-guide'),videoButton=document.getElementById('boda-help-video');
   function openUrl(url){window.open(url,'_blank','noopener');}
@@ -31466,7 +31466,7 @@ ensureBlocksLoaded(function () {
   }
   flyItem('導覽',null,function(){return document.getElementById('boda-tour-launch')||document.querySelector('[data-tour-launch]');});
   flyItem('手冊',guideButton,function(){return guideButton;});
-  flyItem('影片',videoButton,function(){return videoButton;},videoUrl?'':'(11/19上架)'); /* 2026-11-17：影片還沒上線前，選單旁小字註明上架日；填了 videoUrl 就自動消失 */
+  flyItem('影片',videoButton,function(){return videoButton;});
   document.body.appendChild(flyout);
   function placeHelpMenu(){
     var r=helpMenu.getBoundingClientRect();
