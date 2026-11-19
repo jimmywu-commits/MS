@@ -413,9 +413,31 @@ html,body{height:100%;background:var(--bg);color:var(--ink);
 .nav-item.active{background:var(--teal);color:#fff;}
 .nav-item[data-view="maint"]{margin-top:auto;}
 
-#views{flex:1;position:relative;overflow:hidden;}
+#views{flex:1;position:relative;overflow:hidden;padding-top:42px;}
 .view{display:none;height:100%;overflow:auto;}
 .view.active{display:block;}
+/* 法務權利提醒：固定在 MS 編輯器內容區最上方，涵蓋「製作」四步與整包下載。 */
+#ms-rights-notice{position:absolute;z-index:20;left:10px;right:10px;top:7px;min-height:28px;padding:5px 10px;border:1px solid #b9c9d8;border-radius:5px;background:rgba(239,246,255,.94);color:#526272;font-size:11px;line-height:1.55;box-shadow:0 1px 3px rgba(20,40,35,.06);}
+#ms-rights-notice a{color:#2563eb;text-decoration:underline;cursor:pointer;white-space:nowrap;}
+#ms-rights-modal{display:none;position:fixed;inset:0;z-index:2147483100;background:rgba(0,0,0,.56);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);}
+#ms-rights-modal.show{display:flex;}
+.ms-rights-box{width:min(680px,92vw);max-height:82vh;background:#fff;border:1px solid #d5dfdc;border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;}
+.ms-rights-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #e4ebe9;}
+.ms-rights-head h3{font-size:14px;color:var(--ink);margin:0;}
+.ms-rights-close{background:none;border:0;color:var(--ink3);font-size:21px;cursor:pointer;line-height:1;}
+.ms-rights-body{overflow:auto;padding:17px 18px;color:var(--ink2);font-size:12px;line-height:1.85;}
+.ms-rights-body p{margin:0 0 11px;}.ms-rights-body p:last-child{margin-bottom:0;}
+.ms-rights-foot{padding:11px 16px;border-top:1px solid #e4ebe9;text-align:right;}
+.ms-rights-ok{background:#ee4d2d;border:1px solid #ee4d2d;color:#fff;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:700;cursor:pointer;}
+/* 下載條款勾選：放在各右側下載按鈕正上方。 */
+.ms-terms-line{display:flex;align-items:flex-start;gap:5px;margin:0 0 7px;color:var(--ink3);font-size:10.5px;line-height:1.45;}
+.ms-terms-line input{width:13px;height:13px;margin:1px 0 0;accent-color:#ee4d2d;flex:0 0 auto;}
+.ms-terms-line label{cursor:pointer;}.ms-terms-line a{color:#2563eb;text-decoration:underline;cursor:pointer;}
+#generator-primary-action .ms-terms-line,#import-dl-bar .ms-terms-line{margin-top:8px;}
+#generator-primary-action .btn:disabled,#import-dl-bar .btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
+#nav-rail .nav-step[data-step="download"].ms-terms-locked{opacity:.35;}
+#nav-rail .nav-step[data-step="download"].ms-terms-locked:hover{opacity:.45;}
+#boda-dl-preview .ms-terms-line{margin:0 0 8px;padding:8px 10px;border:1px solid #d9e2df;border-radius:7px;background:#f7faf9;color:#52615d;}
 /* 最左側按「整包下載」時，活動頁資源暫時在畫面外排版，截圖才不會是空白 */
 .view.bn-offscreen-render{display:block;position:fixed;left:-20000px;top:0;width:100vw;height:100vh;pointer-events:none;}
 #view-generator.active{display:flex;}
@@ -1781,6 +1803,9 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
   </nav>
 
   <div id="views">
+    <div id="ms-rights-notice" role="note">
+      您自行上傳或使用之圖片、文字、Logo、商標及其他素材，應確認已取得合法權利或授權，且不得侵害第三人之著作權、商標權、肖像權或其他權利。本編輯器提供之平台素材，僅得於指定用途、範圍及期間內使用。因素材上傳、編輯、下載、發布或使用所生之爭議及法律責任，由使用者自行負責。<a href="#ms-rights-modal" id="ms-rights-link">了解更多</a>
+    </div>
 
     <!-- ══════════════ 首頁：入口 ══════════════ -->
     <div id="view-home" class="view">
@@ -1858,7 +1883,13 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
           </div>
           <div id="palette-footer">
             <button class="btn ghost" id="btn-clear-cache" title="清掉這個工具存在瀏覽器裡的暫存（上次畫面、畫布內容、縮放等），重新整理回到全新狀態">🧹 清除本機暫存並重新整理</button>
-            <div id="generator-primary-action"><button class="btn primary" id="btn-all">⬇ 下載此資源檔案</button></div>
+            <div id="generator-primary-action">
+              <div class="ms-terms-line" data-ms-terms-line>
+                <input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款">
+                <label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label>
+              </div>
+              <button class="btn primary" id="btn-all">⬇ 下載此資源檔案</button>
+            </div>
             <div id="bottom-canvas-actions" aria-label="吸底畫布操作">
               <label id="bottom-zoom-wrap">顯示
                 <select id="bottom-canvas-zoom">
@@ -2124,6 +2155,10 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
           <div id="import-dl-bar">
             <!-- UI-012 第六輪（2026-11-13）：「活動頁完成」沿用隱藏的 #step-actions [data-step-act="done"]（finishCurrentWorkflowStep('done')，active view=import → key import），不另建狀態；不觸發下載。 -->
             <button type="button" id="boda-import-done-btn">活動頁完成</button>
+            <div class="ms-terms-line" data-ms-terms-line>
+              <input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款">
+              <label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label>
+            </div>
             <button class="btn primary" id="btn-download-import-package"><svg class="line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m7.8 10.2 4.2 4.2 4.2-4.2"/><path d="M4 20h16"/></svg> 單獨下載活動頁資源檔案</button><!-- UI-012 第六輪：原「下載此資源檔案」 -->
             <div class="dl-hint">只下載活動頁資源目前畫布的合成 PNG、副區整排 PNG 與 MSBN 單張 PNG；完整工單、曝光、色票、吸底及暫存檔請使用最左側「整包下載」。</div>
           </div>
@@ -2229,6 +2264,18 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
   <span>🔓 編輯模式中，家族名稱可以點兩下修改</span>
   <button id="btn-export-config">⬇ 下載設定 JSON</button>
   <button class="relock" id="btn-relock">鎖上</button>
+</div>
+
+<div id="ms-rights-modal" role="dialog" aria-modal="true" aria-labelledby="ms-rights-title">
+  <div class="ms-rights-box">
+    <div class="ms-rights-head"><h3 id="ms-rights-title">素材使用權利與責任說明</h3><button type="button" class="ms-rights-close" aria-label="關閉">×</button></div>
+    <div class="ms-rights-body">
+      <p>本編輯器所提供之平台 Logo、背景圖片及其他素材，僅得於本公司指定或授權之用途、範圍及期間內使用。</p>
+      <p>您自行上傳、匯入或使用之圖片、文字、商標、Logo、人物肖像及其他素材，應自行確認已取得合法權利或完整授權，並確保其使用不侵害任何第三人之著作權、商標權、肖像權、個人資料或其他權利，亦不得違反相關法令及平台規範。</p>
+      <p>因您上傳、編輯、下載、發布或使用相關內容所生之爭議、損害或法律責任，應由您自行負責；如因此致本公司或第三人受有損害，您並應負相關賠償責任。</p>
+    </div>
+    <div class="ms-rights-foot"><button type="button" class="ms-rights-ok" id="ms-rights-ok">我確定</button></div>
+  </div>
 </div>
 
 <div id="app-loading" aria-hidden="true">
@@ -13625,6 +13672,7 @@ function parseImportXlsx(arrayBuffer, options) {
     /* 新工單進來就是新的配色情境：上一份暫存檔的文字配色鎖不再適用，回到依背景推薦。 */
     writeSnapshotTextPaletteLock('', null);
     currentImportWorkbook = wb;
+    currentImportWorkbookBuffer = arrayBuffer && arrayBuffer.slice ? arrayBuffer.slice(0) : arrayBuffer;
     currentImportWorkbookName = options.filename || currentImportWorkbookName || '';
     try { currentImportActivityName = parseWorkbookActivityName(wb); } catch (_) { currentImportActivityName = ''; }
     var hasBottomWorkOrder = workbookHasLayoutOutputBottom(wb);
@@ -16709,6 +16757,9 @@ var previewAllColumns = [];
 var activeImportCanvasContext = 'import';
 /* 使用者匯入的原始活頁簿留在記憶體：下載回填工單時直接改寫這份，而非重新產生範本。 */
 var currentImportWorkbook = null;
+  /* 原始工單的 ArrayBuffer 也要跟匯入暫存一起保存；只保存欄位摘要會讓重新整理後
+     看得到工單名稱，卻沒有真正的 workbook 可供總覽規則、下載與子工具同步使用。 */
+  var currentImportWorkbookBuffer = null;
 /* 工單總覽的「工作項目名稱／活動名稱」：下載 ZIP 時當作最外層的名字，沒有就退回工單檔名。 */
 var currentImportActivityName = '';
 var currentImportWorkbookName = '';
@@ -17078,6 +17129,12 @@ function buildImportStateSavePayload() {
     generatorSignature: currentGeneratorSignature,
     workOrderName: currentImportWorkbookName || '',
     activityName: currentImportActivityName || '',
+    levelId: typeof window.bodaCurrentLevelId === 'function' ? String(window.bodaCurrentLevelId() || '') : '',
+    levelChosen: typeof window.bodaUploadLevelChosen === 'function' ? !!window.bodaUploadLevelChosen() : false,
+    workOrderSpec: currentImportedWorkOrderSpec ? JSON.parse(JSON.stringify(currentImportedWorkOrderSpec)) : null,
+    workbookBuffer: currentImportWorkbookBuffer && currentImportWorkbookBuffer.slice
+      ? currentImportWorkbookBuffer.slice(0)
+      : null,
     hasBottomWorkOrder: !!currentImportHasBottomWorkOrder,
     imageLayoutId: currentImportImageLayoutId,
     imageLayoutSavedAt: importImageLayoutSavedAt,
@@ -17128,7 +17185,11 @@ function saveImportState() {
   var toSave = buildImportStateSavePayload();
   importIdbPut(toSave);
   try {
-    if (importStateFitsLocalStorage(toSave)) localStorage.setItem(IMPORT_STORAGE_KEY, JSON.stringify(toSave));
+    /* ArrayBuffer 只能由 IndexedDB 正確保存；localStorage 只存小型欄位備援，避免
+       JSON.stringify(ArrayBuffer) 變成空物件，反而覆蓋掉有效的舊狀態。 */
+    var localPayload = Object.assign({}, toSave);
+    delete localPayload.workbookBuffer;
+    if (importStateFitsLocalStorage(localPayload)) localStorage.setItem(IMPORT_STORAGE_KEY, JSON.stringify(localPayload));
     /* 大型狀態由 IDB 保存；不刪既有的小型備援，以免 IDB 不可用時連舊備援也遺失。 */
   } catch (e) { /* localStorage 可能滿，IDB 已寫入 */ }
 }
@@ -17144,6 +17205,10 @@ function normalizeImportState(saved) {
     generatorSignature: saved.generatorSignature || '',
     workOrderName: saved.workOrderName || '',
     activityName: saved.activityName || '',
+    levelId: saved.levelId || '',
+    levelChosen: !!saved.levelChosen,
+    workOrderSpec: saved.workOrderSpec && typeof saved.workOrderSpec === 'object' ? saved.workOrderSpec : null,
+    workbookBuffer: saved.workbookBuffer && saved.workbookBuffer.byteLength ? saved.workbookBuffer : null,
     hasBottomWorkOrder: !!saved.hasBottomWorkOrder,
     imageLayoutId: saved.imageLayoutId || '',
     imageLayoutSavedAt: Number(saved.imageLayoutSavedAt) || 0,
@@ -17164,6 +17229,18 @@ function applyImportState(state) {
   currentGeneratorSignature = state.generatorSignature || '';
   currentImportWorkbookName = String(state.workOrderName || currentImportWorkbookName || '');
   currentImportActivityName = String(state.activityName || currentImportActivityName || '');
+  currentImportWorkbookBuffer = state.workbookBuffer && state.workbookBuffer.slice
+    ? state.workbookBuffer.slice(0)
+    : currentImportWorkbookBuffer;
+  if (state.workOrderSpec && typeof state.workOrderSpec === 'object') {
+    currentImportedWorkOrderSpec = state.workOrderSpec;
+    try { localStorage.setItem(WORK_ORDER_SPEC_STORAGE_KEY, JSON.stringify(state.workOrderSpec)); } catch (_) {}
+  } else if (!currentImportedWorkOrderSpec) {
+    try {
+      var storedSpec = JSON.parse(localStorage.getItem(WORK_ORDER_SPEC_STORAGE_KEY) || 'null');
+      if (storedSpec && typeof storedSpec === 'object') currentImportedWorkOrderSpec = storedSpec;
+    } catch (_) {}
+  }
   currentImportHasBottomWorkOrder = !!state.hasBottomWorkOrder;
   currentImportColumns = state.columns.map(function (c) {
     return {
@@ -17183,6 +17260,34 @@ function applyImportState(state) {
     };
   });
   restoreImportImageLayout(state);
+  /* 暫存還原必須和真正匯入工單走同一個 ready path；只畫摘要不算匯入完成。 */
+  function restoreReadyState() {
+    if (!currentImportColumns.length) return;
+    if (state.levelId && typeof window.woApplyLevelFromWorkOrder === 'function') {
+      window.woApplyLevelFromWorkOrder(String(state.levelId));
+    }
+    if (typeof window.bodaMarkUploadReady === 'function') {
+      window.bodaMarkUploadReady('workorder', true);
+      /* 舊版暫存沒有保存 levelId：仍視為已完成的既有匯入，避免摘要有資料卻無法開始。 */
+      if (!state.levelId && !state.levelChosen) window.bodaMarkUploadReady('snapshot', true);
+    }
+  }
+  restoreReadyState();
+  [0, 120, 500].forEach(function (delay) { setTimeout(restoreReadyState, delay); });
+  if (currentImportWorkbookBuffer && !currentImportWorkbook) {
+    var excelReady = typeof ExcelJS !== 'undefined'
+      ? Promise.resolve()
+      : (window.BodaDependencies && typeof window.BodaDependencies.ensure === 'function'
+        ? window.BodaDependencies.ensure('excel')
+        : Promise.resolve());
+    excelReady.then(function () {
+      if (typeof ExcelJS === 'undefined' || currentImportWorkbook) return;
+      return new ExcelJS.Workbook().xlsx.load(currentImportWorkbookBuffer.slice(0)).then(function (wb) {
+        if (!currentImportWorkbook) currentImportWorkbook = wb;
+        if (currentImportWorkbook && currentImportedWorkOrderSpec == null) syncWorkbookExposureSpec(currentImportWorkbook);
+      });
+    }).catch(function () {});
+  }
 }
 function loadImportStateFromIdb() {
   importStateRestorePending = true;
@@ -17195,13 +17300,23 @@ function loadImportStateFromIdb() {
     if (!idb || !idb.columns || !idb.columns.length) return false;
     var localTs = 0;
     var localHasColumns = false;
+    var localHasWorkbookBuffer = false;
+    var localHasLevel = false;
     try {
       var local = normalizeImportState(JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY)));
       localTs = (local && local.ts) || 0;
       localHasColumns = !!(local && local.columns && local.columns.length);
+      localHasWorkbookBuffer = !!(local && local.workbookBuffer && local.workbookBuffer.byteLength);
+      localHasLevel = !!(local && local.levelId);
     } catch (e) {}
     /* 空的 localStorage 不能蓋掉 IndexedDB 裡的完整工單；只有兩邊都有內容時才以時間較新的為準。 */
-    if ((idb.columns && idb.columns.length && !localHasColumns) || idb.ts > localTs) {
+    var idbHasWorkbookBuffer = !!(idb.workbookBuffer && idb.workbookBuffer.byteLength);
+    var idbHasLevel = !!(idb.levelId);
+    var shouldUseIdb = (idb.columns && idb.columns.length && !localHasColumns) ||
+      idb.ts > localTs ||
+      (idb.columns && idb.columns.length && idbHasWorkbookBuffer && !localHasWorkbookBuffer) ||
+      (idb.columns && idb.columns.length && idbHasLevel && !localHasLevel);
+    if (shouldUseIdb) {
       applyImportState(idb);
       if (blocksLoadedForImport) renderImportColumns(currentImportColumns);
       try {
@@ -24729,6 +24844,7 @@ function resetBeforeWorkorderImport() {
     currentImportColumns = [];
     uploadedImages = [];
     currentImportWorkbook = null;
+      currentImportWorkbookBuffer = null;
     currentImportWorkbookName = '';
     currentImportActivityName = '';
     currentImportSource = '';
@@ -26346,6 +26462,7 @@ function validateImportResourceDownload() {
 
 /* 「活動頁資源」頁內按鈕：只輸出這一頁的合成圖、副區整排與 MSBN 單張圖。 */
 function startActivityResourceDownload(triggerButton) {
+  if (typeof window.msRequireAssetTerms === 'function' && !window.msRequireAssetTerms()) return Promise.resolve(false);
   if (!validateImportResourceDownload()) return Promise.resolve(false);
   var btn = triggerButton || document.getElementById('btn-download-import-package');
   var originalHtml = btn ? btn.innerHTML : '';
@@ -26389,6 +26506,7 @@ function startActivityResourceDownload(triggerButton) {
 
 /* 完整 ZIP 只供最左側「整包下載」呼叫。 */
 function startCompletePackageDownload(triggerButton) {
+  if (typeof window.msRequireAssetTerms === 'function' && !window.msRequireAssetTerms()) return Promise.resolve(false);
   if (!validateImportResourceDownload()) return Promise.resolve(false);
   /* 左側製作流程還有沒完成也沒略過的步驟：先提醒，使用者確認後才下載。 */
   if (typeof confirmWorkflowPackageDownload === 'function' && !confirmWorkflowPackageDownload()) {
@@ -26537,9 +26655,10 @@ function showPackageDownloadPreview(bundle) {
     if (bundle.warnings && bundle.warnings.length) {
       html += '<div class="bdp-warn"><b>提醒</b><ul>' + bundle.warnings.map(function (w) { return '<li></li>'; }).join('') + '</ul></div>';
     }
-    html += '</div><div class="bdp-foot"><span class="bdp-foot-note">切到左側其他頁面會取消這次下載</span><button type="button" class="bdp-btn" data-v="0">取消</button>' +
-      '<button type="button" class="bdp-btn bdp-primary" data-v="1">確認下載 ZIP</button></div></div>';
+    html += '</div><div class="bdp-foot"><div class="ms-terms-line"><input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label></div><span class="bdp-foot-note">切到左側其他頁面會取消這次下載</span><button type="button" class="bdp-btn" data-v="0">取消</button>' +
+      '<button type="button" class="bdp-btn bdp-primary" data-v="1" data-ms-terms-confirm>確認下載 ZIP</button></div></div>';
     wrap.innerHTML = html;
+    if (typeof window.msSyncAssetTerms === 'function') window.msSyncAssetTerms();
     Array.prototype.forEach.call(wrap.querySelectorAll('img[data-g]'), function (img) {
       var f = groups[img.getAttribute('data-g')][Number(img.getAttribute('data-i'))];
       img.src = f.dataUrl;
@@ -26998,6 +27117,9 @@ function restoreBottomPersist() {
           version: ++bottomWorkOrderVersion,
           bottomState: saved.bottomState || ''
         };
+          if (!currentImportWorkbookBuffer && saved.workOrderBuffer && saved.workOrderBuffer.slice) {
+            currentImportWorkbookBuffer = saved.workOrderBuffer.slice(0);
+          }
         /* 回填下載工單也需要原始活頁簿 */
         if (!currentImportWorkbook && typeof ExcelJS !== 'undefined') {
           new ExcelJS.Workbook().xlsx.load(saved.workOrderBuffer.slice(0)).then(function (wb) {
@@ -30931,6 +31053,7 @@ function clearImportCanvasContent() {
     /* 清空已上傳圖片素材、工單來源與產生器簽章 */
     uploadedImages = [];
     currentImportWorkbook = null;
+      currentImportWorkbookBuffer = null;
     currentImportWorkbookName = '';
     currentImportSource = '';
     currentGeneratorSignature = '';
@@ -32023,6 +32146,155 @@ ensureBlocksLoaded(function () {
   }, true);
   window.addEventListener('scroll', hide, true);
   window.addEventListener('resize', hide);
+})();
+</script>
+<script>
+/* MS 編輯器法務提醒／下載同意流程：與 shopee2 內嵌工具共用 localStorage。 */
+(function () {
+  'use strict';
+  var VERSION = '2026-11-19-v1';
+  var KEY = 'bn-asset-terms-consent-v1';
+  var TERMS = [
+    '一、工具功能與使用方式',
+    'MS 編輯器為前端網頁工具。使用者可匯入工單與圖片、選擇版型、裁切與排版，並輸出圖片、試算表、暫存檔或 ZIP。',
+    '二、素材與使用範圍',
+    '本工具提供的平台 Logo、背景圖片、版位模板、字型及其他平台素材，僅得於公司指定或授權的用途、範圍及期間內使用。未經書面同意，不得移作其他平台或其他用途，不得散布、轉售、授權第三方或暗示官方背書。',
+    '三、自行上傳素材',
+    '您自行上傳、匯入或使用的圖片、文字、商標、Logo、人物肖像及其他素材，應自行確認已取得合法權利或完整授權，且不得侵害第三人著作權、商標權、肖像權、個人資料或其他權利。',
+    '四、文案與法令遵循',
+    '禁用語與字數檢查僅作為輔助提醒，不代表內容已符合所有法令或平台規範。使用者仍應自行確認文案不得不實、誇大、易生誤解或涉及未經證實的療效宣稱。',
+    '五、外部連線與資料處理',
+    '本工具可能透過 GitHub／GitLab Pages、CDN、Google Fonts、Google Form 或其他前端服務載入程式與資源。正式上線前，仍應依公司法務、資訊安全、品牌及權限政策完成必要審查。',
+    '六、責任說明',
+    '因素材上傳、編輯、下載、發布或使用所生的爭議、損害或法律責任，由使用者自行負責；如因此造成公司或第三人損害，使用者應負相關責任。'
+  ];
+
+  function readConsent() {
+    try {
+      var raw = localStorage.getItem(KEY), data = raw ? JSON.parse(raw) : null;
+      return !!(data && data.version === VERSION && data.agreedAt);
+    } catch (e) { return false; }
+  }
+  function writeConsent(accepted) {
+    try {
+      if (accepted) localStorage.setItem(KEY, JSON.stringify({ version: VERSION, agreedAt: new Date().toISOString(), source: 'ms-editor-download' }));
+      else localStorage.removeItem(KEY);
+    } catch (e) {}
+  }
+  function ensureTermsModal() {
+    var modal = document.getElementById('ms-terms-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'ms-terms-modal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:2147483200;background:rgba(0,0,0,.68);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);';
+    var box = document.createElement('div');
+    box.className = 'ms-rights-box';
+    box.style.maxHeight = '88vh';
+    var head = document.createElement('div');
+    head.className = 'ms-rights-head';
+    head.innerHTML = '<h3>蝦皮資產使用條款</h3><button type="button" class="ms-rights-close" aria-label="關閉">×</button>';
+    var body = document.createElement('div');
+    body.className = 'ms-rights-body';
+    body.style.maxHeight = '58vh';
+    TERMS.forEach(function (line) { var p = document.createElement('p'); p.textContent = line; body.appendChild(p); });
+    var foot = document.createElement('div');
+    foot.className = 'ms-rights-foot';
+    foot.style.display = 'flex'; foot.style.alignItems = 'center'; foot.style.gap = '8px';
+    foot.innerHTML = '<button type="button" class="ms-terms-scroll" style="margin-right:auto;border:1px solid #cbd5e1;background:#f1f5f9;color:#475569;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer">↓ 滑到條款底部</button><span class="ms-terms-hint" style="font-size:10px;color:#64748b">請閱讀至最底部</span><button type="button" class="ms-rights-ok ms-terms-agree" disabled>我已同意條款</button>';
+    box.appendChild(head); box.appendChild(body); box.appendChild(foot); modal.appendChild(box); document.body.appendChild(modal);
+    var agree = foot.querySelector('.ms-terms-agree'), hint = foot.querySelector('.ms-terms-hint');
+    function update() {
+      var reached = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
+      agree.disabled = !reached;
+      hint.textContent = reached ? '已閱讀至條款底部' : '請閱讀至最底部';
+    }
+    body.addEventListener('scroll', update);
+    foot.querySelector('.ms-terms-scroll').addEventListener('click', function () { body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }); });
+    function close() { modal.style.display = 'none'; }
+    head.querySelector('.ms-rights-close').addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    agree.addEventListener('click', function () { writeConsent(true); close(); syncTermsUi(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.style.display === 'flex') close(); });
+    modal._msUpdate = update;
+    return modal;
+  }
+  function openTerms() {
+    var modal = ensureTermsModal();
+    modal.style.display = 'flex';
+    if (modal._msUpdate) modal._msUpdate();
+  }
+  function openRights() {
+    var modal = document.getElementById('ms-rights-modal');
+    if (modal) modal.classList.add('show');
+  }
+  function accepted() { return readConsent(); }
+  function requireTerms() {
+    if (accepted()) return true;
+    openTerms();
+    return false;
+  }
+  function syncTermsUi() {
+    bindTermsLines();
+    var ok = accepted();
+    document.querySelectorAll('[data-ms-terms-check]').forEach(function (check) { check.checked = ok; });
+    document.querySelectorAll('[data-ms-terms-download]').forEach(function (button) {
+      if (!ok) {
+        if (!button.disabled) button.setAttribute('data-ms-terms-restore', '1');
+        button.disabled = true;
+      } else if (button.getAttribute('data-ms-terms-restore') === '1') {
+        button.disabled = false;
+        button.removeAttribute('data-ms-terms-restore');
+      }
+    });
+    var packageButton = document.querySelector('#nav-rail .nav-step[data-step="download"]');
+    if (packageButton) packageButton.classList.toggle('ms-terms-locked', !ok);
+    document.querySelectorAll('[data-ms-terms-confirm]').forEach(function (button) { button.disabled = !ok; });
+  }
+  function bindTermsLines() {
+    document.querySelectorAll('[data-ms-terms-check]').forEach(function (check) {
+      if (check.getAttribute('data-ms-bound') === '1') return;
+      check.setAttribute('data-ms-bound', '1');
+      check.addEventListener('click', function (e) { if (!accepted()) { e.preventDefault(); openTerms(); } });
+      check.addEventListener('change', function () { if (!check.checked) { writeConsent(false); syncTermsUi(); } else if (!accepted()) { check.checked = false; openTerms(); } });
+    });
+    document.querySelectorAll('[data-ms-terms-link]').forEach(function (link) {
+      if (link.getAttribute('data-ms-bound') === '1') return;
+      link.setAttribute('data-ms-bound', '1');
+      link.addEventListener('click', function (e) { e.preventDefault(); openTerms(); });
+    });
+  }
+  function markDownloadButtons() {
+    ['#btn-all', '#btn-download-import-package'].forEach(function (selector) {
+      var button = document.querySelector(selector);
+      if (button) button.setAttribute('data-ms-terms-download', '1');
+    });
+    var packageButton = document.querySelector('#nav-rail .nav-step[data-step="download"]');
+    if (packageButton) packageButton.setAttribute('data-ms-terms-package', '1');
+  }
+  document.addEventListener('click', function (e) {
+    var button = e.target && e.target.closest ? e.target.closest('[data-ms-terms-download],[data-ms-terms-confirm],[data-ms-terms-package]') : null;
+    if (!button || accepted()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    openTerms();
+  }, true);
+  window.msAssetTermsAccepted = accepted;
+  window.msRequireAssetTerms = requireTerms;
+  window.msOpenAssetTerms = openTerms;
+  window.msSetAssetTermsAccepted = function (value) { writeConsent(!!value); syncTermsUi(); };
+  window.msSyncAssetTerms = syncTermsUi;
+  function init() {
+    var rights = document.getElementById('ms-rights-modal'), link = document.getElementById('ms-rights-link');
+    if (link) link.addEventListener('click', function (e) { e.preventDefault(); openRights(); });
+    if (rights) {
+      var close = function () { rights.classList.remove('show'); };
+      rights.querySelector('.ms-rights-close').addEventListener('click', close);
+      rights.querySelector('#ms-rights-ok').addEventListener('click', close);
+      rights.addEventListener('click', function (e) { if (e.target === rights) close(); });
+    }
+    markDownloadButtons(); bindTermsLines(); syncTermsUi();
+    window.addEventListener('storage', function (e) { if (e.key === KEY) syncTermsUi(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
 </body>

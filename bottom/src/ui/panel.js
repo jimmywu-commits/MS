@@ -24,6 +24,54 @@
     return el("div", { class: "note" }, [text]);
   }
 
+  function msTermsAccepted() {
+    try {
+      if (window.parent && window.parent !== window && typeof window.parent.msAssetTermsAccepted === "function") {
+        return !!window.parent.msAssetTermsAccepted();
+      }
+    } catch (e) {}
+    return true;
+  }
+
+  function msTermsOpen() {
+    try {
+      if (window.parent && window.parent !== window && typeof window.parent.msOpenAssetTerms === "function") {
+        window.parent.msOpenAssetTerms();
+      }
+    } catch (e) {}
+  }
+
+  function msTermsSet(value) {
+    try {
+      if (window.parent && window.parent !== window && typeof window.parent.msSetAssetTermsAccepted === "function") {
+        window.parent.msSetAssetTermsAccepted(!!value);
+      }
+    } catch (e) {}
+  }
+
+  function buildMsTermsLine(button) {
+    var wrap = el("div", { class: "ms-terms-line" });
+    var check = el("input", { type: "checkbox", "aria-label": "我已閱讀並接受蝦皮資產使用條款" });
+    var label = el("label", {});
+    var link = el("a", { href: "#ms-terms-modal" }, ["「蝦皮資產使用條款」"]);
+    label.appendChild(document.createTextNode("我已閱讀並接受 "));
+    label.appendChild(link);
+    wrap.appendChild(check); wrap.appendChild(label);
+    function sync() { var ok = msTermsAccepted(); check.checked = ok; button.disabled = !ok; }
+    check.addEventListener("click", function (e) { if (!msTermsAccepted()) { e.preventDefault(); msTermsOpen(); } });
+    check.addEventListener("change", function () { if (!check.checked) { msTermsSet(false); sync(); } });
+    link.addEventListener("click", function (e) { e.preventDefault(); msTermsOpen(); });
+    window.addEventListener("storage", sync);
+    sync();
+    return wrap;
+  }
+
+  function requireMsTerms() {
+    if (msTermsAccepted()) return true;
+    msTermsOpen();
+    return false;
+  }
+
   /*
    * 剛好 5 字 = 橘色（提醒已達上限），超過 5 字 = 紅色（配合輸入框的紅框）。
    * 兩者要分得開，不然「剛好用滿」跟「已經超了」會長得一樣。
@@ -548,6 +596,7 @@
   }
 
   function downloadBottomPageResources(store, ui, rerender) {
+    if (!requireMsTerms()) return;
     if (ui.pageResourceExporting) return;
     var current = store.getState();
     var bannerCount = current.banners.length;
@@ -579,6 +628,7 @@
     dlBtn.innerHTML = '<svg class="host-btn-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m7.8 10.2 4.2 4.2 4.2-4.2"/><path d="M4 20h16"/></svg> 下載此資源檔案';
     if (ui.pageResourceExporting) dlBtn.setAttribute("disabled", "disabled");
     dlBtn.addEventListener("click", function () { downloadBottomPageResources(store, ui, rerender); });
+    node.appendChild(buildMsTermsLine(dlBtn));
     node.appendChild(dlBtn);
     node.appendChild(el("div", { class: "host-dl-hint" }, [
       "只下載吸底工具目前所有分頁的多狀態 PNG 與吸底進度存檔；完整工單與其他頁資源請使用最左側「整包下載」。"
@@ -1440,6 +1490,7 @@
       var parentExportBtn = el("button", { class: "primary block" }, ["⬇ 下載此資源檔案"]);
       if (ui.pageResourceExporting) parentExportBtn.setAttribute("disabled", "disabled");
       parentExportBtn.addEventListener("click", function () { downloadBottomPageResources(store, ui, rerender); });
+      node.appendChild(buildMsTermsLine(parentExportBtn));
       node.appendChild(parentExportBtn);
       if (ui.exportStatus) node.appendChild(note(ui.exportStatus));
       return node;

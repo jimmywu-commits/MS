@@ -1719,6 +1719,11 @@ html.embed-standalone .host-snapshot-btn:hover {
   color: #356f6a;
 }
 html.embed-standalone .host-dl-hint { font-size: 10px; color: #93a19d; text-align: center; margin-top: 6px; line-height: 1.5; }
+.ms-terms-line { display:flex; align-items:flex-start; gap:5px; margin:0 0 7px; color:#7a8a86; font-size:10.5px; line-height:1.45; }
+.ms-terms-line input { width:13px; height:13px; margin:1px 0 0; accent-color:#ee4d2d; flex:0 0 auto; }
+.ms-terms-line label { cursor:pointer; }
+.ms-terms-line a { color:#2563eb; text-decoration:underline; cursor:pointer; }
+.host-dl-btn:disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
 
 /*
  * ── 2026-10 新增：重設、移除素材、圖片大小、整頁拖放 ──────────────
