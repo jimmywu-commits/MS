@@ -29802,8 +29802,8 @@ function bindMaintControls() {
    外掛仍從 MS/jbp/js 載入，不應從 shopee2 內尋找。 */
 var BODA_USE_LOCAL_SIBLINGS = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 var EXPOSURE_PLUGIN_BASE_LOCAL = new URL('jbp/js/', new URL('./', location.href)).href;
-var EXPOSURE_SRC_LOCAL  = '../shopee2/index.html?host=boda&pluginBase=' + encodeURIComponent(EXPOSURE_PLUGIN_BASE_LOCAL) + '&v=20261113-paths2';
-var EXPOSURE_SRC_REMOTE = 'https://jimmywu-commits.github.io/shopee2/index.html?host=boda&pluginBase=https://jimmywu-commits.github.io/MS/jbp/js/&v=20261113-paths1';
+var EXPOSURE_SRC_LOCAL  = '../shopee2/index.html?host=boda&pluginBase=' + encodeURIComponent(EXPOSURE_PLUGIN_BASE_LOCAL) + '&v=20261119-additional-modal';
+var EXPOSURE_SRC_REMOTE = 'https://jimmywu-commits.github.io/shopee2/index.html?host=boda&pluginBase=https://jimmywu-commits.github.io/MS/jbp/js/&v=20261119-additional-modal';
 var EXPOSURE_SRC = BODA_USE_LOCAL_SIBLINGS
   ? EXPOSURE_SRC_LOCAL : EXPOSURE_SRC_REMOTE;
 var exposureLoaded = false;
