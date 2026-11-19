@@ -195,6 +195,8 @@
   }
   /* 工單沒列到的版位：自動選 LOGO 方／橫版、無 LOGO 版時不可再自動勾回來（使用者手動勾不受限）。 */
   function workorderBlocksAutoCheck(layout) {
+    /* 使用者用「＋追加版位」加進來的版位等同手動列入，LOGO 方／橫自動判斷要照常套用。 */
+    if (layout && additionalFamilyOfLayout(layout.id)) return false;
     return !!workorderPlacement && !workorderListsSlot(workorderSlotOfLayout(layout));
   }
   /* shopee2/index.html 的預覽畫布在建立 iframe 前會呼叫這個排序器，讓右側畫布
@@ -203,7 +205,15 @@
     return sortLayoutsForWorkorder(layouts, workorderPlacement);
   };
   var currentLevelId = readLevel();
+  /* 新版以版位家族記錄追加選擇；保留 boolean 供舊暫存相容。 */
   var additionalSlotsRevealed = {};
+  var additionalSlotsSelected = {};
+  /* { 等級: { 版位 id: 追加家族 key } }：追加進來的實際版位，用來判斷 LOGO 自動選版與整組取消。 */
+  var additionalSlotLayoutIds = {};
+  function additionalFamilyOfLayout(id) {
+    var map = additionalSlotLayoutIds[currentLevelId];
+    return map ? (map[String(id)] || '') : '';
+  }
   var SHEET = {};
   var sheetError = '';
 
@@ -500,8 +510,15 @@
     (conf.conditional || []).concat(WORKORDER_ONLY_SLOTS).forEach(function (name) {
       if (names.indexOf(name) === -1 && optionalNames.indexOf(name) === -1) optionalNames.push(name);
     });
-    var revealOptional = !!additionalSlotsRevealed[currentLevelId];
-    if (revealOptional) names = names.concat(optionalNames);
+    var selectedOptional = additionalSlotsSelected[currentLevelId] || {};
+    var selectedKeys = Object.keys(selectedOptional);
+    var revealOptional = !!additionalSlotsRevealed[currentLevelId] || selectedKeys.length > 0;
+    if (revealOptional) {
+      names = names.concat(optionalNames.filter(function (name) {
+        if (!selectedKeys.length) return true;
+        return !!selectedOptional[additionalSlotFamilyKey(name)];
+      }));
+    }
     names.forEach(function (name) {
       var hits = filesForSlot(conf, name, layouts).filter(function (l) {
         return !usedIds[layoutKey(l)];
@@ -577,29 +594,167 @@
     });
   }
 
+  function additionalSlotFamilyKey(name) {
+    return normKey(String(name == null ? '' : name)
+      .replace(/(?:方|橫|横|無)\s*(?:logo)?$/i, '')
+      .replace(/(?:square|horizontal|landscape|portrait|no[-_ ]?logo)$/i, ''));
+  }
+
+  function ensureAdditionalSlotsModal() {
+    var modal = document.getElementById('bn-additional-modal');
+    if (modal) return modal;
+    /* 舊版 shopee2 沒有浮動視窗時，由 MS 外掛補上同一個 DOM，避免退回頁尾展開。 */
+    if (!document.getElementById('boda-additional-modal-style')) {
+      var style = document.createElement('style');
+      style.id = 'boda-additional-modal-style';
+      style.textContent = '#bn-additional-modal{position:fixed;inset:0;z-index:10050;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62)}#bn-additional-modal.show{display:flex}.bn-additional-card{width:min(430px,calc(100vw - 32px));max-height:min(78vh,620px);display:flex;flex-direction:column;border:1px solid #d9e1df;border-radius:12px;background:#fff;box-shadow:0 18px 60px rgba(0,0,0,.35);overflow:hidden}.bn-additional-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #e1e8e6}.bn-additional-head strong{flex:1;font-size:14px}.bn-additional-close{width:28px;height:28px;border:1px solid #d9e1df;border-radius:6px;background:#f4f6f5;color:#5b6b67;cursor:pointer}.bn-additional-note{padding:10px 16px;color:#7a8a86;font-size:11px;line-height:1.6;border-bottom:1px solid #e1e8e6}.bn-additional-options{padding:10px;overflow:auto}.bn-additional-option{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;cursor:pointer}.bn-additional-option:hover{background:#eef2f1}.bn-additional-option input{width:15px;height:15px;accent-color:#4d9b95}.bn-additional-option span{font-size:12px;font-weight:600}.bn-additional-option small{margin-left:auto;color:#7a8a86;font-size:10px}.bn-additional-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid #e1e8e6}.bn-additional-foot button{padding:6px 12px;border:1px solid #d9e1df;border-radius:6px;background:#f4f6f5;color:#5b6b67;cursor:pointer;font:inherit;font-size:11px}.bn-additional-foot .primary{border-color:#4d9b95;background:#4d9b95;color:#fff}';
+      document.head.appendChild(style);
+    }
+    modal = document.createElement('div');
+    modal.id = 'bn-additional-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = '<div class="bn-additional-card"><div class="bn-additional-head"><strong id="bn-additional-title">追加版位</strong><button type="button" class="bn-additional-close" aria-label="關閉">×</button></div><div class="bn-additional-note">只選版位名稱；同一版位的方／橫 LOGO 由編輯器依 LOGO 尺寸自動判斷。</div><div id="bn-additional-options" class="bn-additional-options"></div><div class="bn-additional-foot"><button type="button" data-additional-cancel>取消</button><button type="button" class="primary" data-additional-apply>追加選取版位</button></div></div>';
+    document.body.appendChild(modal);
+    modal.querySelector('.bn-additional-close').addEventListener('click', closeAdditionalSlots);
+    modal.querySelector('[data-additional-cancel]').addEventListener('click', closeAdditionalSlots);
+    modal.querySelector('[data-additional-apply]').addEventListener('click', applyAdditionalSlots);
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeAdditionalSlots(); });
+    return modal;
+  }
+
+  function getAdditionalSlotFamilies() {
+    var conf = levelSheetConf(currentLevelId);
+    var layouts = (typeof window.loadLayouts === 'function' ? window.loadLayouts() : [])
+      .filter(function (l) { return l && l.enabled !== false; });
+    var base = conf.order || [];
+    var selected = additionalSlotsSelected[currentLevelId] || {};
+    var groups = {};
+    (conf.conditional || []).concat(WORKORDER_ONLY_SLOTS).forEach(function (name) {
+      if (base.indexOf(name) !== -1) return;
+      var key = additionalSlotFamilyKey(name);
+      if (!key || selected[key]) return;
+      var hits = filesForSlot(conf, name, layouts);
+      if (!hits.length) return;
+      if (!groups[key]) groups[key] = { key: key, label: String(name), members: [] };
+      groups[key].members = groups[key].members.concat(hits);
+    });
+    return Object.keys(groups).map(function (key) { return groups[key]; })
+      .sort(function (a, b) { return a.label.localeCompare(b.label, 'zh-Hant'); });
+  }
+
   function updateAdditionalSlotsButton(plan) {
     var button = document.getElementById('bn-additional-layouts');
     if (!button) return;
-    var available = !!(plan && plan.optionalAvailable);
-    var revealed = !!(plan && plan.optionalRevealed);
-      /* 追加版位按鈕固定顯示在「全消」右側；沒有可追加項目時僅淡灰停用。 */
-      button.hidden = false;
-      button.disabled = !available;
-      button.setAttribute('aria-disabled', available ? 'false' : 'true');
-      button.style.cursor = available ? 'pointer' : 'not-allowed';
-    button.textContent = revealed ? '−收起追加版位' : '＋追加版位';
-    button.setAttribute('aria-expanded', revealed ? 'true' : 'false');
-    button.title = revealed ? '收起此等級的追加版位' : '顯示此等級的有資源才做版位';
+    var available = getAdditionalSlotFamilies().length > 0;
+    /* 按鈕固定在「全消」右側；按下後開浮動視窗，不再把清單推到頁尾。 */
+    button.hidden = false;
+    button.disabled = !available;
+    button.setAttribute('aria-disabled', available ? 'false' : 'true');
+    button.setAttribute('aria-expanded', 'false');
+    button.style.cursor = available ? 'pointer' : 'not-allowed';
+    button.textContent = '＋追加版位';
+    button.title = available ? '開啟追加版位選擇視窗' : '目前沒有可追加的版位';
   }
 
   function toggleAdditionalSlots() {
-    var plan = planForLevel();
-    if (!plan || !plan.optionalAvailable) return;
-    additionalSlotsRevealed[currentLevelId] = !additionalSlotsRevealed[currentLevelId];
+    var groups = getAdditionalSlotFamilies();
+    if (!groups.length) { updateAdditionalSlotsButton(); return; }
+    var modal = ensureAdditionalSlotsModal();
+    var options = modal.querySelector('#bn-additional-options');
+    options.innerHTML = groups.map(function (group, index) {
+      var detail = group.members.length > 1 ? '方／橫自動判斷' : '單一版位';
+      return '<label class="bn-additional-option"><input type="checkbox" data-additional-family="' + esc(group.key) + '" id="bn-additional-' + index + '"><span>' + esc(group.label) + '</span><small>' + esc(detail) + '</small></label>';
+    }).join('');
+    modal.classList.add('show');
+    var button = document.getElementById('bn-additional-layouts');
+    if (button) button.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeAdditionalSlots() {
+    var modal = document.getElementById('bn-additional-modal');
+    if (modal) modal.classList.remove('show');
+    var button = document.getElementById('bn-additional-layouts');
+    if (button) button.setAttribute('aria-expanded', 'false');
+  }
+
+  function logoVariantOf(layout) {
+    var s = String((layout && (layout.name || layout.file)) || '');
+    if (/(無logo|no[-_ ]?logo)/i.test(s)) return 'none';
+    if (/(方式logo|方(?:式|版)?logo|方logo|square|vertical|portrait)/i.test(s)) return 'square';
+    if (/(橫(?:式|版)?logo|橫logo|horizontal|landscape)/i.test(s)) return 'horizontal';
+    return '';
+  }
+  /* 跟 bn-editor-plugin 的 syncLogoLayoutSelection 同一套規則：沒有 LOGO → 無 LOGO 版；
+     2 顆以上或 1 顆寬 > 高 → 橫版；1 顆高 >= 寬 → 方版。尺寸還沒量到時回傳空字串。 */
+  function currentLogoVariantMode() {
+    var logos = window._bnLogos || [];
+    if (!logos.length) return 'none';
+    if (logos.length > 1) return 'horizontal';
+    var ratio = Number(logos[0] && logos[0].ratio);
+    if (ratio > 1) return 'horizontal';
+    if (ratio > 0) return 'square';
+    return '';
+  }
+  function pickLogoVariantMembers(members, mode) {
+    var picks = {};
+    var byVariant = { none: [], square: [], horizontal: [] };
+    (members || []).forEach(function (layout) {
+      var v = logoVariantOf(layout);
+      if (v) byVariant[v].push(layout);
+      else picks[String(layout.id)] = true; /* 沒有方／橫之分的版位一律勾選 */
+    });
+    var variantCount = byVariant.none.length + byVariant.square.length + byVariant.horizontal.length;
+    if (!variantCount) return picks;
+    var chosen;
+    if (mode === 'none') chosen = byVariant.none.length ? byVariant.none : byVariant.square.concat(byVariant.horizontal);
+    else if (mode && byVariant[mode].length) chosen = byVariant[mode];
+    else if (mode) chosen = byVariant.square.concat(byVariant.horizontal);
+    else chosen = byVariant.none.concat(byVariant.square, byVariant.horizontal); /* LOGO 尺寸量測中：先全勾，量完由自動選版收斂 */
+    if (!chosen.length) chosen = byVariant.none.concat(byVariant.square, byVariant.horizontal);
+    chosen.forEach(function (layout) { picks[String(layout.id)] = true; });
+    return picks;
+  }
+
+  function applyAdditionalSlots() {
+    var modal = document.getElementById('bn-additional-modal');
+    if (!modal) return;
+    var wanted = {};
+    modal.querySelectorAll('input[data-additional-family]:checked').forEach(function (input) {
+      wanted[input.getAttribute('data-additional-family')] = true;
+    });
+    if (!Object.keys(wanted).length) { closeAdditionalSlots(); return; }
+    var families = getAdditionalSlotFamilies();
+    var selected = additionalSlotsSelected[currentLevelId] || {};
+    var addedIds = additionalSlotLayoutIds[currentLevelId] || {};
+    var checked = window.checked || (window.checked = {});
+    var mode = currentLogoVariantMode();
+    Object.keys(wanted).forEach(function (key) { selected[key] = true; });
+    additionalSlotsSelected[currentLevelId] = selected;
+    additionalSlotLayoutIds[currentLevelId] = addedIds;
+    additionalSlotsRevealed[currentLevelId] = false;
+    /* 追加的版位直接預設勾選；有方／橫（／無）LOGO 版本的，只勾目前 LOGO 對應的那一張，
+       另一張不勾、也不顯示，跟等級原本就有的版位呈現一致。 */
+    families.forEach(function (group) {
+      if (!wanted[group.key]) return;
+      var picks = pickLogoVariantMembers(group.members, mode);
+      group.members.forEach(function (layout) {
+        addedIds[String(layout.id)] = group.key;
+        checked[layout.id] = !!picks[String(layout.id)];
+        userTouched[layout.id] = true;
+        noteManualCheck(layout.id, checked[layout.id]);
+      });
+    });
+    closeAdditionalSlots();
     myRenderChecks();
     if (typeof window.renderPreviews === 'function') window.renderPreviews();
+    if (typeof window._bnSyncLogoLayoutSelection === 'function') {
+      try { Promise.resolve(window._bnSyncLogoLayoutSelection()).catch(function () {}); } catch (e) {}
+    }
   }
   window.toggleAdditionalSlots = toggleAdditionalSlots;
+  window.closeAdditionalSlots = closeAdditionalSlots;
+  window.applyAdditionalSlots = applyAdditionalSlots;
 
   function enforceLpbnSingleVariant(plan) {
     var checked = window.checked || (window.checked = {});
@@ -636,8 +791,11 @@
     var checked = window.checked || {};
     /* 工單等級沒有、工單未勾選，或 Logo 方／橫尺寸不符的版型都不顯示。
        plan 仍保留完整可用清單給程式同步，這裡只篩選工具列的可見項目。 */
+    /* 追加版位跟一般版位同樣只顯示已勾選的那張（方／橫 LOGO 不符的不顯示）；
+       只有舊暫存的「展開全部有資源才做版位」模式才連未勾選的一起列出。 */
+    var legacyRevealed = !!additionalSlotsRevealed[currentLevelId];
     var visibleRows = plan.rows.filter(function (r) {
-      return !!(r.layout && (checked[r.layout.id] || (r.optional && plan.optionalRevealed)));
+      return !!(r.layout && (checked[r.layout.id] || (r.optional && legacyRevealed)));
     });
     if (!visibleRows.length) {
       wrap.innerHTML = '<div class="no-layouts">目前工單與 Logo 沒有符合的版位</div>';
@@ -701,6 +859,19 @@
     }).join('||');
   }
 
+  /* 追加的版位整組都被取消勾選後，從清單移除並放回「＋追加版位」視窗，之後可以再追加。 */
+  function releaseUncheckedAdditionalFamily(id) {
+    var key = additionalFamilyOfLayout(id);
+    if (!key) return;
+    var ids = additionalSlotLayoutIds[currentLevelId] || {};
+    var checked = window.checked || {};
+    var members = Object.keys(ids).filter(function (layoutId) { return ids[layoutId] === key; });
+    if (members.some(function (layoutId) { return !!checked[layoutId]; })) return;
+    members.forEach(function (layoutId) { delete ids[layoutId]; });
+    var selected = additionalSlotsSelected[currentLevelId];
+    if (selected) delete selected[key];
+  }
+
   function myOnCheck(id, val) {
     var checked = window.checked || (window.checked = {});
     checked[id] = !!val;
@@ -712,6 +883,7 @@
     if (selected && isLogoVariantLayout(selected.layout)) {
       _logoVariantManualOverride = true;
     }
+    releaseUncheckedAdditionalFamily(id);
     myRenderChecks();
     if (typeof window.renderPreviews === 'function') window.renderPreviews();
   }

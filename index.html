@@ -1732,6 +1732,13 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 #boda-dl-preview .bdp-foot-note{margin-right:auto;font-size:12px;color:var(--ink3,#7a8a86);}
 #boda-dl-preview .bdp-primary{background:#ee4d2d;border-color:#ee4d2d;color:#fff;font-weight:700;}
 #boda-dl-preview .bdp-primary:hover{background:#d83e21;}
+/* 條款＋確認下載 ZIP 放在同一個框內，條款在左、按鈕在右 */
+#boda-dl-preview .bdp-terms-confirm{display:flex;align-items:center;gap:10px;padding:4px 4px 4px 10px;border:1px solid #d9e2df;border-radius:9px;background:#f7faf9;}
+#boda-dl-preview .bdp-terms-confirm .ms-terms-line{margin:0;padding:0;border:0;background:none;align-items:center;}
+#boda-dl-preview .bdp-terms-confirm .ms-terms-line input{margin:0;}
+#boda-dl-preview .bdp-foot .bdp-btn,#boda-dl-preview .bdp-terms-confirm .ms-terms-line label{white-space:nowrap;}
+#boda-dl-preview .bdp-terms-confirm{flex:0 0 auto;}
+#boda-dl-preview .bdp-primary:disabled,#boda-dl-preview .bdp-primary:disabled:hover{background:#c9cfcd;border-color:#c9cfcd;color:#fff;cursor:not-allowed;}
 #boda-choice-dialog .bcd-primary:hover{background:#d83e21;border-color:#d83e21;}
 #boda-choice-dialog .bcd-btn:not(.bcd-primary):hover{border-color:#ee4d2d;color:#ee4d2d;}
 .nav-step.active .step-badge{box-shadow:0 0 0 2px var(--teal);}
@@ -13463,7 +13470,10 @@ function syncWorkbookLpbnToExposure(wb) {
     if (!win) return false;
     win.postMessage({
       type: 'wo-workorder-lpbn-text',
-      data: { main: data.main, sub: data.sub, date: data.date, productFiles: productFiles }
+       data: {
+         main: data.main, sub: data.sub, date: data.date, productFiles: productFiles,
+         workOrderKey: currentExposureWorkOrderKey()
+       }
     }, '*');
     return true;
   } catch (e) { return false; }
@@ -18945,6 +18955,8 @@ function bindImportScrollSync() {
 var IMPORT_THEME_KEY = 'wo_import_theme_v1';
 var SHARED_CANVAS_BG_KEY = 'wo_shared_canvas_bg_v1';
 var SHARED_EXPOSURE_TEXT_KEY = 'wo_shared_exposure_text_v1';
+/* 曝光資源文字編輯鎖：同一份工單後續同步素材／影子時，保留使用者已編輯文字。 */
+var EXPOSURE_TEXT_EDIT_LOCK_KEY = 'boda_exposure_text_edit_lock_v1';
 var SHARED_ENDORSER_TEXT_COLOR_KEY = 'wo_shared_endorser_text_color_v1';
 var EXPOSURE_DEFAULT_BG = '#6bc0ec'; /* shopee2/index.html 裡 colorState.canvasBg 的預設值 */
 
@@ -19092,8 +19104,31 @@ function normalizeExposureOverviewText(data, keepTimestamp) {
     /* 工單總覽「代言人照+簽名檔路徑」：檔名以換行分隔保存（檔名本身可能有逗號，例如 滿2,000折） */
     endorserFiles: data.endorserFiles == null ? '' : String(data.endorserFiles),
     endorserNote: data.endorserNote == null ? '' : String(data.endorserNote),
+    workOrderKey: data.workOrderKey == null ? '' : String(data.workOrderKey),
+    userEdited: data.userEdited === true,
+    manualEditedAt: Number(data.manualEditedAt) || 0,
     ts: ts
   };
+}
+function currentExposureWorkOrderKey() {
+  var specId = currentImportedWorkOrderSpec && currentImportedWorkOrderSpec.importId;
+  if (specId) return 'spec:' + String(specId);
+  if (currentImportWorkbookName) return 'file:' + String(currentImportWorkbookName).trim().toLowerCase();
+  if (currentImportActivityName) return 'activity:' + String(currentImportActivityName).trim().toLowerCase();
+  return '';
+}
+function readExposureTextEditLock() {
+  try {
+    var raw = localStorage.getItem(EXPOSURE_TEXT_EDIT_LOCK_KEY);
+    var value = raw ? JSON.parse(raw) : null;
+    return value && typeof value === 'object' ? value : null;
+  } catch (e) { return null; }
+}
+function writeExposureTextEditLock(value) {
+  try {
+    if (value && value.workOrderKey) localStorage.setItem(EXPOSURE_TEXT_EDIT_LOCK_KEY, JSON.stringify(value));
+    else localStorage.removeItem(EXPOSURE_TEXT_EDIT_LOCK_KEY);
+  } catch (e) {}
 }
 function readSharedExposureOverviewText() {
   try {
@@ -19118,17 +19153,73 @@ function pushExposureOverviewText(payload) {
     if (!win) return false;
     win.postMessage({
       type: 'wo-workorder-overview-text',
-      data: { brand: payload.brand, main: payload.main, sub: payload.sub, date: payload.date, icon: payload.icon, ar: payload.ar, logoFiles: payload.logoFiles, productFiles: payload.productFiles },
+      data: {
+        brand: payload.brand, main: payload.main, sub: payload.sub, date: payload.date,
+        icon: payload.icon, ar: payload.ar, logoFiles: payload.logoFiles,
+        productFiles: payload.productFiles, workOrderKey: payload.workOrderKey,
+        userEdited: !!payload.userEdited, manualEditedAt: payload.manualEditedAt || 0
+      },
       ts: payload.ts
     }, '*');
     return true;
   } catch (e) { return false; }
 }
 function syncImportedExposureOverviewText(data) {
-  var payload = writeSharedExposureOverviewText(normalizeExposureOverviewText(data, false));
+  var incoming = normalizeExposureOverviewText(Object.assign({}, data || {}, {
+    workOrderKey: (data && data.workOrderKey) || currentExposureWorkOrderKey()
+  }), false);
+  var existing = readSharedExposureOverviewText();
+  /* 同一份工單只保留使用者已編輯的文字；換新工單（workOrderKey 不同）才套用工單原始值。 */
+  if (existing && existing.userEdited && existing.workOrderKey &&
+      incoming.workOrderKey && existing.workOrderKey === incoming.workOrderKey) {
+    incoming.brand = existing.brand;
+    incoming.main = existing.main;
+    incoming.sub = existing.sub;
+    incoming.date = existing.date;
+    incoming.icon = existing.icon;
+    incoming.ar = existing.ar;
+    incoming.userEdited = true;
+    incoming.manualEditedAt = existing.manualEditedAt || existing.ts;
+    incoming.ts = existing.ts || incoming.ts;
+  } else {
+    incoming.userEdited = false;
+    incoming.manualEditedAt = 0;
+    if (!existing || !incoming.workOrderKey || existing.workOrderKey !== incoming.workOrderKey) {
+      writeExposureTextEditLock(null);
+    }
+  }
+  var payload = writeSharedExposureOverviewText(incoming);
   pushExposureOverviewText(payload);
   return payload;
 }
+
+/* 曝光 iframe 的文字編輯結果回傳主頁；主頁是跨頁同步的權威來源。 */
+window.addEventListener('message', function (e) {
+  var d = e && e.data;
+  if (!d || d.type !== 'bn-exposure-text-edited') return;
+  var frame = document.getElementById('exposure-frame');
+  if (!frame || e.source !== frame.contentWindow) return;
+  var current = readSharedExposureOverviewText() || {};
+  var data = d.data || {};
+  var key = String(data.workOrderKey || currentExposureWorkOrderKey() || current.workOrderKey || '');
+  var now = Date.now();
+  var payload = normalizeExposureOverviewText(Object.assign({}, current, data, {
+    workOrderKey: key,
+    userEdited: true,
+    manualEditedAt: now,
+    ts: now
+  }), true);
+  writeSharedExposureOverviewText(payload);
+  writeExposureTextEditLock({ workOrderKey: key, ts: now });
+  try {
+    frame.contentWindow.postMessage({
+      type: 'bn-exposure-text-edit-ack',
+      workOrderKey: key,
+      ts: now
+    }, '*');
+  } catch (_) {}
+  /* 不需再次推回同一個 iframe；保留目前畫布，後續同步會讀這份使用者版本。 */
+});
 
 function normalizeExposureAssetFileNames(value) {
   var seen = {};
@@ -21327,8 +21418,14 @@ window.addEventListener('message', function (e) {
   if (loading.source === 'BODA_EXPOSURE_LOADING' && exposureFrame && e.source === exposureFrame.contentWindow) {
     if (loading.phase === 'finish') {
       exposureChildLoading = false;
+      exposureChildLoadingFallbackUntil = 0;
+      clearTimeout(exposureChildLoadingFallbackTimer);
+      exposureChildLoadingFallbackTimer = 0;
       appLoadingFinish(loading.note || '曝光資源已就緒');
     } else {
+      /* 父頁已因子頁長時間未回報 ready 而安全收尾時，忽略遲到的 update，
+         避免 Loading 又被重新打開；下一次真正重新進入曝光資源時會重設這個時間。 */
+      if (exposureChildLoadingFallbackUntil && Date.now() < exposureChildLoadingFallbackUntil) return;
       exposureChildLoading = true;
       appLoadingStart(loading.label || 'LOADING · 曝光資源', Number(loading.percent) || 8, loading.note || '正在載入畫布與字體…');
     }
@@ -26655,10 +26752,13 @@ function showPackageDownloadPreview(bundle) {
     if (bundle.warnings && bundle.warnings.length) {
       html += '<div class="bdp-warn"><b>提醒</b><ul>' + bundle.warnings.map(function (w) { return '<li></li>'; }).join('') + '</ul></div>';
     }
-    html += '</div><div class="bdp-foot"><div class="ms-terms-line"><input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label></div><span class="bdp-foot-note">切到左側其他頁面會取消這次下載</span><button type="button" class="bdp-btn" data-v="0">取消</button>' +
-      '<button type="button" class="bdp-btn bdp-primary" data-v="1" data-ms-terms-confirm>確認下載 ZIP</button></div></div>';
+    /* 條款勾選與「確認下載 ZIP」是同一組：條款在按鈕左邊緊貼，未勾選前按鈕反灰不能按。 */
+    html += '</div><div class="bdp-foot"><span class="bdp-foot-note">切到左側其他頁面會取消這次下載</span><button type="button" class="bdp-btn" data-v="0">取消</button>' +
+      '<div class="bdp-terms-confirm"><div class="ms-terms-line"><input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label></div>' +
+      '<button type="button" class="bdp-btn bdp-primary" data-v="1" data-ms-terms-confirm' +
+      (typeof window.msAssetTermsAccepted === 'function' && !window.msAssetTermsAccepted() ? ' disabled' : '') +
+      '>確認下載 ZIP</button></div></div></div>';
     wrap.innerHTML = html;
-    if (typeof window.msSyncAssetTerms === 'function') window.msSyncAssetTerms();
     Array.prototype.forEach.call(wrap.querySelectorAll('img[data-g]'), function (img) {
       var f = groups[img.getAttribute('data-g')][Number(img.getAttribute('data-i'))];
       img.src = f.dataUrl;
@@ -26765,6 +26865,8 @@ function showPackageDownloadPreview(bundle) {
     } catch (e) {}
     document.addEventListener('keydown', onKey, true);
     document.body.appendChild(wrap);
+    /* 要在掛上頁面後才同步：條款勾選框的綁定與按鈕反灰都是用 document 查找。 */
+    if (typeof window.msSyncAssetTerms === 'function') window.msSyncAssetTerms();
   });
 }
 
@@ -29808,6 +29910,8 @@ var EXPOSURE_SRC = BODA_USE_LOCAL_SIBLINGS
   ? EXPOSURE_SRC_LOCAL : EXPOSURE_SRC_REMOTE;
 var exposureLoaded = false;
 var exposureChildLoading = false; /* iframe 內仍在載入字體／畫布時，父頁不可提早收起提示。 */
+var exposureChildLoadingFallbackTimer = 0;
+var exposureChildLoadingFallbackUntil = 0;
 /* UI-003（2026-11-11）：把 MS 的曝光資源介面樣式 css/exposure-light.css 注入子頁（shopee2/index.html）。
    - 路徑以「父頁自身網址」解析成絕對 URL（/MS/css/…），不受本機或 GitHub Pages 子頁路徑影響。
    - 同一份 document 只注入一次（以 link id 檢查）；iframe 重新載入（fallback／reload）是新 document，load 時會再注入。
@@ -29850,18 +29954,27 @@ function injectExposureSidebarScript(frame) {
 function installExposureDoneButton(doc, downloadButton) {
   try {
     if (!doc || !downloadButton || !downloadButton.parentNode) return;
-    if (doc.getElementById('boda-exposure-done-btn')) return;
-    var btn = doc.createElement('button');
-    btn.type = 'button';
-    btn.id = 'boda-exposure-done-btn';
-    btn.textContent = '曝光資源完成'; /* UI-005-J：原「完成」 */
-    btn.title = '標記「曝光資源」這一步已完成（左側導覽顯示 ✓），並前往下一步';
-    btn.addEventListener('click', function (e) {
-      e.preventDefault(); e.stopPropagation(); /* 不觸發下載列任何事件 */
-      var done = document.querySelector('#step-actions [data-step-act="done"]');
-      if (done) done.click();
-    });
-    downloadButton.parentNode.insertBefore(btn, downloadButton);
+    var terms = doc.getElementById('bn-ms-terms-line') || doc.querySelector('.bn-ms-terms-line');
+    var btn = doc.getElementById('boda-exposure-done-btn');
+    if (!btn) {
+      btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.id = 'boda-exposure-done-btn';
+      btn.textContent = '曝光資源完成'; /* UI-005-J：原「完成」 */
+      btn.title = '標記「曝光資源」這一步已完成（左側導覽顯示 ✓），並前往下一步';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation(); /* 不觸發下載列任何事件 */
+        var done = document.querySelector('#step-actions [data-step-act="done"]');
+        if (done) done.click();
+      });
+    }
+    /* 固定順序：曝光資源完成 → 條款勾選 → 單獨下載曝光資源檔案。 */
+    var anchor = terms || downloadButton;
+    /* 只有位置不對時才搬：mark() 由子頁 MutationObserver 觸發，每次 insertBefore 都會再產生一次
+       childList 變動，無條件搬移會讓 observer 無限重跑、整頁凍結在曝光資源的 Loading 畫面。 */
+    if (anchor.parentNode && (btn.parentNode !== anchor.parentNode || btn.nextSibling !== anchor)) {
+      anchor.parentNode.insertBefore(btn, anchor);
+    }
   } catch (e) { /* 子頁尚未可讀時略過，mark() 之後會再試 */ }
 }
 /* 曝光資源的「排版選擇」右側全選／全消按鈕：
@@ -29998,6 +30111,7 @@ function ensureExposureLoaded(options) {
     wrap.classList.remove('missing');
     if (typeof window.woBroadcastLevel === 'function') setTimeout(window.woBroadcastLevel, 300);
     setTimeout(function () {
+      try {
       if (typeof resolvedImportBg === 'function') pushImportBgToExposure(colorToHex(resolvedImportBg()));
       /* 背景推過去會讓曝光資源重算自動 CTA；若使用者有手動指定的共用 CTA 底色／字色，接著再推一次。 */
       if (typeof pushImportCtaBgToExposure === 'function' && importTheme.ctaBg) pushImportCtaBgToExposure(importTheme.ctaBg);
@@ -30041,7 +30155,29 @@ function ensureExposureLoaded(options) {
         pendingExposureSnapshotApplyAttempts = 0;
         [200, 950, 1900, 3300].forEach(schedulePendingExposureSnapshotStateApply);
       }
-      if (!exposureChildLoading) appLoadingFinish('曝光資源已載入');
+      } catch (e) {
+        /* 單一同步步驟失敗不能讓整個曝光資源永久停在 88%。其餘畫布仍可繼續載入。 */
+        try { console.warn('[BODA] exposure sync skipped:', e && e.message ? e.message : e); } catch (_) {}
+      } finally {
+        clearTimeout(exposureChildLoadingFallbackTimer);
+        exposureChildLoadingFallbackTimer = 0;
+        if (!exposureChildLoading) {
+          /* 子頁的 start 事件可能在這個 400ms callback 之後才抵達；
+             短暫忽略遲到的 update，避免剛完成又重新打開遮罩。 */
+          exposureChildLoadingFallbackUntil = Date.now() + 3000;
+          appLoadingFinish('曝光資源已載入');
+        } else {
+          /* 子頁若有版位一直不回報 ready，最多等待 20 秒；編輯器先解鎖，
+             未完成的版位仍由子頁在背景繼續載入。 */
+          exposureChildLoadingFallbackTimer = setTimeout(function () {
+            exposureChildLoadingFallbackTimer = 0;
+            if (!exposureChildLoading) return;
+            exposureChildLoading = false;
+            exposureChildLoadingFallbackUntil = Date.now() + 3000;
+            appLoadingFinish('曝光資源已載入（部分版位在背景載入）');
+          }, 20000);
+        }
+      }
     }, 400);
   });
   frame.addEventListener('error', function () {
@@ -30527,6 +30663,7 @@ function askBeforeLeavingStep(targetKey, proceed) {
     cancelText: '還沒，繼續製作'
   }).then(function (done) {
     if (!done) return;
+     persistCurrentEditingState();
     setWorkflowStepStatus(current, 'done');
     leavingAsked = true;
     proceed();
@@ -30775,9 +30912,25 @@ function goToWorkflowStep(key) {
   workflowCurrentStep = key;
   showView(step.view);
 }
+/* 離開工具頁前立即保存，避免右側「完成」或整包下載太快時，180ms／250ms
+   的延遲保存尚未執行，下一頁又把畫面重建成工單原始值。 */
+function persistCurrentEditingState() {
+  try {
+    var current = currentWorkflowStepKey();
+    if (current === 'import') {
+      if (importStateSaveTimer) { clearTimeout(importStateSaveTimer); importStateSaveTimer = null; }
+      if (typeof saveImportState === 'function') saveImportState();
+    } else if (current === 'exposure') {
+      var frame = document.getElementById('exposure-frame');
+      var win = frame && frame.contentWindow;
+      if (win && win._bnStatePlugin && typeof win._bnStatePlugin.save === 'function') win._bnStatePlugin.save();
+    }
+  } catch (e) { console.warn('[BODA] 離頁前保存編輯狀態失敗', e); }
+}
 function finishCurrentWorkflowStep(status) {
   var current = currentWorkflowStepKey();
   if (!current) return;
+  persistCurrentEditingState();
   setWorkflowStepStatus(current, status);
   /* 2026-11-14：最後一個步驟也完成（全部完成／略過）→ 直接問要不要整包下載 */
   if (!unfinishedWorkflowSteps().length && typeof bodaChoiceDialog === 'function') {
@@ -30797,6 +30950,7 @@ function finishCurrentWorkflowStep(status) {
 /* 左側「整包下載」是唯一的完整 ZIP 入口；各工具頁自己的按鈕只下載該頁資源。
    不在活動頁資源時，會把畫布暫時放到畫面外排版再截圖。 */
 function startWorkflowPackageDownload() {
+  persistCurrentEditingState();
   var trigger = document.querySelector('#nav-rail .nav-item[data-action="package-download"]');
   runImportPackageDownloadFromBottom(trigger);
 }
