@@ -3,7 +3,8 @@
    ──────────────────────────────────────────────────────────────
    1. 在左側「文字內容」上面顯示目前等級；曝光資源端僅供查看、不可下拉，
       等級由主工具／工單透過 localStorage 與 postMessage 單向同步進來。
-   2. 「排版選擇」依照 MS與BN曝光版位 Google Sheet D 欄名稱、K:W 勾選矩陣過濾。
+   2. 「排版選擇」依照 MS與BN曝光版位 Google Sheet D 欄名稱、K:Y 勾選矩陣過濾；
+      V 預設勾選、- 不顯示、「有資源才做」由「＋追加版位」顯示且預設不勾選。
    3. 曝光人物圖片只允許在商品／人物區內移動，不可拖進文字區或畫布外。
    4. 商品影子顏色移到左側全域色票，一次套用全部商品；單品編輯只保留幾何設定。
    5. 這支是獨立外掛，整段刪掉就會回到原本的行為。
@@ -47,6 +48,7 @@
     /* Campaign Card 和 SCBN 是不同的版位：Campaign Card 還沒有公版（建立後檔名以 Campaign Card 開頭），
        SCBN 的公版是 SCBN_APP.html。 */
     { key: 'campaigncard', test: /^Campaign[\s_-]*Card/i },
+    { key: 'popup',        test: /^POPUP/i },
     { key: 'scbn',        test: /^SCBN/i },
     { key: 'lpbnapp',     test: /^LPBN_APP/i },
     { key: 'lpbnpc',      test: /^LPBN_PC/i },
@@ -62,6 +64,8 @@
     '活動總覽': '活動總覽',
     '首頁logo牆': '首頁LOGO牆',
     ar: 'AR',
+    scbn: 'SCBN',
+    popup: 'POPUP',
     fbpost: 'FB POST',
     amsbn: 'AMS BN',
     campaigncard: 'Campaign Card',
@@ -199,6 +203,7 @@
     return sortLayoutsForWorkorder(layouts, workorderPlacement);
   };
   var currentLevelId = readLevel();
+  var additionalSlotsRevealed = {};
   var SHEET = {};
   var sheetError = '';
 
@@ -424,15 +429,18 @@
       if (!levelName) return;
       var conf = out[levelName] = { order: [], def: {}, files: {}, conditional: [], msbnMax: null };
       var checkedColumns = Array.isArray(level.checkedColumns) ? level.checkedColumns : [];
+      var optionalColumns = Array.isArray(level.optionalColumns) ? level.optionalColumns : [];
       resources.forEach(function (resource) {
         var slotName = SHEET_SLOT_HEADERS[normKey(resource && resource.header)];
         if (!slotName) return;
-        if (resource.mode === 'workorder-presence') {
-          conf.conditional.push(slotName);
+        var isOptional = optionalColumns.indexOf(resource.column) !== -1 ||
+          (!optionalColumns.length && resource.mode === 'workorder-presence');
+        if (isOptional) {
+          if (conf.conditional.indexOf(slotName) === -1) conf.conditional.push(slotName);
           return;
         }
         if (checkedColumns.indexOf(resource.column) === -1) return;
-        conf.order.push(slotName);
+        if (conf.order.indexOf(slotName) === -1) conf.order.push(slotName);
         conf.def[slotName] = true;
       });
     });
@@ -452,14 +460,15 @@
     }
     if (window.BODA_EXPOSURE_PLACEMENT_RULES) { applyRules(); return; }
     var s = document.createElement('script');
-    s.src = _scriptDir + '../../data/exposure-placement-rules.js?v=20261113-sheet-rules';
+    s.src = _scriptDir + '../../data/exposure-placement-rules.js?v=20261119-sheet-rules';
     s.onload = applyRules;
     s.onerror = applyRules;
     document.head.appendChild(s);
   }
 
   /* ── 版位名稱 ↔ 排版檔案 ───────────────────────────── */
-  var WORKORDER_ONLY_SLOTS = ['SCBN'];
+  /* SCBN 現在由試算表 Q 欄直接控制，不再以工單存在與否繞過等級規則。 */
+  var WORKORDER_ONLY_SLOTS = [];
   function filesForSlot(conf, name, layouts) {
     if (conf.files[name] && conf.files[name].length) {
       var want = conf.files[name].map(function (f) { return normKey(f.replace(/\.html$/i, '')); });
@@ -486,28 +495,32 @@
     var rows = [];
     var usedIds = {};
     var names = conf.order.slice();
-    /* 等級表（MS與BN曝光版位）沒有 SCBN 這一欄：工單有列 SCBN 才加進來，跟 T:W 的條件版位一樣。 */
+    var optionalNames = [];
+    /* 「有資源才做」版位由試算表定義；不要求工單先列出，按下「＋追加版位」後才列入清單，並維持未勾選。 */
     (conf.conditional || []).concat(WORKORDER_ONLY_SLOTS).forEach(function (name) {
-      var requestedByWorkorder = workorderSlotsOfName(name).some(function (slot) { return workorderListsSlot(slot); });
-      if (requestedByWorkorder && names.indexOf(name) === -1) names.push(name);
+      if (names.indexOf(name) === -1 && optionalNames.indexOf(name) === -1) optionalNames.push(name);
     });
+    var revealOptional = !!additionalSlotsRevealed[currentLevelId];
+    if (revealOptional) names = names.concat(optionalNames);
     names.forEach(function (name) {
       var hits = filesForSlot(conf, name, layouts).filter(function (l) {
         return !usedIds[layoutKey(l)];
       });
       if (!hits.length) {
-        rows.push({ slot: name, layout: null, def: conf.def[name] });
+        rows.push({ slot: name, layout: null, def: conf.def[name], optional: optionalNames.indexOf(name) !== -1 });
         return;
       }
       hits.forEach(function (l) {
         usedIds[layoutKey(l)] = true;
-        rows.push({ slot: name, layout: l, def: conf.def[name] });
+        rows.push({ slot: name, layout: l, def: conf.def[name], optional: optionalNames.indexOf(name) !== -1 });
       });
     });
     rows = sortPlanRowsForWorkorder(rows, workorderPlacement);
     return {
       all: rows.filter(function (r) { return r.layout; }).map(function (r) { return r.layout; }),
-      rows: rows
+      rows: rows,
+      optionalAvailable: optionalNames.length > 0,
+      optionalRevealed: revealOptional
     };
   }
 
@@ -564,6 +577,30 @@
     });
   }
 
+  function updateAdditionalSlotsButton(plan) {
+    var button = document.getElementById('bn-additional-layouts');
+    if (!button) return;
+    var available = !!(plan && plan.optionalAvailable);
+    var revealed = !!(plan && plan.optionalRevealed);
+      /* 追加版位按鈕固定顯示在「全消」右側；沒有可追加項目時僅淡灰停用。 */
+      button.hidden = false;
+      button.disabled = !available;
+      button.setAttribute('aria-disabled', available ? 'false' : 'true');
+      button.style.cursor = available ? 'pointer' : 'not-allowed';
+    button.textContent = revealed ? '−收起追加版位' : '＋追加版位';
+    button.setAttribute('aria-expanded', revealed ? 'true' : 'false');
+    button.title = revealed ? '收起此等級的追加版位' : '顯示此等級的有資源才做版位';
+  }
+
+  function toggleAdditionalSlots() {
+    var plan = planForLevel();
+    if (!plan || !plan.optionalAvailable) return;
+    additionalSlotsRevealed[currentLevelId] = !additionalSlotsRevealed[currentLevelId];
+    myRenderChecks();
+    if (typeof window.renderPreviews === 'function') window.renderPreviews();
+  }
+  window.toggleAdditionalSlots = toggleAdditionalSlots;
+
   function enforceLpbnSingleVariant(plan) {
     var checked = window.checked || (window.checked = {});
     var logos = window._bnLogos || [];
@@ -593,13 +630,14 @@
     var wrap = document.getElementById('layout-checks');
     if (!wrap) return;
     var plan = planForLevel();
+    updateAdditionalSlotsButton(plan);
     syncChecked(plan);
     enforceLpbnSingleVariant(plan);
     var checked = window.checked || {};
     /* 工單等級沒有、工單未勾選，或 Logo 方／橫尺寸不符的版型都不顯示。
        plan 仍保留完整可用清單給程式同步，這裡只篩選工具列的可見項目。 */
     var visibleRows = plan.rows.filter(function (r) {
-      return !!(r.layout && checked[r.layout.id]);
+      return !!(r.layout && (checked[r.layout.id] || (r.optional && plan.optionalRevealed)));
     });
     if (!visibleRows.length) {
       wrap.innerHTML = '<div class="no-layouts">目前工單與 Logo 沒有符合的版位</div>';
@@ -634,6 +672,7 @@
     var checked = window.checked || (window.checked = {});
     plan.rows.forEach(function (r) {
       if (!r.layout) return;
+      if (r.optional && !plan.optionalRevealed) return;
       checked[r.layout.id] = !!val && !workorderBlocksAutoCheck(r.layout);
       userTouched[r.layout.id] = true;
       noteManualCheck(r.layout.id, checked[r.layout.id]);

@@ -1732,7 +1732,7 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 #import-preview-list .preview-all-item.is-active.is-locked .preview-all-stage-wrap{
   box-shadow:0 0 0 3px var(--teal-dark),0 0 0 6px var(--teal-tint);}
 </style>
-<script src="data/exposure-placement-rules.js?v=20261113-sheet-rules"></script>
+<script src="data/exposure-placement-rules.js?v=20261119-sheet-rules"></script>
 </head>
 <body>
 <div id="shell">
@@ -10989,15 +10989,19 @@ function exportWorkOrderXlsx(exportOptions) {
     'SearchImage': { display: 'Search Image', size: '1125×156', format: 'JPG/PNG', rules: '副標≤7；LOGO 1～3 個', reminder: '依選用版型提供 1～3 個 LOGO', layouts: 'Search_Image1logo／2logo／3logo', available: true },
     'SCPN': { display: 'SCBN／SCPN', size: '1200×200', format: 'JPG', rules: '品牌名≤9；副標≤7；CTA', reminder: '商城橫幅', layouts: 'SCBN_APP', available: true }
   };
-  /* 曝光資源預設值由 Google Sheet D、K:W 的本機唯讀快照產生。
-     T:W 的「有資源才做」保留條件型態，匯入工單後依工單總覽決定是否出現。 */
+  /* 曝光資源預設值由 Google Sheet D、K:Y 的本機唯讀快照產生。
+     各等級的 optionalColumns（藍底紅字）保留條件型態，匯入工單後依工單總覽決定是否出現。 */
   var EXPOSURE_RULE_SOURCE = window.BODA_EXPOSURE_PLACEMENT_RULES || { resources: [], levels: [] };
   var EXPOSURE_RESOURCE_KEYS = (EXPOSURE_RULE_SOURCE.resources || []).map(function (resource) { return resource.catalogKey; });
   function checkedExposurePlan(levelId) {
     var level = (EXPOSURE_RULE_SOURCE.levels || []).filter(function (item) { return item.id === levelId; })[0];
     var checked = level && Array.isArray(level.checkedColumns) ? level.checkedColumns : [];
+    var optional = level && Array.isArray(level.optionalColumns) ? level.optionalColumns : [];
     return (EXPOSURE_RULE_SOURCE.resources || []).map(function (resource) {
-      if (resource.mode === 'workorder-presence') return [resource.catalogKey, '有資源才做'];
+      if (optional.indexOf(resource.column) !== -1 ||
+          (!optional.length && resource.mode === 'workorder-presence')) {
+        return [resource.catalogKey, '有資源才做'];
+      }
       return checked.indexOf(resource.column) !== -1 ? [resource.catalogKey, '預設'] : ['', ''];
     });
   }
@@ -17072,6 +17076,9 @@ function buildImportStateSavePayload() {
     ts: Date.now(),
     source: currentImportSource,
     generatorSignature: currentGeneratorSignature,
+    workOrderName: currentImportWorkbookName || '',
+    activityName: currentImportActivityName || '',
+    hasBottomWorkOrder: !!currentImportHasBottomWorkOrder,
     imageLayoutId: currentImportImageLayoutId,
     imageLayoutSavedAt: importImageLayoutSavedAt,
     imageZoomWeights: layout.weights,
@@ -17135,6 +17142,9 @@ function normalizeImportState(saved) {
     version: saved.version || 2,
     source: saved.source || 'saved',
     generatorSignature: saved.generatorSignature || '',
+    workOrderName: saved.workOrderName || '',
+    activityName: saved.activityName || '',
+    hasBottomWorkOrder: !!saved.hasBottomWorkOrder,
     imageLayoutId: saved.imageLayoutId || '',
     imageLayoutSavedAt: Number(saved.imageLayoutSavedAt) || 0,
     imageZoomWeights: saved.imageZoomWeights || {},
@@ -17152,6 +17162,9 @@ function applyImportState(state) {
   if (!state || !state.columns || !state.columns.length) return;
   currentImportSource = state.source || 'saved';
   currentGeneratorSignature = state.generatorSignature || '';
+  currentImportWorkbookName = String(state.workOrderName || currentImportWorkbookName || '');
+  currentImportActivityName = String(state.activityName || currentImportActivityName || '');
+  currentImportHasBottomWorkOrder = !!state.hasBottomWorkOrder;
   currentImportColumns = state.columns.map(function (c) {
     return {
       blockId: c.blockId,
@@ -17181,13 +17194,19 @@ function loadImportStateFromIdb() {
     var idb = normalizeImportState(idbState);
     if (!idb || !idb.columns || !idb.columns.length) return false;
     var localTs = 0;
+    var localHasColumns = false;
     try {
-      var local = JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY));
+      var local = normalizeImportState(JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY)));
       localTs = (local && local.ts) || 0;
+      localHasColumns = !!(local && local.columns && local.columns.length);
     } catch (e) {}
-    if (idb.ts > localTs) {
+    /* 空的 localStorage 不能蓋掉 IndexedDB 裡的完整工單；只有兩邊都有內容時才以時間較新的為準。 */
+    if ((idb.columns && idb.columns.length && !localHasColumns) || idb.ts > localTs) {
       applyImportState(idb);
       if (blocksLoadedForImport) renderImportColumns(currentImportColumns);
+      try {
+        setUploadStepState('import-drop', 'done', '已還原暫存：' + (currentImportWorkbookName || '工單') + '（' + currentImportColumns.length + ' 格）');
+      } catch (e) {}
       return true;
     }
     return false;
