@@ -3664,8 +3664,13 @@
       return JSON.stringify({
         replaceLogos: !!payload.replaceLogos,
         replaceProducts: !!payload.replaceProducts,
+        replaceCampaignCard: !!payload.replaceCampaignCard,
         logos: normalizeWorkorderAssets(payload.logos, 'logo').map(workorderAssetKey),
         products: normalizeWorkorderAssets(payload.products, 'product').map(workorderAssetKey),
+        campaignCard: {
+          product: workorderAssetKey(payload.campaignCard && payload.campaignCard.product),
+          logo: workorderAssetKey(payload.campaignCard && payload.campaignCard.logo)
+        },
         replaceEndorser: !!payload.replaceEndorser,
         endorsers: normalizeWorkorderAssets(payload.endorsers, 'endorser').map(workorderAssetKey),
         endorserNote: String(payload.endorserNote || '')
@@ -3682,6 +3687,13 @@
       }
       return true;
     }
+    function workorderCampaignCardStateSignature(card){
+      card = card || {};
+      return JSON.stringify([
+        workorderAssetKey(card.product),
+        workorderAssetKey(card.logo)
+      ]);
+    }
     function workorderAssetRatio(src){
       return loadImg(src).then(function(img){
         return img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1;
@@ -3693,10 +3705,14 @@
       var products = normalizeWorkorderAssets(payload.products, 'product');
       var replaceLogos = payload.replaceLogos === true;
       var replaceProducts = payload.replaceProducts === true;
+      var replaceCampaignCard = payload.replaceCampaignCard === true;
+      var campaignCard = payload.campaignCard || {};
+      var campaignCardProduct = normalizeWorkorderAssets([campaignCard.product], 'product')[0] || null;
+      var campaignCardLogo = normalizeWorkorderAssets([campaignCard.logo], 'logo')[0] || null;
       /* 代言人照＋簽名檔／代言人小字：只有工單內容變了、或目前沒有時才套用（不覆蓋手動調整） */
       var replaceEndorser = endorserWorkorderNeedsApply(payload);
       var endorserNoteText = endorserWorkorderNoteNeedsApply(payload) ? endorserWorkorderNoteText(payload) : '';
-      if(!replaceLogos && !replaceProducts && !replaceEndorser && !endorserNoteText) return Promise.resolve(false);
+      if(!replaceLogos && !replaceProducts && !replaceCampaignCard && !replaceEndorser && !endorserNoteText) return Promise.resolve(false);
 
       var seq = ++_bnWorkorderAssetApplySeq;
       /* 影子外掛是按需載入的：工單商品進來時若還沒載入，以前就直接用 BODA 傳來的圖（已烘活動頁影子），
@@ -3795,6 +3811,10 @@
         if((endorserResult && (endorserResult.photo || endorserResult.sign)) || endorserNoteText){
           renderEndorserUI();
           broadcastAllEndorser();
+        }
+        if(replaceCampaignCard){
+          window._bnCampaignCardAssets = { product:campaignCardProduct, logo:campaignCardLogo };
+          broadcast({type:'bn-campaign-card-assets', assets:window._bnCampaignCardAssets});
         }
 
         markStateDirty();
@@ -4876,6 +4896,9 @@
       if(origOnReady)origOnReady(id);
       /* iframe ready 只補送素材，不重新判斷版位；避免覆蓋使用者手動勾選。 */
       setTimeout(function(){
+        if(window._bnCampaignCardAssets){
+          broadcastTo(id,{type:'bn-campaign-card-assets',assets:window._bnCampaignCardAssets});
+        }
         if(window._bnLogos&&window._bnLogos.length){
           broadcastTo(id,{type:'bn-logos',logos:window._bnLogos,
             logoLayoutById:window._bnLogoLayouts || {}});
@@ -4949,7 +4972,9 @@
       var productStateSame = !payload || payload.replaceProducts !== true ||
         workorderAssetStateMatches(window._bnProducts, payload.products, 'product');
       var endorserStateSame = !endorserWorkorderNeedsApply(payload) && !endorserWorkorderNoteNeedsApply(payload);
-      if(sameSignature && logoStateSame && productStateSame && endorserStateSame) return Promise.resolve(false);
+      var campaignCardStateSame = workorderCampaignCardStateSignature(window._bnCampaignCardAssets) ===
+        workorderCampaignCardStateSignature(payload && payload.campaignCard);
+      if(sameSignature && logoStateSame && productStateSame && endorserStateSame && campaignCardStateSame) return Promise.resolve(false);
       _bnWorkorderAssetSignature = signature;
       return applyBodaWorkorderAssets(payload);
     };

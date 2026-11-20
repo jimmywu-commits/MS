@@ -1093,9 +1093,31 @@
       return;
     }
 
+    if (e.data.type === 'bn-campaign-card-assets') {
+      if (!document.body || !document.body.classList.contains('campaign-card-template')) return;
+      var campaignAssets = e.data.assets || {};
+      var campaignProductImg = document.getElementById('campaign-card-product-override');
+      var campaignLogoImg = document.getElementById('campaign-card-logo-override');
+      function applyCampaignAsset(img, item, managedAttr) {
+        if (!img) return;
+        var src = item && item.src ? String(item.src) : '';
+        document.body.dataset[managedAttr] = '1';
+        if (src) {
+          img.src = src;
+          img.style.display = 'block';
+        } else {
+          img.removeAttribute('src');
+          img.style.display = 'none';
+        }
+      }
+      applyCampaignAsset(campaignProductImg, campaignAssets.product, 'campaignCardProductManaged');
+      applyCampaignAsset(campaignLogoImg, campaignAssets.logo, 'campaignCardLogoManaged');
+      return;
+    }
+
     if (e.data.type === 'bn-text') {
       var d = e.data.data||{};
-      ['品牌名','主標','副標','日期'].forEach(function(cls) {
+      ['品牌名','主標','副標','日期','CampaignCard文案'].forEach(function(cls) {
         if (d[cls]===undefined) return;
         document.querySelectorAll('.'+cls).forEach(function(el) {
           var ct = el.querySelector('.cta-text');

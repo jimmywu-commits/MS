@@ -1,0 +1,71 @@
+/* Campaign Card 240×327 */
+.bg {
+  position: absolute;
+  left: 0; top: 0;
+  width: 240px; height: 327px;
+  background: #ffffff;
+  z-index: 1;
+}
+.商品範圍 {
+  position: absolute;
+  left: 14px; top: 16px;
+  width: 212px; height: 164px;
+  background: transparent;
+  opacity: 1;
+  z-index: 5;
+}
+.logo範圍 {
+  position: absolute;
+  left: 28px; top: 190px;
+  width: 184px; height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 26px;
+  box-shadow: 0 2px 7px rgba(0,0,0,.16);
+  z-index: 20;
+}
+.CampaignCard文案 {
+  position: absolute;
+  left: 12px; top: 260px;
+  width: 216px; height: 48px;
+  color: #a00018;
+  font-family: "ShopeeNotoSans (content)", sans-serif;
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 50;
+}
+#campaign-card-product-override {
+  position: absolute;
+  left: 16px; top: 18px;
+  width: 208px; height: 160px;
+  object-fit: contain;
+  pointer-events: none;
+  display: none;
+  z-index: 30;
+}
+#campaign-card-logo-override {
+  position: absolute;
+  left: 28px; top: 190px;
+  width: 184px; height: 50px;
+  padding: 6px 12px;
+  object-fit: contain;
+  pointer-events: none;
+  display: none;
+  z-index: 40;
+}
+body.campaign-card-template[data-campaign-card-product-managed="1"] .商品範圍 .bn-prod-box {
+  display: none !important;
+}
+body.campaign-card-template[data-campaign-card-logo-managed="1"] .logo範圍 .bn-logo-img,
+body.campaign-card-template[data-campaign-card-logo-managed="1"] .logo範圍 .bn-logo-box {
+  display: none !important;
+}
+#canvas { background: #ffffff !important; }
+#底圖 { display: none !important; opacity: 0 !important; }

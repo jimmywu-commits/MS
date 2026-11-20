@@ -850,6 +850,13 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
             <span class="char-count-badge" id="badge-ICON獨立文案"></span><div class="color-dot" id="dot-iconTextMirror" title="ICON文案顏色（跟主標共用同一個顏色，改這裡主標也會一起變，改主標這裡也會跟著變）"></div>
           </div>
         </div>
+        <div class="s-field-inline" id="field-campaign-card">
+          <label>Campaign Card</label>
+          <div class="s-field-row">
+            <input type="text" id="txt-campaignCard" data-limit="5" placeholder="Campaign Card 文案（限 5 字）" value="文案可05字" oninput="broadcastText()">
+            <span class="char-count-badge" id="badge-CampaignCard文案"></span>
+          </div>
+        </div>
         <div class="s-field-inline" id="ar-text-field" style="display:none">
           <label>AR文案（六字內）</label>
           <div class="s-field-row">
@@ -862,7 +869,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
           (function(){
             var scroll=document.getElementById('sidebar-scroll');
             var sectionText=document.getElementById('section-text');
-            var order=['field-main','field-sub','field-date','field-brand','field-icon'];
+            var order=['field-main','field-sub','field-date','field-brand','field-icon','field-campaign-card'];
             var ref=sectionText.nextElementSibling;
             order.forEach(function(id){
               var el=document.getElementById(id);
@@ -1893,7 +1900,7 @@ function bnFieldLimitByInputId(inputId){
 ════════════════════════════════════════ */
 var BN_LIMIT_FIELDS=[
   ['txt-brand','品牌名'],['txt-main','主標'],['txt-sub','副標'],
-  ['txt-date','日期'],['txt-icon','SearchICON文案'],['txt-ar','AR文案'],
+  ['txt-date','日期'],['txt-icon','SearchICON文案'],['txt-campaignCard','Campaign Card'],['txt-ar','AR文案'],
   /* 代言人／簽名檔小字：最多 10 字、兩排（欄位由 bn-editor-plugin.js 建立，算法沿用左側字數提示） */
   ['bn-endorser-note-inp','代言人小字']
 ];
@@ -2116,8 +2123,8 @@ window.addEventListener('message', function (e) {
     /* Search Image 的「副標案型七字內」本質上也是副標，先統一欄位名稱，
        才能回寫左側工具列並同步其他所有版位。 */
     var syncField = e.data.field === '副標案型七字內' ? '副標' : e.data.field;
-    var fieldMap = { '品牌名':'txt-brand', '主標':'txt-main', '副標':'txt-sub', '日期':'txt-date', 'ICON獨立文案':'txt-icon', '六字內':'txt-ar' };
-    var roleMap  = { '品牌名':'品牌名',    '主標':'主標',     '副標':'副標',    '日期':'date',    'ICON獨立文案':'ICON獨立文案', '六字內':'副標' };
+    var fieldMap = { '品牌名':'txt-brand', '主標':'txt-main', '副標':'txt-sub', '日期':'txt-date', 'ICON獨立文案':'txt-icon', 'CampaignCard文案':'txt-campaignCard', '六字內':'txt-ar' };
+    var roleMap  = { '品牌名':'品牌名',    '主標':'主標',     '副標':'副標',    '日期':'date',    'ICON獨立文案':'ICON獨立文案', 'CampaignCard文案':'', '六字內':'副標' };
     var inputId  = fieldMap[syncField];
     if(inputId){
       var inp = document.getElementById(inputId);
@@ -2198,8 +2205,8 @@ window.addEventListener('message', function (e) {
 
   /* 字數提示：iframe 回報字數，顯示在左側輸入框旁並紅框超限 */
   if (e.data.type === 'bn-char-count') {
-    var badgeMap = {'品牌名':'badge-品牌名','主標':'badge-主標','副標':'badge-副標','日期':'badge-日期','ICON獨立文案':'badge-ICON獨立文案','六字內':'badge-六字內'};
-    var inputMap = {'品牌名':'txt-brand','主標':'txt-main','副標':'txt-sub','日期':'txt-date','ICON獨立文案':'txt-icon','六字內':'txt-ar'};
+    var badgeMap = {'品牌名':'badge-品牌名','主標':'badge-主標','副標':'badge-副標','日期':'badge-日期','ICON獨立文案':'badge-ICON獨立文案','CampaignCard文案':'badge-CampaignCard文案','六字內':'badge-六字內'};
+    var inputMap = {'品牌名':'txt-brand','主標':'txt-main','副標':'txt-sub','日期':'txt-date','ICON獨立文案':'txt-icon','CampaignCard文案':'txt-campaignCard','六字內':'txt-ar'};
     var badgeEl = document.getElementById(badgeMap[e.data.field]);
     var inpEl   = document.getElementById(inputMap[e.data.field]);
     var rowEl   = inpEl ? inpEl.closest('.s-field-row') : null;
@@ -2220,7 +2227,7 @@ window.addEventListener('message', function (e) {
 
   /* Escape 取消編輯：把原本的文字推回去 */
   if (e.data.type === 'bn-text-cancel') {
-    var fieldMap2 = { '品牌名':'txt-brand', '主標':'txt-main', '副標':'txt-sub', '日期':'txt-date', 'ICON獨立文案':'txt-icon', '六字內':'txt-ar' };
+    var fieldMap2 = { '品牌名':'txt-brand', '主標':'txt-main', '副標':'txt-sub', '日期':'txt-date', 'ICON獨立文案':'txt-icon', 'CampaignCard文案':'txt-campaignCard', '六字內':'txt-ar' };
     var inp2 = document.getElementById(fieldMap2[e.data.field]);
     if(inp2) broadcastText();
     return;
@@ -2390,6 +2397,7 @@ function bnNormalizeWorkorderOverviewText(raw) {
     date: raw.date == null ? '' : String(raw.date),
     icon: raw.icon == null ? '' : String(raw.icon),
     ar: raw.ar == null ? '' : String(raw.ar),
+    campaignCard: raw.campaignCard == null ? '' : String(raw.campaignCard),
     workOrderKey: raw.workOrderKey == null ? '' : String(raw.workOrderKey),
     userEdited: raw.userEdited === true,
     manualEditedAt: Number(raw.manualEditedAt) || 0,
@@ -2448,6 +2456,7 @@ function bnApplyWorkorderOverviewText(raw, options) {
     ['txt-sub', payload.sub],
     ['txt-date', payload.date],
     ['txt-icon', payload.icon],
+    ['txt-campaignCard', payload.campaignCard],
     ['txt-ar', payload.ar]
   ];
   fields.forEach(function (pair) {
@@ -2730,6 +2739,7 @@ function getTextData() {
     副標:   document.getElementById('txt-sub').value,
     日期:   document.getElementById('txt-date').value,
     ICON獨立文案: document.getElementById('txt-icon').value,
+    CampaignCard文案: document.getElementById('txt-campaignCard').value,
     六字內: document.getElementById('txt-ar').value
   };
 }
@@ -2746,6 +2756,7 @@ function bnExposureTextPayloadFromInputs() {
     date: value('txt-date'),
     icon: value('txt-icon'),
     ar: value('txt-ar'),
+    campaignCard: value('txt-campaignCard'),
     workOrderKey: _bnExposureWorkOrderKey || '',
     userEdited: true,
     manualEditedAt: Date.now(),
@@ -2765,7 +2776,7 @@ function bnMarkExposureTextEdited() {
   } catch (_) {}
 }
 function bnBindExposureTextEditTracking() {
-  ['txt-brand', 'txt-main', 'txt-sub', 'txt-date', 'txt-icon', 'txt-ar'].forEach(function (id) {
+  ['txt-brand', 'txt-main', 'txt-sub', 'txt-date', 'txt-icon', 'txt-campaignCard', 'txt-ar'].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
     if (el.dataset.bnExposureTextTracking === '1') return;
@@ -4134,6 +4145,7 @@ document.addEventListener('DOMContentLoaded',function(){
     ['txt-sub','badge-副標'],
     ['txt-date','badge-日期'],
     ['txt-icon','badge-ICON獨立文案'],
+    ['txt-campaignCard','badge-CampaignCard文案'],
     ['txt-ar','badge-六字內']
   ];
 

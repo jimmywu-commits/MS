@@ -778,6 +778,7 @@
         date: (document.getElementById('txt-date') ||{}).value||'',
         icon: (document.getElementById('txt-icon') ||{}).value||'',
         ar:   (document.getElementById('txt-ar')   ||{}).value||'',
+        campaignCard:(document.getElementById('txt-campaignCard')||{}).value||'',
       },
       /* 文字內容的來源識別與手動編輯時間；重新載入時可拒絕同工單的舊工單回推。 */
       textMeta:{
@@ -864,7 +865,7 @@
       global._bnRefreshProductLayoutLockUI();
     }
     if(state.texts){
-      ['brand','main','sub','date','icon','ar'].forEach(function(k){
+      ['brand','main','sub','date','icon','ar','campaignCard'].forEach(function(k){
         var el=document.getElementById('txt-'+k);
         if(el&&state.texts[k]!==undefined){ el.value=state.texts[k]; el.dispatchEvent(new Event('input',{bubbles:true})); }
       });
@@ -1277,6 +1278,7 @@
           'txt-sub':   '副標$500起',
           'txt-date':  '5/18 - 5/25 期間限定',
           'txt-icon':  '文案',
+          'txt-campaignCard': '文案可05字',
           'txt-ar':    '最多六個字內'
         };
         Object.keys(defaults).forEach(function(id){

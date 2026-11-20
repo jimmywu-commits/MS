@@ -45,7 +45,7 @@
     { key: 'fbpost',      test: /^FB_POST/i },
     { key: 'searchicon',  test: /^SearchICON_/i },
     { key: 'searchimage', test: /^Search_Image/i },
-    /* Campaign Card 和 SCBN 是不同的版位：Campaign Card 還沒有公版（建立後檔名以 Campaign Card 開頭），
+    /* Campaign Card 和 SCBN 是不同的版位；Campaign_Card.html 對應 Campaign Card。
        SCBN 的公版是 SCBN_APP.html。 */
     { key: 'campaigncard', test: /^Campaign[\s_-]*Card/i },
     { key: 'popup',        test: /^POPUP/i },

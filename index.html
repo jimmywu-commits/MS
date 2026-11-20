@@ -1761,7 +1761,7 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 #import-preview-list .preview-all-item.is-active.is-locked .preview-all-stage-wrap{
   box-shadow:0 0 0 3px var(--teal-dark),0 0 0 6px var(--teal-tint);}
 </style>
-<script src="data/exposure-placement-rules.js?v=20261119-sheet-rules"></script>
+<script src="data/exposure-placement-rules.js?v=20261120-campaign-card"></script>
 </head>
 <body>
 <div id="shell">
@@ -11031,6 +11031,7 @@ function exportWorkOrderXlsx(exportOptions) {
   var CATALOG = {
     'LPBN': { display: 'LPBN', count: 2, size: 'APP 1200×550\nPC 1200×400', format: 'JPG', rules: '主標≤8；副標≤7；日期／警語≤14', reminder: 'APP、PC 各 1 張', layouts: 'LPBN_APP／LPBN_PC', available: true },
     'DDCard': { display: 'DD Card BN (APP)', size: '531×792', format: 'JPG', rules: '主標≤8；副標≤7；日期/警語≤14', reminder: 'LOGO、商品圖；CTA 依版型', layouts: 'ddcard無logo／ddcard方logo／ddcard橫logo', available: true },
+    'CampaignCard': { display: 'Campaign Card', size: '240×327', format: 'JPG', rules: 'Campaign Card 文案≤5；商品圖、LOGO', reminder: '商品與 LOGO 各自優先使用工單指定素材；未填欄位沿用上方第一個素材', layouts: 'Campaign_Card', available: true },
     'HBN': { display: 'HBN (PC)', size: '1200×360', format: 'JPG', rules: '主標≤8；副標≤7；日期/警語≤14', reminder: '橫式或方形 LOGO 版', layouts: 'HBN_橫式LOGO／HBN_方式LOGO', available: true },
     '活動總覽': { display: '活動總覽', size: '1200x360', format: 'JPG', rules: '主標≤8；副標≤7；日期/警語≤14', reminder: '', layouts: '', available: false },
     '首頁LOGO牆': { display: '首頁 LOGO 牆', size: '402×483', format: 'JPG/PNG', rules: 'LOGO／人物或商品圖可縮放', reminder: 'LOGO 位於曝品或人物範圍內，可用滑鼠縮放；會呈現曝品圖中第1品。', layouts: '首頁LOGO牆', available: true },
@@ -11221,7 +11222,7 @@ function exportWorkOrderXlsx(exportOptions) {
   mergeSafe(overview, 16, 1, 16, 9).value = '其他曝光資源文案';
   setStaticStyle(overview.getCell(16, 1), { bold: true, color: COLORS.white, fill: COLORS.tealDark, horizontal: 'left', size: 11 });
   setBorder(overview, 16, 1, 16, 9);
-  [['品牌名', 9, '曝光資源品牌名稱'], ['SearchICON文案', 2, 'Search ICON 文字版'], ['AR文案', 6, 'AR 文案；與曝光資源 AR 版位連動']].forEach(function (it, idx) {
+  [['品牌名', 9, '曝光資源品牌名稱'], ['SearchICON文案', 2, 'Search ICON 文字版'], ['Campaign Card', 5, 'Campaign Card 版位文案；限 5 字'], ['AR文案', 6, 'AR 文案；與曝光資源 AR 版位連動']].forEach(function (it, idx) {
     var rr = 17 + idx;
     overviewLabel(rr, 1, it[0]);
     var inp = overviewInput(rr, 2, rr, 4, '');
@@ -12885,7 +12886,7 @@ function parseWorkbookOverviewByLabels(wb) {
     return m ? ('#' + m[1]).toLowerCase() : '';
   }
 
-  var result = { main: '', sub: '', date: '', ar: '', arLogo: '', productFiles: [], logoFiles: [], bg: '', bgChecked: null, found: false };
+  var result = { main: '', sub: '', date: '', ar: '', arLogo: '', productFiles: [], logoFiles: [], campaignCardText: '', campaignCardProductFile: '', campaignCardLogoFile: '', campaignCardSection: false, bg: '', bgChecked: null, found: false };
   var anchorRow = 0, anchorCol = 0;
   for (var r = 1; r <= maxRow && !anchorRow; r++) {
     for (var c = 1; c <= maxCol; c++) {
@@ -12970,6 +12971,60 @@ function parseWorkbookOverviewByLabels(wb) {
       }
     }
   }
+  /* Campaign Card 專屬文案／素材：以「Campaign Card 單格」定位，只讀該區塊附近的欄位。
+     商品與 LOGO 分別取指定欄；空白時由匯入素材同步層各自回退至上方第一個商品／LOGO。 */
+  var campaignCardAnchorRow = 0;
+  for (var ccr = 1; ccr <= maxRow && !campaignCardAnchorRow; ccr++) {
+    for (var ccc = 1; ccc <= maxCol; ccc++) {
+      if (isMergedSlave(cellAt(ccr, ccc))) continue;
+      if (norm(text(ccr, ccc)).toLowerCase().indexOf('campaigncard單格') === 0) {
+        campaignCardAnchorRow = ccr;
+        result.campaignCardSection = true;
+        result.found = true;
+        break;
+      }
+    }
+  }
+  var campaignCardTextFromBlock = '', campaignCardLogoRaw = '', campaignCardProductRaw = '';
+  function campaignCardValueLooksLikeLabel(value) {
+    return /^(?:logo(?:路徑|檔名)?(?:\(.*\))?|(?:商品|品品)(?:圖)?(?:路徑|檔名)(?:\(.*\))?|kv路徑)[:：]?$/i.test(norm(value));
+  }
+  function campaignCardRightValue(row, col) {
+    for (var vc = col + 1; vc <= maxCol; vc++) {
+      if (isMergedSlave(cellAt(row, vc))) continue;
+      var candidate = text(row, vc);
+      if (!candidate || campaignCardValueLooksLikeLabel(candidate)) continue;
+      return candidate;
+    }
+    return '';
+  }
+  if (campaignCardAnchorRow) {
+    for (var cr = campaignCardAnchorRow; cr <= Math.min(maxRow, campaignCardAnchorRow + 4); cr++) {
+      for (var cc = 1; cc < maxCol; cc++) {
+        if (isMergedSlave(cellAt(cr, cc))) continue;
+        var cardLabel = norm(text(cr, cc));
+        var cardValue = campaignCardRightValue(cr, cc);
+        if (!cardValue || campaignCardValueLooksLikeLabel(cardValue)) continue;
+        if (!campaignCardLogoRaw && /^logo$/i.test(cardLabel)) campaignCardLogoRaw = cardValue;
+        else if (!campaignCardTextFromBlock && /^文案\(限5字內\)/.test(cardLabel)) campaignCardTextFromBlock = cardValue;
+        else if (!campaignCardProductRaw && /^挑選kv3品之1/.test(cardLabel.toLowerCase())) campaignCardProductRaw = cardValue;
+      }
+    }
+  }
+  /* 新版工單的右側「Campaign Card」欄作為備援文案來源；Campaign Card 區塊內的限 5 字文案優先。 */
+  var campaignCardSideText = '';
+  for (var scr = 1; scr <= maxRow && !campaignCardSideText; scr++) {
+    for (var scc = 1; scc < maxCol; scc++) {
+      if (isMergedSlave(cellAt(scr, scc))) continue;
+      if (norm(text(scr, scc)).toLowerCase() !== 'campaigncard') continue;
+      campaignCardSideText = text(scr, scc + 1);
+      if (campaignCardSideText) break;
+    }
+  }
+  result.campaignCardText = campaignCardTextFromBlock || campaignCardSideText || '';
+  result.campaignCardLogoFile = normalizeExposureLogoFileNames(campaignCardLogoRaw)[0] || '';
+  result.campaignCardProductFile = normalizeExposureAssetFileNames(campaignCardProductRaw)[0] || '';
+  if (result.campaignCardText || result.campaignCardLogoFile || result.campaignCardProductFile) result.found = true;
   /* Logo 欄位不綁死 H16:J17，也不要求 LOGO 標籤與檔名在同一列：
      先找 Logo 區塊附近的左／中／右（或下面）標題，再讀各標題正下方第一個有效值。 */
   var dynamicLogoFiles = parseWorkbookOverviewLogoFiles(ws, maxRow, maxCol);
@@ -13287,8 +13342,8 @@ function exposureSlotsOfWorkorderName(name) {
   if (/searchimage|searchimg/.test(c)) out.push('searchimage');
   return out;
 }
-/* 認得出版位、但還沒有公版的類別（Campaign Card 尚未建立；建好後從這裡拿掉） */
-var EXPOSURE_SLOTS_WITHOUT_TEMPLATE = ['campaigncard'];
+/* 認得出版位、但仍沒有公版的類別。 */
+var EXPOSURE_SLOTS_WITHOUT_TEMPLATE = [];
 function exposureNameHasTemplate(name) {
   return exposureSlotsOfWorkorderName(name).some(function (slot) {
     return EXPOSURE_SLOTS_WITHOUT_TEMPLATE.indexOf(slot) === -1;
@@ -13387,7 +13442,8 @@ function syncWorkbookOverviewTextToExposure(wb) {
   var byLabels = currentImportOverviewByLabels || parseWorkbookOverviewByLabels(wb);
   /* 代言人照＋簽名檔、代言人小字：兩種工單格式都以標籤定位 */
   var endorser = parseWorkbookOverviewEndorser(wb);
-  if (byLabels && (byLabels.main || byLabels.sub || byLabels.date || byLabels.productFiles.length || byLabels.logoFiles.length)) {
+  if (byLabels && (byLabels.main || byLabels.sub || byLabels.date || byLabels.productFiles.length || byLabels.logoFiles.length ||
+      byLabels.campaignCardSection || byLabels.campaignCardText || byLabels.campaignCardProductFile || byLabels.campaignCardLogoFile)) {
     /* BD 標籤版：固定儲存格 B10～B19 在這種表裡是別的欄位，不能混用。 */
     /* AR 文案優先序：工單 AR 列勾選（True）的文案 → 沒有文案、也沒有 LOGO 路徑時才吃副標。 */
     var arText = byLabels.ar || (byLabels.arLogo ? '' : byLabels.sub) || '';
@@ -13395,6 +13451,9 @@ function syncWorkbookOverviewTextToExposure(wb) {
       brand: '', main: byLabels.main, sub: byLabels.sub, date: byLabels.date,
       icon: '', ar: arText, logoFiles: byLabels.logoFiles.join(','),
       productFiles: byLabels.productFiles.join(','),
+      campaignCard: byLabels.campaignCardText,
+      campaignCardProductFile: byLabels.campaignCardProductFile,
+      campaignCardLogoFile: byLabels.campaignCardLogoFile,
       endorserFiles: endorser.files.join('\n'), endorserNote: endorser.note
     };
     syncImportedExposureOverviewText(labelData);
@@ -13412,6 +13471,9 @@ function syncWorkbookOverviewTextToExposure(wb) {
     logoFiles: '',
     productFiles: productRow && !isDefaultExposureProductFileText(workbookCellPlainString(ws.getCell(productRow, 2)))
       ? workbookCellPlainString(ws.getCell(productRow, 2)) : '',
+    campaignCard: byLabels ? byLabels.campaignCardText : '',
+    campaignCardProductFile: byLabels ? byLabels.campaignCardProductFile : '',
+    campaignCardLogoFile: byLabels ? byLabels.campaignCardLogoFile : '',
     endorserFiles: endorser.files.join('\n'), endorserNote: endorser.note
   };
   syncImportedExposureOverviewText(overviewData);
@@ -19099,6 +19161,9 @@ function normalizeExposureOverviewText(data, keepTimestamp) {
     date: data.date == null ? '' : String(data.date),
     icon: data.icon == null ? '' : String(data.icon),
     ar: data.ar == null ? '' : String(data.ar),
+    campaignCard: data.campaignCard == null ? '' : String(data.campaignCard),
+    campaignCardProductFile: data.campaignCardProductFile == null ? '' : String(data.campaignCardProductFile),
+    campaignCardLogoFile: data.campaignCardLogoFile == null ? '' : String(data.campaignCardLogoFile),
     logoFiles: data.logoFiles == null ? '' : String(data.logoFiles),
     productFiles: data.productFiles == null ? '' : String(data.productFiles),
     /* 工單總覽「代言人照+簽名檔路徑」：檔名以換行分隔保存（檔名本身可能有逗號，例如 滿2,000折） */
@@ -19155,8 +19220,8 @@ function pushExposureOverviewText(payload) {
       type: 'wo-workorder-overview-text',
       data: {
         brand: payload.brand, main: payload.main, sub: payload.sub, date: payload.date,
-        icon: payload.icon, ar: payload.ar, logoFiles: payload.logoFiles,
-        productFiles: payload.productFiles, workOrderKey: payload.workOrderKey,
+        icon: payload.icon, ar: payload.ar, campaignCard: payload.campaignCard,
+        logoFiles: payload.logoFiles, productFiles: payload.productFiles, workOrderKey: payload.workOrderKey,
         userEdited: !!payload.userEdited, manualEditedAt: payload.manualEditedAt || 0
       },
       ts: payload.ts
@@ -19178,6 +19243,7 @@ function syncImportedExposureOverviewText(data) {
     incoming.date = existing.date;
     incoming.icon = existing.icon;
     incoming.ar = existing.ar;
+    incoming.campaignCard = existing.campaignCard;
     incoming.userEdited = true;
     incoming.manualEditedAt = existing.manualEditedAt || existing.ts;
     incoming.ts = existing.ts || incoming.ts;
@@ -19353,7 +19419,7 @@ function exposureOverviewAssetSigPartsFromStored(raw) {
   if (!raw) return null;
   try {
     var parsed = JSON.parse(raw);
-    if (parsed && parsed.v === 2) return parsed;
+    if (parsed && (parsed.v === 2 || parsed.v === 3)) return parsed;
     /* 舊版簽章格式：
        [logoNames, logoAssets.length, productNames, productAssets.length, endorserNames, endorserAssets.length, endorserNote]
        轉成分類簽章，讓新版第一次重送 LOGO 時，不會誤判商品也變了而覆蓋商品位置。 */
@@ -19375,9 +19441,20 @@ function pushExposureOverviewAssets(payload, force) {
   var productNames = normalizeExposureAssetFileNames(payload.productFiles);
   var logoAssets = exposureAssetsForNames(logoNames.join(','));
   var productAssets = exposureAssetsForNames(productNames.join(','));
+  var campaignCardProductName = normalizeExposureAssetFileNames(payload.campaignCardProductFile || productNames[0] || '')[0] || '';
+  var campaignCardLogoName = normalizeExposureLogoFileNames(payload.campaignCardLogoFile || logoNames[0] || '')[0] || '';
+  var campaignCardProductAssets = exposureAssetsForNames(campaignCardProductName);
+  var campaignCardLogoAssets = exposureAssetsForNames(campaignCardLogoName);
+  var campaignCardAssets = {
+    product: campaignCardProductAssets.length ? campaignCardProductAssets[0] : null,
+    logo: campaignCardLogoAssets.length ? Object.assign({}, campaignCardLogoAssets[0], {
+      src: campaignCardLogoAssets[0].logoSrc || campaignCardLogoAssets[0].src,
+      baseSrc: campaignCardLogoAssets[0].logoSrc || campaignCardLogoAssets[0].baseSrc || campaignCardLogoAssets[0].src
+    }) : null
+  };
   var endorserNames = storedEndorserFileNames(payload.endorserFiles);
   var endorserNote = String(payload.endorserNote == null ? '' : payload.endorserNote).trim();
-  if (!logoNames.length && !productNames.length && !endorserNames.length && !endorserNote) return false;
+  if (!logoNames.length && !productNames.length && !endorserNames.length && !endorserNote && !campaignCardChanged) return false;
   var endorserAssets = exposureEndorserAssets(endorserNames);
   /* 2026-11-17 修正：曝光 LOGO 同步不能只看「檔名＋數量」。
      例如工單總覽寫「順發」、圖片資料夾後來才讀到順發.png，或暫存／舊狀態曾記過同名同數量時，
@@ -19387,11 +19464,18 @@ function pushExposureOverviewAssets(payload, force) {
   var logoSig = JSON.stringify([logoNames, logoAssets.map(exposureOverviewAssetSigPart)]);
   var productSig = JSON.stringify([productNames, productAssets.length]);
   var endorserSig = JSON.stringify([endorserNames, endorserAssets.length, endorserNote]);
-  var sentSig = JSON.stringify({ v: 2, logo: logoSig, product: productSig, endorser: endorserSig });
+  var campaignCardSig = JSON.stringify([
+    payload.workOrderKey || '', campaignCardProductName,
+    campaignCardProductAssets.map(exposureOverviewAssetSigPart),
+    campaignCardLogoName, campaignCardLogoAssets.map(exposureOverviewAssetSigPart)
+  ]);
+  var sentSig = JSON.stringify({ v: 3, logo: logoSig, product: productSig, endorser: endorserSig,
+    campaignCard: campaignCardSig, workOrderKey: payload.workOrderKey || '' });
   var oldSigParts = exposureOverviewAssetSigPartsFromStored(_exposureOverviewAssetSentSig);
   var logoChanged = force || !oldSigParts || oldSigParts.logo !== logoSig;
   var productChanged = force || !oldSigParts || oldSigParts.product !== productSig;
   var endorserChanged = force || !oldSigParts || oldSigParts.endorser !== endorserSig;
+  var campaignCardChanged = force || !oldSigParts || oldSigParts.campaignCard !== campaignCardSig;
   if (!force && sentSig === _exposureOverviewAssetSentSig) return false;
   if (!_exposureFrameReadyForAssets) return false;   /* 曝光資源載入後會再呼叫一次 */
   rememberExposureAssetSig(sentSig);
@@ -19412,7 +19496,9 @@ function pushExposureOverviewAssets(payload, force) {
          只找到其中一張也先送；另一張讀完後簽章不同會再套一次。 */
       endorsers: endorserAssets,
       replaceEndorser: endorserChanged && endorserAssets.length > 0,
-      endorserNote: endorserNote
+      endorserNote: endorserNote,
+      campaignCard: campaignCardAssets,
+      replaceCampaignCard: campaignCardChanged
     }
   };
   /* Debounce：連續呼叫只保留最後一包，100ms 內取代舊的，最終只發一次。
@@ -19434,7 +19520,9 @@ function pushExposureOverviewAssets(payload, force) {
 var _exposureOverviewAssetDebounce = null;
 var _exposureOverviewAssetPending = null;
 function syncExposureOverviewAssets(data, force) {
-  return pushExposureOverviewAssets(data || readSharedExposureOverviewText(), force);
+  var shared = readSharedExposureOverviewText();
+  var payload = data && typeof data === 'object' ? Object.assign({}, shared || {}, data) : shared;
+  return pushExposureOverviewAssets(payload, force);
 }
 
 var IMPORT_COLOR_ITEMS = [
