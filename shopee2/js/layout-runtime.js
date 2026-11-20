@@ -750,15 +750,8 @@
     if(!cv) return;
     var cw=cv.offsetWidth||parseFloat(cv.style.width)||0;
     var ch=cv.offsetHeight||parseFloat(cv.style.height)||0;
-    var previewScale=1;
-    try{
-      var frame=window.frameElement;
-      if(frame){
-        var layoutWidth=frame.offsetWidth||parseFloat(frame.style.width)||cw;
-        var visibleWidth=frame.getBoundingClientRect().width;
-        if(layoutWidth>0&&visibleWidth>0) previewScale=visibleWidth/layoutWidth;
-      }
-    }catch(_){}
+    /* 預覽縮放比例由父頁用 bn-preview-scale 訊息告知（TP 上版位讀不到父頁的 iframe 元素）。 */
+    var previewScale=Number(window._bnPreviewScale)||1;
     previewScale=Math.max(.1,Math.min(1,previewScale||1));
     var fontPx=Math.max(BN_CONTENT_WARNING_MIN_CANVAS_FONT,
       Math.ceil(BN_CONTENT_WARNING_MIN_VISIBLE_FONT/previewScale));
@@ -5562,4 +5555,54 @@
     style.appendChild(document.createTextNode(css));
     (document.head || document.documentElement).appendChild(style);
   } catch(e) {}
+})();
+
+/* ── 版位 → 父頁：量測回報 ──────────────────────────────────────
+   TP 上父頁和版位 iframe 互相讀不到，只能用 postMessage。父頁需要的量測值
+   （畫布尺寸、背景區尺寸、目前背景色、data-fw/fh）由版位主動送出：
+   載入完成、收到 bn-color／bn-bg 系列訊息、視窗大小改變時，延遲 80ms 送一次 bn-layout-metrics。
+   父頁也可以送 bn-metrics-request 要求重送；bn-preview-scale 告知預覽縮放比例。 */
+(function(){
+  if(window.parent === window) return;
+  var timer = null;
+  function bnid(){ try{ return new URLSearchParams(location.search).get('bnid') || ''; }catch(_){ return ''; } }
+  function size(el){
+    if(!el) return null;
+    var w = el.clientWidth || el.offsetWidth || 0, h = el.clientHeight || el.offsetHeight || 0;
+    return (w && h) ? {w:w, h:h} : null;
+  }
+  function solidColor(el){
+    if(!el) return null;
+    var c = window.getComputedStyle(el).backgroundColor;
+    if(!c || c === 'transparent') return null;
+    var m = /rgba\([^)]*,\s*([\d.]+)\s*\)/.exec(c);
+    if(m && parseFloat(m[1]) === 0) return null;
+    return c;
+  }
+  function measure(){
+    var body = document.body, cv = document.getElementById('canvas') || document.querySelector('#canvas,.canvas,[data-canvas]');
+    var bgEl = document.querySelector('.背景色,.bg') || cv;
+    var color = null;
+    [document.querySelector('.背景色'), document.querySelector('.bg'), cv, body].some(function(el){ color = solidColor(el); return !!color; });
+    return {
+      type: 'bn-layout-metrics', bnid: bnid(),
+      fw: body ? (parseFloat(body.getAttribute('data-fw')) || 0) : 0,
+      fh: body ? (parseFloat(body.getAttribute('data-fh')) || 0) : 0,
+      canvas: size(cv), bg: size(bgEl), bgColor: color
+    };
+  }
+  function post(){ timer = null; try{ window.parent.postMessage(measure(), '*'); }catch(_){} }
+  function schedule(){ if(!timer) timer = setTimeout(post, 80); }
+  window.addEventListener('message', function(e){
+    var type = e.data && e.data.type;
+    if(!type) return;
+    if(type === 'bn-preview-scale'){
+      var s = Number(e.data.scale);
+      if(s > 0) window._bnPreviewScale = s;
+      return;
+    }
+    if(type === 'bn-metrics-request' || /^bn-(color|bg)/.test(type)) schedule();
+  });
+  window.addEventListener('resize', schedule);
+  if(document.readyState === 'complete') schedule(); else window.addEventListener('load', schedule);
 })();

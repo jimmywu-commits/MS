@@ -1968,6 +1968,8 @@ function bnResizePreviewViewport(iframe,requestedW,requestedH){
   iframe.style.width=viewW+'px';
   iframe.style.height=viewH+'px';
   iframe.style.transform='scale('+scale+')';
+  /* 版位要依縮放比例調整提示字級；TP 上版位讀不到父頁的 iframe 元素，改用訊息告知。 */
+  try { iframe.contentWindow && iframe.contentWindow.postMessage({type:'bn-preview-scale', scale:scale}, '*'); } catch(_) {}
   var id=String(iframe.id||'').replace(/^iframe-/,'');
   var body=document.getElementById('pbody-'+id);
   if(body){
@@ -3450,29 +3452,10 @@ function applyTagColor(mode) {
   document.querySelectorAll('.tag-color-dot').forEach(function(dot) {
     dot.classList.toggle('active', dot.dataset.tagColor === mode);
   });
+  /* 掛標顏色跟著 bn-color 的 tagColor 送到版位（TP 上不能直接呼叫 iframe 裡的函式）。 */
   broadcastColors();
-  document.querySelectorAll('.preview-block iframe').forEach(function(iframe) {
-    try {
-      if (iframe.contentWindow && typeof iframe.contentWindow._bnSetTagColor === 'function') {
-        iframe.contentWindow._bnSetTagColor(mode);
-      } else if (iframe.contentWindow && typeof iframe.contentWindow._bnApplyTag === 'function') {
-        iframe.contentWindow._bnTagColor = mode;
-        iframe.contentWindow._bnApplyTag();
-      }
-    } catch(_) {}
-  });
-  /* 有些 iframe 會在收到 bn-color 後再做一次 layout/init，延遲補套用一次，避免只閃一下沒有真正切換。 */
-  [50, 250].forEach(function(delay) {
-    setTimeout(function() {
-      document.querySelectorAll('.preview-block iframe').forEach(function(iframe) {
-        try {
-          if (iframe.contentWindow && typeof iframe.contentWindow._bnSetTagColor === 'function') {
-            iframe.contentWindow._bnSetTagColor(mode);
-          }
-        } catch(_) {}
-      });
-    }, delay);
-  });
+  /* 有些 iframe 會在收到 bn-color 後再做一次 layout/init，延遲補送一次，避免只閃一下沒有真正切換。 */
+  [50, 250].forEach(function(delay) { setTimeout(broadcastColors, delay); });
   try { document.dispatchEvent(new CustomEvent('bn-state-dirty')); } catch(_) {}
 }
 
@@ -3485,29 +3468,9 @@ function applyLogoColor(mode) {
   document.querySelectorAll('.logo-color-dot').forEach(function(dot) {
     dot.classList.toggle('active', dot.dataset.logoColor === mode);
   });
+  /* LOGO 顏色跟著 bn-color 的 logoColor 送到版位（TP 上不能直接呼叫 iframe 裡的函式）。 */
   broadcastColors();
-  document.querySelectorAll('.preview-block iframe').forEach(function(iframe) {
-    try {
-      if (iframe.contentWindow && typeof iframe.contentWindow._bnSetLogoColor === 'function') {
-        iframe.contentWindow._bnSetLogoColor(mode);
-      } else if (iframe.contentWindow && typeof iframe.contentWindow._bnApplyShopeeLogo === 'function') {
-        iframe.contentWindow._bnLogoColor = mode;
-        iframe.contentWindow._bnApplyShopeeLogo();
-      }
-    } catch(_) {}
-  });
-  /* 有些 iframe 會在收到 bn-color 後再做一次 layout/init，延遲補套用一次，避免只閃一下沒有真正切換。 */
-  [50, 250].forEach(function(delay) {
-    setTimeout(function() {
-      document.querySelectorAll('.preview-block iframe').forEach(function(iframe) {
-        try {
-          if (iframe.contentWindow && typeof iframe.contentWindow._bnSetLogoColor === 'function') {
-            iframe.contentWindow._bnSetLogoColor(mode);
-          }
-        } catch(_) {}
-      });
-    }, delay);
-  });
+  [50, 250].forEach(function(delay) { setTimeout(broadcastColors, delay); });
   try { document.dispatchEvent(new CustomEvent('bn-state-dirty')); } catch(_) {}
 }
 

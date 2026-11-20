@@ -9,6 +9,17 @@
   var _bnEditorScriptNode=document.currentScript;
   var _bnEditorScriptBase=new URL('.',(_bnEditorScriptNode&&_bnEditorScriptNode.src)||new URL('js/bn-editor-plugin.js',document.baseURI).href).href;
 
+  /* 版位 iframe 的量測值（畫布／背景區尺寸、背景色），由 layout-runtime 用 bn-layout-metrics 送來。
+     TP 上讀不到 iframe 內容，一律用這份快取，不直接讀 iframe 的 document。 */
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.type !== 'bn-layout-metrics') return;
+    var frames = document.querySelectorAll('iframe');
+    for (var i = 0; i < frames.length; i++) {
+      if (frames[i].contentWindow === e.source) { frames[i]._bnMetrics = e.data; return; }
+    }
+  });
+  function bnFrameMetrics(ifr) { return (ifr && ifr._bnMetrics) || null; }
+
   function ready(fn) {
     if (document.readyState !== 'loading') fn();
     else document.addEventListener('DOMContentLoaded', fn);
@@ -2263,9 +2274,11 @@
           var qs = (ifrEl.src||'').split('?')[1]||'';
           var id = new URLSearchParams(qs).get('bnid');
           if(id) return String(id);
-          /* fallback：從 contentWindow 的 location 取 */
-          var loc = ifrEl.contentWindow && ifrEl.contentWindow.location;
-          if(loc){ id = new URLSearchParams(loc.search||'').get('bnid'); if(id) return String(id); }
+          /* fallback：延遲載入的 iframe 還沒設 src，從 data-bn-src 取；再不行用版位回報的 bnid */
+          id = new URLSearchParams(((ifrEl.dataset && ifrEl.dataset.bnSrc)||'').split('?')[1]||'').get('bnid');
+          if(id) return String(id);
+          var m = bnFrameMetrics(ifrEl);
+          if(m && m.bnid) return String(m.bnid);
         }catch(_){}
         return null;
       }
@@ -2474,10 +2487,10 @@
         return bgNaturalCache[src];
       }
       function getBgContainerSize(ifrEl,image){
-        var el=null;try{var doc=ifrEl.contentDocument;el=doc&&(doc.querySelector('.背景色,.bg')||doc.getElementById('canvas'));}catch(_){}
-        var css=el&&el.ownerDocument.defaultView.getComputedStyle(el);
-        return {w:el&&(el.clientWidth||parseFloat(css.width))||parseFloat(ifrEl.style.width)||ifrEl.width||image.w,
-          h:el&&(el.clientHeight||parseFloat(css.height))||parseFloat(ifrEl.style.height)||ifrEl.height||image.h};
+        /* 背景區尺寸由版位用 bn-layout-metrics 回報（不直接讀 iframe 內容）；還沒收到時用 iframe 尺寸。 */
+        var m=bnFrameMetrics(ifrEl),bg=m&&(m.bg||m.canvas);
+        return {w:bg&&bg.w||parseFloat(ifrEl.style.width)||ifrEl.width||image.w,
+          h:bg&&bg.h||parseFloat(ifrEl.style.height)||ifrEl.height||image.h};
       }
 
       /* 建立每個 preview-block 右側的背景圖控制面板 */
@@ -2761,26 +2774,14 @@
           return '';
         }
 
+        /* 版位尺寸由版位用 bn-layout-metrics 回報（不直接讀 iframe 內容） */
         try{
-          var doc = ifrEl && (ifrEl.contentDocument || (ifrEl.contentWindow && ifrEl.contentWindow.document));
-          if(doc){
-            var body = doc.body || null;
-            var byData = body ? pickBySize(body.getAttribute('data-fw'), body.getAttribute('data-fh')) : '';
+          var metrics = bnFrameMetrics(ifrEl);
+          if(metrics){
+            var byData = pickBySize(metrics.fw, metrics.fh);
             if(byData) return byData;
-
-            var canvas = doc.getElementById('canvas') || doc.querySelector('#canvas,.canvas,[data-canvas]');
-            if(canvas){
-              var rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
-              var byRect = rect ? pickBySize(rect.width, rect.height) : '';
-              if(byRect) return byRect;
-
-              var cs = doc.defaultView && doc.defaultView.getComputedStyle ? doc.defaultView.getComputedStyle(canvas) : null;
-              var byCss = cs ? pickBySize(cs.width, cs.height) : '';
-              if(byCss) return byCss;
-
-              var byEl = pickBySize(canvas.offsetWidth || canvas.clientWidth || canvas.scrollWidth, canvas.offsetHeight || canvas.clientHeight || canvas.scrollHeight);
-              if(byEl) return byEl;
-            }
+            var byCanvas = metrics.canvas ? pickBySize(metrics.canvas.w, metrics.canvas.h) : '';
+            if(byCanvas) return byCanvas;
           }
         }catch(_){}
 
@@ -4165,22 +4166,10 @@
       var found = null;
       document.querySelectorAll('.preview-block iframe').forEach(function(ifr){
         if(found) return;
-        try{
-          var doc = ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document);
-          if(!doc) return;
-          var candidates = [
-            doc.querySelector('.背景色'),
-            doc.querySelector('.bg'),
-            doc.getElementById('canvas'),
-            doc.body
-          ];
-          candidates.forEach(function(el){
-            if(found || !el) return;
-            var cs = doc.defaultView.getComputedStyle(el);
-            var hex = _bnRgbToHex(cs.backgroundColor);
-            if(hex) found = hex;
-          });
-        }catch(_){ }
+        /* 背景色由版位用 bn-layout-metrics 回報（不直接讀 iframe 內容） */
+        var m = bnFrameMetrics(ifr);
+        var hex = m && _bnRgbToHex(m.bgColor);
+        if(hex) found = hex;
       });
       return found;
     }
