@@ -1,0 +1,87 @@
+.logo範圍 {
+  background-color: rgb(235, 104, 119);
+  opacity: 0.4;
+  position: absolute;
+  left: 88px;
+  top: 122px;
+  width: 490px;
+  height: 50px;
+  z-index: 10;
+}
+.商品範圍 {
+  background-color: rgb(235, 104, 119);
+  opacity: 0.4;
+  position: absolute;
+  left: 600px;
+  top: 34px;
+  width: 590px;
+  height: 310px;
+  z-index: 9;
+}
+.主標 {
+  font-size: 40px;
+  font-family: "ShopeeNotoSans (content)";
+  font-weight: 400;
+  color: rgb(33, 118, 255);
+  line-height: 1.2;
+  text-align: left;
+  position: absolute;
+  left: 88px;
+  top: 170px;
+  z-index: 8;
+}
+.副標 {
+  font-size: 60px;
+  font-family: "ShopeeNotoSans (content)";
+  font-weight: 700;
+  color: rgb(63, 73, 207);
+  line-height: 1.2;
+  text-align: left;
+  position: absolute;
+  left: 88px;
+  top: 223.2px;
+  z-index: 7;
+}
+.日期 {
+  font-size: 27px;
+  font-family: "ShopeeNotoSans (content)";
+  font-weight: 400;
+  color: rgb(63, 73, 207);
+  line-height: 1.2;
+  text-align: left;
+  position: absolute;
+  left: 88px;
+  top: 287px;
+  z-index: 6;
+}
+.逛逛去 {
+  font-size: 28px;
+  font-family: "ShopeeNotoSans (content)";
+  font-weight: 300;
+  color: rgb(255, 255, 255);
+  line-height: 1.2;
+  text-align: center;
+  position: absolute;
+  left: 1028px;
+  top: 342px;
+  z-index: 4;
+}
+.cta底 {
+  border-radius: 8px;
+  background-color: rgb(33, 118, 255);
+  position: absolute;
+  left: 1012px;
+  top: 336px;
+  width: 160px;
+  height: 48px;
+  z-index: 3;
+}
+.bg {
+  background-color: rgb(194, 223, 243);
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 1200px;
+  height: 400px;
+  z-index: 2;
+}

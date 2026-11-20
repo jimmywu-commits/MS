@@ -1,0 +1,546 @@
+[
+  {
+    "row": 1,
+    "scope": "出現",
+    "keyword": "撒",
+    "rule": "自動改成\"灑\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 2,
+    "scope": "出現",
+    "keyword": "購物金",
+    "rule": "自動改成\"優惠券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 3,
+    "scope": "出現",
+    "keyword": "抵用券",
+    "rule": "自動改成\"優惠券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 4,
+    "scope": "出現",
+    "keyword": "折價券",
+    "rule": "自動改成\"優惠券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 5,
+    "scope": "出現",
+    "keyword": "蝦皮券",
+    "rule": "自動改成\"優惠券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 6,
+    "scope": "出現",
+    "keyword": "蝦幣券",
+    "rule": "自動改成\"優惠券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 7,
+    "scope": "出現",
+    "keyword": "折扣券",
+    "rule": "自動改成\"優惠券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 8,
+    "scope": "出現",
+    "keyword": "$蝦幣",
+    "rule": "自動改成\"蝦幣\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 9,
+    "scope": "出現",
+    "keyword": "蝦幣$",
+    "rule": "自動改成\"蝦幣\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 10,
+    "scope": "出現",
+    "keyword": "\\$\\d+\\s*蝦幣",
+    "rule": "自動改成\"蝦幣\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 11,
+    "scope": "出現",
+    "keyword": "元",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": "萬元、百元、千元，元祖"
+  },
+  {
+    "row": 12,
+    "scope": "出現",
+    "keyword": "蝦幣*元",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 13,
+    "scope": "出現",
+    "keyword": "*元蝦幣",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 14,
+    "scope": "出現",
+    "keyword": "*倍蝦幣",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 15,
+    "scope": "出現",
+    "keyword": "賺",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": "賺錢、賺到、賺翻、賺爛"
+  },
+  {
+    "row": 16,
+    "scope": "出現",
+    "keyword": "賺取",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 17,
+    "scope": "出現",
+    "keyword": "賣蝦幣",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 18,
+    "scope": "出現",
+    "keyword": "up",
+    "rule": "自動改成\"起\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 19,
+    "scope": "出現",
+    "keyword": "商城狂購節",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 20,
+    "scope": "出現",
+    "keyword": "蝦皮吃貨節",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 21,
+    "scope": "出現",
+    "keyword": "蝦皮中元節",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 22,
+    "scope": "出現",
+    "keyword": "蝦皮時尚週",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 23,
+    "scope": "出現",
+    "keyword": "18號",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 24,
+    "scope": "出現",
+    "keyword": "25號",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 25,
+    "scope": "出現",
+    "keyword": "18節",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 26,
+    "scope": "出現",
+    "keyword": "25節",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 27,
+    "scope": "出現",
+    "keyword": "最強",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 28,
+    "scope": "出現",
+    "keyword": "最便宜",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 29,
+    "scope": "出現",
+    "keyword": "最低價",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 30,
+    "scope": "出現",
+    "keyword": "最優惠",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 31,
+    "scope": "出現",
+    "keyword": "最大牌",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 32,
+    "scope": "出現",
+    "keyword": "最佳",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 33,
+    "scope": "出現",
+    "keyword": "最大品牌",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 34,
+    "scope": "出現",
+    "keyword": "效果最好",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 35,
+    "scope": "出現",
+    "keyword": "年度最強",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 36,
+    "scope": "出現",
+    "keyword": "最划算",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 37,
+    "scope": "出現",
+    "keyword": "競網最便宜",
+    "rule": "自動改成\"超\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 38,
+    "scope": "出現",
+    "keyword": "獨家",
+    "rule": "自動改成\"限定\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 39,
+    "scope": "出現",
+    "keyword": "第一",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 40,
+    "scope": "出現",
+    "keyword": "No1",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 41,
+    "scope": "出現",
+    "keyword": "No.1",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 42,
+    "scope": "出現",
+    "keyword": "No,1",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 43,
+    "scope": "出現",
+    "keyword": "專屬",
+    "rule": "自動改成\"限定\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 44,
+    "scope": "出現",
+    "keyword": "VIP",
+    "rule": "自動改成\"限定\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 45,
+    "scope": "出現",
+    "keyword": "拚",
+    "rule": "自動改成\"拼\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 46,
+    "scope": "出現",
+    "keyword": "卷",
+    "rule": "自動改成\"券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 47,
+    "scope": "出現",
+    "keyword": "周",
+    "rule": "自動改成\"週\"",
+    "message": "",
+    "exclude": "周邊"
+  },
+  {
+    "row": 48,
+    "scope": "出現",
+    "keyword": "千",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": "滿千、折千、千萬"
+  },
+  {
+    "row": 49,
+    "scope": "出現",
+    "keyword": "仟",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": "滿仟、折仟"
+  },
+  {
+    "row": 50,
+    "scope": "出現",
+    "keyword": "百",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": "德國百靈、百萬、滿百、折百、百元"
+  },
+  {
+    "row": 51,
+    "scope": "出現",
+    "keyword": "~",
+    "rule": "自動改成\"-\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 52,
+    "scope": "出現",
+    "keyword": "!",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 53,
+    "scope": "出現",
+    "keyword": "?",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 54,
+    "scope": "出現",
+    "keyword": "=+",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 55,
+    "scope": "出現",
+    "keyword": ".",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 56,
+    "scope": "出現",
+    "keyword": "\"",
+    "rule": "直接無法輸入",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 57,
+    "scope": "出現",
+    "keyword": "一",
+    "rule": "自動改成\"1\"",
+    "message": "",
+    "exclude": "一級、一站搞定、一級節能、一級能效、均一價、一日限定、星期一、一日、一鍵、一次、一代"
+  },
+  {
+    "row": 58,
+    "scope": "出現",
+    "keyword": "二",
+    "rule": "自動改成\"2\"",
+    "message": "",
+    "exclude": "星期二、二代、不二"
+  },
+  {
+    "row": 59,
+    "scope": "出現",
+    "keyword": "三",
+    "rule": "自動改成\"3\"",
+    "message": "",
+    "exclude": "三星、三麗鷗、三得利、三槍牌、三菱、星期三、三代"
+  },
+  {
+    "row": 60,
+    "scope": "出現",
+    "keyword": "四",
+    "rule": "自動改成\"4\"",
+    "message": "",
+    "exclude": "星期四、四季、四代"
+  },
+  {
+    "row": 61,
+    "scope": "出現",
+    "keyword": "五",
+    "rule": "自動改成\"5\"",
+    "message": "",
+    "exclude": "黑五、星期五、五代、五木"
+  },
+  {
+    "row": 62,
+    "scope": "出現",
+    "keyword": "六",
+    "rule": "自動改成\"6\"",
+    "message": "",
+    "exclude": "星期六、六代"
+  },
+  {
+    "row": 63,
+    "scope": "出現",
+    "keyword": "七",
+    "rule": "自動改成\"7\"",
+    "message": "",
+    "exclude": "七星、七代、七夕"
+  },
+  {
+    "row": 64,
+    "scope": "出現",
+    "keyword": "八",
+    "rule": "自動改成\"8\"",
+    "message": "",
+    "exclude": "八代"
+  },
+  {
+    "row": 65,
+    "scope": "出現",
+    "keyword": "九",
+    "rule": "自動改成\"9\"",
+    "message": "",
+    "exclude": "九代"
+  },
+  {
+    "row": 66,
+    "scope": "出現",
+    "keyword": "十",
+    "rule": "自動改成\"10\"",
+    "message": "",
+    "exclude": "十全、十美、十代"
+  },
+  {
+    "row": 67,
+    "scope": "出現",
+    "keyword": "劵",
+    "rule": "自動改成\"券\"",
+    "message": "",
+    "exclude": ""
+  },
+  {
+    "row": 68,
+    "scope": "出現",
+    "keyword": "兩",
+    "rule": "自動改成\"2\"",
+    "message": "",
+    "exclude": "兩用、2兩"
+  }
+]

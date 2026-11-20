@@ -2,14 +2,14 @@
 G:\共用雲端硬碟\INT_TWN_SHP_內部-素材\AI審圖\JBP單店<br>
 <br>
 一、字體路徑：<br>
-https://jimmywu-commits.github.io/shopee2/fonts/<br>
+本專案的 shopee2/fonts/<br>
 在coding時將上述的字體路徑提供給GPT, 裡面包含了三種粗細，分別是：<br>
 ShopeeNotoSans(content)-Bold.ttf<br>
 ShopeeNotoSans(content)-Medium.ttf<br>
 ShopeeNotoSans(content)-Regular.ttf<br>
 
 二、共用js位置：
-https://jimmywu-commits.github.io/shopee2/js/<br>
+本專案的 shopee2/js/<br>
 layout-runtime.js<br>
 排版版位的核心引擎，每個 html/ 裡的版位殼都載入它。負責：<br>
 讀取 CSS/config 建立圖層<br>

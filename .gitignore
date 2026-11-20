@@ -1,7 +1,9 @@
 /shopee
-/shopee2
 __tmp_case123/
 .git.broken-*/
 .claude/worktrees/
 .claude/settings.local.json
 output/
+# 工具自動產生的檔案（tools/raster_preview.py 輸出、Python 快取）
+__pycache__/
+tools/_preview/

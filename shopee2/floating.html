@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Float Editor</title>
+<!-- Banword rules are compiled from banwords.xlsx into a small local JSON file. -->
+<!-- External JS plugins: keep rules/features in separate JS files so future updates only require replacing the JS file. -->
+<script src="js/banwords-engine-hbn.js"></script>
+<script src="js/editor-plugin.js"></script>
+<style>
+/* ── Load local font: ShopeeNotoSans(content)-Medium.ttf ── */
+@font-face{font-family:'ShopeeNotoSans';src:url('fonts/ShopeeNotoSans(content)-Medium.woff2') format('woff2'),url('fonts/ShopeeNotoSans(content)-Medium.ttf') format('truetype');font-weight:400 500 700}
+@font-face{font-family:'ShopeeNotoSansReg';src:url('fonts/ShopeeNotoSans(content)-Regular.woff2') format('woff2'),url('fonts/ShopeeNotoSans(content)-Regular.ttf') format('truetype');font-weight:400}
+@font-face{font-family:'ShopeeNotoSansBold';src:url('fonts/ShopeeNotoSans(content)-Bold.woff2') format('woff2'),url('fonts/ShopeeNotoSans(content)-Bold.ttf') format('truetype');font-weight:700}
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1018;--p1:#13161f;--p2:#1a1e2b;--p3:#20253a;
+  --b1:#252b3d;--b2:#323a56;
+  --ac:#4a90e2;--acl:rgba(74,144,226,.15);
+  --tx:#dde3f0;--mu:#687090;--mu2:#8898b8;
+  --gr:#2dd4a0;--re:#f56565;--wa:#f5a623;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'ShopeeNotoSans','Noto Sans TC','PingFang TC',sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;font-size:13px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+/* TOP BAR */
+.tb{height:46px;background:var(--p1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0}
+.logo{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--ac);margin-right:auto;text-transform:uppercase}
+.logo em{color:var(--mu2);font-style:normal;font-weight:400}
+.btn{display:inline-flex;align-items:center;gap:5px;background:transparent;border:1px solid var(--b2);color:var(--mu2);font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+.btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acl)}
+.btn:disabled{opacity:.25;cursor:not-allowed}
+.btn.ok{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:700}
+.btn.ok:hover{opacity:.88}
+.btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.sep{width:1px;height:20px;background:var(--b1)}
+
+/* LAYOUT */
+.lay{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sb{width:262px;background:var(--p1);border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sc{padding:13px;border-bottom:1px solid var(--b1)}
+.st{font-size:9.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+.tabs{display:flex;background:var(--p2);border-radius:7px;padding:3px}
+.tab{flex:1;padding:6px 4px;font-size:11px;font-family:inherit;background:transparent;border:none;color:var(--mu);border-radius:5px;cursor:pointer;transition:.15s;font-weight:500}
+.tab.on{background:var(--p3);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.rw{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.lb{font-size:10px;color:var(--mu);width:42px;flex-shrink:0}
+.ip{flex:1;background:var(--p2);border:1px solid var(--b1);color:var(--tx);font-size:12px;padding:5px 8px;border-radius:6px;outline:none;font-family:inherit}
+.ip:focus{border-color:var(--ac);background:var(--p3)}
+.ip[type=color]{padding:2px 3px;height:30px;flex:none;width:32px;cursor:pointer}
+.ip[type=range]{-webkit-appearance:none;height:3px;background:var(--b2);border-radius:2px;flex:1;border:none;padding:0}
+.ip[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--ac);border-radius:50%;cursor:pointer}
+.sws{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.sw{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s;flex-shrink:0}
+.sw:hover{transform:scale(1.18)}
+.sw.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+.ta{width:100%;background:var(--p2);border:1px solid var(--b1);color:var(--tx);font-size:12.5px;padding:7px 9px;border-radius:7px;outline:none;font-family:inherit;resize:none;line-height:1.6}
+.ta:focus{border-color:var(--ac);background:var(--p3)}
+.ta.over{border-color:var(--re)}
+.hint{font-size:10px;color:var(--mu);margin-top:5px}
+.hint.over{color:var(--re)}
+/* char limit flash */
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.shake{animation:.25s shake}
+/* upload zone */
+.up{border:1.5px dashed var(--b2);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:.2s;color:var(--mu);position:relative}
+.up:hover,.up.drag{border-color:var(--ac);color:var(--ac);background:var(--acl)}
+.up input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.upico{margin:0 auto 6px;opacity:.5}
+.pwr{margin-top:8px}
+.pimg{width:100%;border-radius:7px;display:block;object-fit:cover;max-height:130px}
+.pedit{display:flex;gap:5px;margin-top:6px}
+.pedit button{flex:1;font-size:10px;padding:5px 3px;font-family:inherit;background:var(--p2);border:1px solid var(--b1);color:var(--mu2);border-radius:5px;cursor:pointer;transition:.15s}
+.pedit button:hover{border-color:var(--ac);color:var(--ac)}
+.dlb{display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#4a90e2,#7c5cfc);border:none;color:#fff;font-size:12px;font-weight:700;padding:11px;border-radius:8px;cursor:pointer;font-family:inherit;transition:.15s}
+.dlb:hover{opacity:.9;transform:translateY(-1px)}
+.dlb svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5}
+
+/* CANVAS AREA */
+.ca{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:32px 72px;gap:88px;background:var(--bg)}
+.cw{display:flex;flex-direction:column;align-items:center;gap:12px}
+.clb{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--mu);display:flex;align-items:center;gap:8px}
+.clb::before,.clb::after{content:'';height:1px;width:28px;background:var(--b2)}
+/* canvas frame */
+.cf{position:relative;width:360px;height:360px;border:1px solid var(--b2);border-radius:10px;overflow:hidden;
+  background-color:#161b24;
+  background-image:linear-gradient(45deg,rgba(255,255,255,.025) 25%,transparent 25%),
+    linear-gradient(-45deg,rgba(255,255,255,.025) 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,rgba(255,255,255,.025) 75%),
+    linear-gradient(-45deg,transparent 75%,rgba(255,255,255,.025) 75%);
+  background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0}
+.cf canvas{position:absolute;inset:0;width:360px;height:360px}
+/* product canvas: accepts drop */
+#cf2{transition:box-shadow .2s;overflow:visible}
+#cf2.dragover{box-shadow:0 0 0 3px var(--ac);border-color:var(--ac)}
+
+/* history float — left side for both */
+.hf{position:absolute;top:50%;right:-92px;transform:translateY(-50%);display:flex;flex-direction:column;gap:5px;z-index:5}
+.hb{width:34px;height:34px;background:rgba(13,16,24,.85);backdrop-filter:blur(8px);border:1px solid var(--b2);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mu2);transition:.15s}
+.hb:hover{background:var(--acl);border-color:var(--ac);color:var(--ac)}
+.hb:disabled{opacity:.2;cursor:default}
+.hb svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* MODALS */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:.2s;backdrop-filter:blur(4px)}
+.ov.open{opacity:1;pointer-events:all}
+.mo{background:var(--p1);border:1px solid var(--b2);border-radius:12px;padding:20px;width:440px;max-width:92vw;animation:.2s ms}
+@keyframes ms{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.mh{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.mc{background:none;border:none;color:var(--mu);cursor:pointer;font-size:20px;line-height:1;transition:.15s}
+.mc:hover{color:var(--tx)}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.mb{padding:7px 16px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;border:1px solid var(--b2);background:var(--p2);color:var(--tx);transition:.15s;font-weight:500}
+.mb:hover{border-color:var(--ac);color:var(--ac)}
+.mb.ok{background:var(--ac);border-color:var(--ac);color:#fff}
+.mb.ok:hover{opacity:.88}
+/* crop */
+.cr{position:relative;background:#000;border-radius:8px;overflow:hidden;height:270px;user-select:none;margin-bottom:8px;cursor:crosshair}
+.ci{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.cb{position:absolute;border:2px solid var(--ac);cursor:move;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
+.ch{position:absolute;width:10px;height:10px;background:var(--ac);border-radius:2px;z-index:2}
+.ch.tl{top:-5px;left:-5px;cursor:nw-resize}.ch.tr{top:-5px;right:-5px;cursor:ne-resize}
+.ch.bl{bottom:-5px;left:-5px;cursor:sw-resize}.ch.br{bottom:-5px;right:-5px;cursor:se-resize}
+.bgprev{border-radius:8px;overflow:hidden;background-image:linear-gradient(45deg,#1a1d2a 25%,transparent 25%),linear-gradient(-45deg,#1a1d2a 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1a1d2a 75%),linear-gradient(-45deg,transparent 75%,#1a1d2a 75%);background-size:10px 10px;min-height:180px;display:flex;align-items:center;justify-content:center}
+
+
+/* inline canvas text editor */
+.canvas-text-editor{
+  position:absolute;
+  left:50%;
+  top:104px;
+  width:260px;
+  min-height:160px;
+  transform:translateX(-50%);
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--canvas-text-color,#fff);
+  font-size:74px;
+  line-height:1.08;
+  font-family:'ShopeeNotoSans',sans-serif;
+  font-weight:500;
+  text-align:center;
+  outline:none;
+  resize:none;
+  overflow:hidden;
+  z-index:30;
+  caret-color:#fff;
+  white-space:pre-wrap;
+  word-break:break-word;
+  -webkit-user-select:text;
+  user-select:text;
+}
+.canvas-text-editor::selection{background:rgba(74,144,226,.22)}
+.canvas-text-editor *{font:inherit;color:inherit}
+/* TOAST */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--p1);border:1px solid var(--b2);padding:9px 18px;border-radius:8px;font-size:12px;transition:.3s;opacity:0;z-index:200;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.ok{border-color:var(--gr);color:var(--gr)}
+.toast.err{border-color:var(--re);color:var(--re)}
+.toast.wa{border-color:var(--wa);color:var(--wa)}
+
+/* AUDIT */
+.audit-msg{font-size:10px;margin-top:5px;line-height:1.5;display:none;border-radius:5px;padding:5px 8px}
+.audit-msg.changed{display:block;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--wa)}
+.audit-msg.blocked{display:block;background:rgba(245,85,101,.1);border:1px solid rgba(245,85,101,.35);color:var(--re)}
+.audit-tag{display:inline-block;background:rgba(245,166,35,.2);border-radius:3px;padding:0 4px;margin:1px 2px;font-weight:700}
+.banword-status{font-size:10px;color:var(--mu);margin-top:4px}
+.banword-status.ok{color:var(--gr)}
+.banword-status.err{color:var(--re)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="tb">
+  <div class="logo">Float <em>Editor</em></div>
+  <button class="btn" id="b-undo" onclick="undo()" disabled>
+    <svg viewBox="0 0 24 24"><path d="M3 10h10a8 8 0 0 1 0 16H3"/><polyline points="7 6 3 10 7 14"/></svg>上一步
+  </button>
+  <button class="btn" id="b-redo" onclick="redo()" disabled>
+    <svg viewBox="0 0 24 24"><path d="M21 10H11a8 8 0 0 0 0 16h10"/><polyline points="17 6 21 10 17 14"/></svg>下一步
+  </button>
+  <div class="sep"></div>
+  <button class="btn" onclick="return dl('text',event)">
+    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>文案型 PNG
+  </button>
+  <button class="btn" onclick="return dl('product',event)">
+    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>商品型 PNG
+  </button>
+  <button class="btn ok" onclick="return dlAll(event)">
+    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下載全部
+  </button>
+</div>
+
+<div class="lay">
+  <!-- SIDEBAR -->
+  <div class="sb">
+    <div class="sc">
+      <div class="tabs">
+        <button class="tab on" id="t-text" onclick="switchTab('text')">文案型</button>
+        <button class="tab" id="t-product" onclick="switchTab('product')">商品型</button>
+      </div>
+    </div>
+
+    <!-- Circle color (shared) -->
+    <div class="sc">
+      <div class="st">圓型色塊顏色</div>
+      <div class="rw">
+        <span class="lb">色碼</span>
+        <input class="ip" type="text" id="hex-in" value="#FF6B35" oninput="onHex(this.value)" style="font-family:monospace;flex:1">
+        <input class="ip" type="color" id="col-in" value="#FF6B35" oninput="onPick(this.value)">
+      </div>
+      <div class="sws" id="sws"></div>
+    </div>
+
+    <!-- Text floating settings -->
+    <div class="sc" id="sc-text">
+      <div class="st">文案設定</div>
+      <!-- text color -->
+      <div class="rw">
+        <span class="lb">文字色</span>
+        <input class="ip" type="text" id="txt-hex" value="#FFFFFF" oninput="onTxtHex(this.value)" style="font-family:monospace;flex:1">
+        <input class="ip" type="color" id="txt-col" value="#FFFFFF" oninput="onTxtPick(this.value)">
+      </div>
+      <div class="sws" id="txt-sws"></div>
+<div class="rw" style="margin-top:10px;display:none">
+        <span class="lb">X高度</span>
+        <input class="ip" type="range" min="30" max="90" step="1" id="x-font-range" oninput="onXFontSize(this.value)">
+        <input class="ip" type="number" min="30" max="90" step="1" id="x-font-size" oninput="onXFontSize(this.value)" style="width:58px;flex:none">
+      </div>
+      <div class="hint" id="x-font-hint" style="display:none"></div>
+
+      
+
+      <div style="margin-top:10px"></div>
+      <textarea class="ta" id="ta-text" rows="3" placeholder="輸入文案（最多6字）&#10;中文=1字，英/數=0.5字" oninput="onTxt(event)" onblur="applyTextAuditOnBlur('text')" onkeydown="blockOver(event,'text')"></textarea>
+      <div class="hint" id="h-text">0 / 6字</div>
+      <div class="audit-msg" id="audit-text"></div>
+    </div>
+
+    <!-- Product floating settings -->
+    <div class="sc" id="sc-product" style="display:none">
+      <div class="st">標題設定</div>
+      <div class="rw">
+        <span class="lb">CTA色</span>
+        <input class="ip" type="text" id="cta-hex" value="#1a47ae" oninput="onCtaHex(this.value)" style="font-family:monospace;flex:1">
+        <input class="ip" type="color" id="cta-col" value="#1a47ae" oninput="onCtaPick(this.value)">
+      </div>
+      <div class="sws" id="cta-sws"></div>
+      <div style="margin-top:10px"></div>
+
+
+<textarea class="ta" id="ta-prod" rows="2" placeholder="輸入標題（最多5字）" oninput="onProd(event)" onblur="applyTextAuditOnBlur('prod')" onkeydown="blockOver(event,'prod')">逛逛去</textarea>
+      <div class="hint" id="h-prod">3 / 5字</div>
+      <div class="audit-msg" id="audit-prod"></div>
+    </div>
+
+    <!-- Banword loading status -->
+    <div class="sc" style="padding:10px 13px">
+      <div class="banword-status" id="bw-status">⏳ 禁用語規則載入中…</div>
+    </div>
+
+    <!-- Image upload -->
+    <div class="sc">
+      <div class="st">商品圖片</div>
+      <div class="up" id="upzone">
+        <input type="file" accept="image/*" id="fIn" onchange="onFile(event)">
+        <svg class="upico" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12l4-4 4 4"/></svg>
+        <div style="font-size:11px">點擊上傳 / 拖曳圖片</div>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">PNG · JPG · WEBP</div>
+      </div>
+      <div id="prevWrap" style="display:none">
+        <div class="pwr"><img id="pImg" class="pimg" src="" alt=""></div>
+        <div class="pedit">
+          <button onclick="openCrop()">✂ 裁切</button>
+          <button onclick="openBg()">✦ 去背</button>
+          <button onclick="resetImg()">↩ 還原</button>
+          <button onclick="clearImg()">✕ 移除</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1"></div>
+    <button class="dlb" onclick="return dlAll(event)" style="width:calc(100% - 24px);margin:12px">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
+      下載全部（PNG 透明背景）
+    </button>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div class="ca">
+
+    <!-- Text floating -->
+    <div class="cw">
+      <div class="clb">文案型 Floating</div>
+      <div class="cf" id="cf1">
+        <canvas id="cv1" width="360" height="360"></canvas>
+      </div>
+      <div style="font-size:10px;color:var(--mu)">360 × 360 px · 透明底</div>
+    </div>
+
+    <!-- Product floating -->
+    <div class="cw">
+      <div class="clb">商品型 Floating</div>
+      <div class="cf" id="cf2">
+        <canvas id="cv2" width="360" height="360"></canvas>
+      </div>
+      <div style="font-size:10px;color:var(--mu)">360 × 360 px · 透明底 · 可拖曳圖片至圓形區域</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CROP MODAL -->
+<div class="ov" id="ov-crop">
+  <div class="mo">
+    <div class="mh">✂ 裁切圖片 <button class="mc" onclick="closeMo('ov-crop')">×</button></div>
+    <div class="cr" id="crArea">
+      <img id="crImg" class="ci" src="" alt="">
+      <div class="cb" id="cBox">
+        <div class="ch tl" data-h="tl"></div><div class="ch tr" data-h="tr"></div>
+        <div class="ch bl" data-h="bl"></div><div class="ch br" data-h="br"></div>
+      </div>
+    </div>
+    <div class="hint" style="margin-bottom:6px">拖曳框選裁切範圍</div>
+    <div class="ma">
+      <button class="mb" onclick="closeMo('ov-crop')">取消</button>
+      <button class="mb ok" onclick="doCrop()">套用裁切</button>
+    </div>
+  </div>
+</div>
+
+<!-- BG REMOVE MODAL -->
+<div class="ov" id="ov-bg">
+  <div class="mo">
+    <div class="mh">✦ 去背處理 <button class="mc" onclick="closeMo('ov-bg')">×</button></div>
+    <div class="rw" style="margin-bottom:12px">
+      <span class="lb">容差</span>
+      <input class="ip" type="range" min="1" max="120" value="1" id="tol" oninput="prevBg(this.value)">
+      <span id="tolv" style="font-size:12px;min-width:28px">1</span>
+    </div>
+    <div class="bgprev"><canvas id="bgCv" style="max-width:100%;max-height:220px;display:block"></canvas></div>
+    <div class="hint" style="margin-top:6px;margin-bottom:0">以四角取樣顏色作為背景進行去除</div>
+    <div class="ma" style="justify-content:space-between;align-items:center">
+      <button class="mb" type="button" onclick="window.open('https://www.photoroom.com/tools/background-remover','_blank')" style="border-color:#ff4d4f;color:#ff4d4f;font-weight:700">
+        去背不乾淨？超強去背 Remove
+      </button>
+      <div style="display:flex;gap:8px">
+        <button class="mb" onclick="closeMo('ov-bg')">取消</button>
+        <button class="mb ok" onclick="applyBg()">套用去背</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// FONTS — register with canvas
+// ══════════════════════════════════════════════
+const FONT_SNS = "'ShopeeNotoSans',sans-serif";
+const FONT_SNS_REG = "'ShopeeNotoSansReg',sans-serif";
+const FONT_SNS_BOLD = "'ShopeeNotoSansBold',sans-serif";
+const FONT_NOTO = FONT_SNS;
+const FONT_SHOPEE = FONT_SNS;
+
+// Pre-load font so canvas renders correctly
+async function loadFonts(){
+  try{
+    const fMed=new FontFace('ShopeeNotoSans','url(fonts/ShopeeNotoSans(content)-Medium.woff2)',{weight:'500'});
+    const fReg=new FontFace('ShopeeNotoSansReg','url(fonts/ShopeeNotoSans(content)-Regular.woff2)',{weight:'400'});
+    const fBold=new FontFace('ShopeeNotoSansBold','url(fonts/ShopeeNotoSans(content)-Bold.woff2)',{weight:'700'});
+    await Promise.allSettled([fMed.load(),fReg.load(),fBold.load()]).then(rs=>{
+      rs.forEach(r=>{ if(r.status==='fulfilled') document.fonts.add(r.value); });
+    });
+  }catch(e){ console.warn('Font not found, using system fallback'); }
+}
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let S={
+  color:'#FF6B35',
+  textColor:'#FFFFFF',
+  ctaColor:'#1a47ae',
+  text:'',
+  prod:'逛逛去',
+  orig:null,
+  proc:null,
+  imgScale:1.0,
+  imgOffX:0,
+  imgOffY:0
+};
+let hist=[JSON.stringify(S)],hi=0;
+const X_FONT_SIZE_MIN=30;
+const X_FONT_SIZE_MAX=90;
+const X_FONT_SIZE_DEFAULT=52;
+let runtimeXFontSize=X_FONT_SIZE_DEFAULT;
+
+const HBN_EDITOR_STORAGE_KEY='hbn-floating-editor-state-v6-default-cta';
+// CTA 標題不允許空白：任何情況下只要是空字串，就強制回填這個預設值
+const PROD_DEFAULT='逛逛去';
+function ensureProd(v){ return String(v==null?'':v).trim()===''?PROD_DEFAULT:v; }
+const HBN_PENDING_DOWNLOAD_KEY='hbn-floating-editor-pending-product-png-v1';
+let _restoreUsed=false;
+
+function syncStateFromUI(){
+  const textEl=document.getElementById('ta-text');
+  const prodEl=document.getElementById('ta-prod');
+  const colorEl=document.getElementById('col-in');
+  const textColorEl=document.getElementById('txt-col');
+  if(textEl) S.text=textEl.value;
+  if(prodEl) S.prod=prodEl.value;
+  if(colorEl && /^#[0-9a-fA-F]{6}$/.test(colorEl.value)) S.color=colorEl.value;
+  if(textColorEl && /^#[0-9a-fA-F]{6}$/.test(textColorEl.value)) S.textColor=textColorEl.value;
+}
+
+function makePersistSnapshot(){
+  syncStateFromUI();
+  return {
+    color:S.color,
+    textColor:S.textColor,
+    ctaColor:S.ctaColor||'#1a47ae',
+    
+    
+    text:S.text,
+    prod:S.prod,
+    orig:S.orig,
+    proc:S.proc,
+    imgScale:S.imgScale,
+    imgOffX:S.imgOffX,
+    imgOffY:S.imgOffY
+  };
+}
+
+function persistEditorState(){
+  try{
+    // 只保存「目前畫面狀態」，不要把整份 history 一起塞進 localStorage。
+    // 之前會因為 history 內含多份 base64 圖片導致容量不足，setItem 失敗後就還原到更舊的紀錄。
+    const snapshot=makePersistSnapshot();
+    const payload={version:3,S:snapshot,ts:Date.now()};
+    localStorage.setItem(HBN_EDITOR_STORAGE_KEY,JSON.stringify(payload));
+  }catch(e){
+    // 如果仍然因圖片太大失敗，先清掉舊紀錄，避免下載後 reload 還原成「之前的編輯內容」。
+    try{ localStorage.removeItem(HBN_EDITOR_STORAGE_KEY); }catch(_){}
+    console.warn('Editor state persist failed',e);
+  }
+}
+
+function restoreEditorState(){
+  try{
+    const raw=localStorage.getItem(HBN_EDITOR_STORAGE_KEY);
+    if(!raw) return false;
+    const payload=JSON.parse(raw);
+    if(!payload||!payload.S) return false;
+    S=Object.assign(S,payload.S);
+    // 下載造成 reload 後只需要還原當下狀態，避免舊 history 把畫面帶回前一版。
+    hist=[JSON.stringify(S)];
+    hi=0;
+    _restoreUsed=true;
+    applyStateToUI(false);
+    return true;
+  }catch(e){
+    console.warn('Editor state restore failed',e);
+    return false;
+  }
+}
+
+function clearSavedEditorState(){
+  try{ localStorage.removeItem(HBN_EDITOR_STORAGE_KEY); }catch(e){}
+}
+
+window.addEventListener('pagehide',persistEditorState);
+window.addEventListener('beforeunload',persistEditorState);
+
+const SW_CIRCLE=['#FF6B35','#FF3B5C','#FF9500','#FFCC00','#34C759','#00C7BE',
+                 '#32ADE6','#007AFF','#5856D6','#AF52DE','#FF375F','#1C1C1E'];
+const SW_TEXT=['#FFFFFF','#222222','#FF6B35','#FFCC00','#34C759','#007AFF',
+               '#AF52DE','#FF3B5C','#FFD700','#00C7BE'];
+
+const SW_CTA=['#1a47ae','#007AFF','#0052CC','#34C759','#FF6B35','#AF52DE','#111827','#222222'];
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load',async()=>{
+  await loadFonts();
+  initXFontSizeControl();
+  buildSw('sws',SW_CIRCLE,()=>S.color,(c)=>{ S.color=c; syncCircleUI(c); push(); draw(); });
+  buildSw('txt-sws',SW_TEXT,()=>S.textColor,(c)=>{ S.textColor=c; document.getElementById('txt-hex').value=c; document.getElementById('txt-col').value=c; push(); draw(); });
+
+  buildSw('cta-sws',SW_CTA,()=>S.ctaColor,(c)=>{ 
+    S.ctaColor=c; 
+    document.getElementById('cta-hex').value=c; 
+    document.getElementById('cta-col').value=c; 
+    push(); 
+    draw(); 
+  });
+  setupProd2Drag();
+  setupProd2Drop();
+  if(typeof setupProd2Scroll === 'function') setupProd2Scroll();
+  loadBanwords();
+  const restored=restoreEditorState();
+  if(!restored){ applyStateToUI(false); draw(); }
+  else { draw(); setTimeout(()=>toast('已還原上次編輯狀態','ok'),250); }
+  setTimeout(showPendingProductDownloadIfAny,500);
+});
+
+// ══════════════════════════════════════════════
+// BANWORDS — load local rules & audit
+// ══════════════════════════════════════════════
+let _bwReady=false;
+
+async function loadBanwords(){
+  const el=document.getElementById('bw-status');
+  try{
+    const res=await fetch('banwords.rules.json?v=20261113-slim1',{cache:'default'});
+    if(!res.ok) throw new Error('rules fetch failed');
+    const rules=await res.json();
+    if(window.banwordEngine && Array.isArray(rules)){
+      window.banwordEngine.setRules(rules);
+      _bwReady=true;
+      const n=window.banwordEngine.getRules().length;
+      el.textContent=`✓ 禁用語規則已載入（${n} 條）`;
+      el.className='banword-status ok';
+    } else {
+      throw new Error('engine not ready');
+    }
+  }catch(e){
+    el.textContent=`✕ 禁用語規則載入失敗：${e.message}`;
+    el.className='banword-status err';
+    console.warn('Banwords load error',e);
+  }
+}
+
+function runAudit(text, msgElId){
+  const msgEl=document.getElementById(msgElId);
+  if(!_bwReady||!window.banwordEngine){ msgEl.style.display='none'; return text; }
+  const result=window.banwordEngine.transformText(text);
+  if(!result.changed){ msgEl.className='audit-msg'; msgEl.style.display='none'; return text; }
+  // Build message
+  const lines=[];
+  if(result.blocked) lines.push('🚫 含有禁用語，已自動移除');
+  if(result.text!==text) lines.push(`✏️ 自動修正：<span class="audit-tag">${escHtml(text)}</span> → <span class="audit-tag">${escHtml(result.text)}</span>`);
+  if(result.messages&&result.messages.length) result.messages.forEach(m=>lines.push(`⚠️ ${escHtml(m)}`));
+  msgEl.innerHTML=lines.join('<br>');
+  msgEl.className='audit-msg '+(result.blocked?'blocked':'changed');
+  return result.text;
+}
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function buildSw(id,colors,getCurrent,cb){
+  const w=document.getElementById(id);
+  colors.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='sw'+(c===getCurrent()?' on':'');
+    d.style.background=c;
+    d.style.outline=c==='#FFFFFF'||c==='#1C1C1E'?'1px solid #555':'';
+    d.title=c;
+    d.onclick=()=>{ w.querySelectorAll('.sw').forEach(s=>s.classList.toggle('on',s.title===c)); cb(c); };
+    w.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════════
+// COLOR — CIRCLE
+// ══════════════════════════════════════════════
+function syncCircleUI(c){
+  document.getElementById('hex-in').value=c;
+  document.getElementById('col-in').value=c;
+  document.querySelectorAll('#sws .sw').forEach(s=>s.classList.toggle('on',s.title===c));
+}
+function setCol(c){ S.color=c; syncCircleUI(c); push(); draw(); }
+function onHex(v){ if(/^#[0-9a-fA-F]{6}$/.test(v)) setCol(v); }
+function onPick(v){ setCol(v); }
+
+// ══════════════════════════════════════════════
+// COLOR — TEXT
+// ══════════════════════════════════════════════
+function onTxtHex(v){ if(/^#[0-9a-fA-F]{6}$/.test(v)){ S.textColor=v; document.getElementById('txt-col').value=v; document.querySelectorAll('#txt-sws .sw').forEach(s=>s.classList.toggle('on',s.title===v)); push(); draw(); } }
+function onTxtPick(v){ S.textColor=v; document.getElementById('txt-hex').value=v; document.querySelectorAll('#txt-sws .sw').forEach(s=>s.classList.toggle('on',s.title===v)); push(); draw(); }
+
+
+
+function initXFontSizeControl(){
+  const range=document.getElementById('x-font-range');
+  const input=document.getElementById('x-font-size');
+  if(range){
+    range.min=X_FONT_SIZE_MIN;
+    range.max=X_FONT_SIZE_MAX;
+    range.value=runtimeXFontSize;
+  }
+  if(input){
+    input.min=X_FONT_SIZE_MIN;
+    input.max=X_FONT_SIZE_MAX;
+    input.value=runtimeXFontSize;
+  }
+  syncXFontSizeControl();
+}
+
+function syncXFontSizeControl(){
+  const range=document.getElementById('x-font-range');
+  const input=document.getElementById('x-font-size');
+  const hint=document.getElementById('x-font-hint');
+  if(range) range.value=runtimeXFontSize;
+  if(input) input.value=runtimeXFontSize;
+  if(hint) hint.textContent=`實際可見高度 ${runtimeXFontSize}px / 可調 ${X_FONT_SIZE_MIN}–${X_FONT_SIZE_MAX}px`;
+}
+
+function onXFontSize(v){
+  runtimeXFontSize=Math.max(X_FONT_SIZE_MIN,Math.min(X_FONT_SIZE_MAX,parseInt(v,10)||X_FONT_SIZE_DEFAULT));
+  syncXFontSizeControl();
+  draw();
+}
+
+function onCtaHex(v){
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){
+    S.ctaColor=v;
+    document.getElementById('cta-col').value=v;
+    document.querySelectorAll('#cta-sws .sw').forEach(s=>s.classList.toggle('on',s.title===v));
+    push();
+    draw();
+  }
+}
+
+function onCtaPick(v){
+  S.ctaColor=v;
+  document.getElementById('cta-hex').value=v;
+  document.querySelectorAll('#cta-sws .sw').forEach(s=>s.classList.toggle('on',s.title===v));
+  push();
+  draw();
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+function switchTab(t){
+  document.getElementById('t-text').classList.toggle('on',t==='text');
+  document.getElementById('t-product').classList.toggle('on',t==='product');
+  document.getElementById('sc-text').style.display=t==='text'?'':'none';
+  document.getElementById('sc-product').style.display=t==='product'?'':'none';
+}
+
+// ══════════════════════════════════════════════
+// TEXT — char width & limit enforcement
+// ══════════════════════════════════════════════
+function cw(ch){ return /[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u2e80-\u2eff]/.test(ch)?1:0.5; }
+function cws(s){ let w=0; for(const c of s){ if(c==='\n') continue; w+=cw(c); } return w; }
+
+// Trim string to max char-width
+function trimToMax(s,max){
+  let w=0; let out='';
+  for(const c of [...s]){ if(c==='\n'){ out+=c; continue; } const cW=cw(c); if(w+cW>max+0.001) break; w+=cW; out+=c; }
+  return out;
+}
+
+function blockOver(e,type){
+  const max=type==='text'?6:5;
+  const ta=document.getElementById(type==='text'?'ta-text':'ta-prod');
+  const cur=cws(ta.value);
+  // Allow control keys
+  const ctrl=e.ctrlKey||e.metaKey;
+  const ok=['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','Tab','Enter'];
+  if(ctrl||ok.includes(e.key)) return;
+  const addW=cw(e.key);
+  if(cur+addW>max+0.001){ e.preventDefault(); shakeEl(ta); toast('已達字數上限','wa'); }
+}
+
+function clearAuditMessage(msgElId){
+  const msgEl=document.getElementById(msgElId);
+  if(!msgEl) return;
+  msgEl.className='audit-msg';
+  msgEl.style.display='none';
+  msgEl.innerHTML='';
+}
+
+function updateTextField(type, options){
+  options=options||{};
+  const isText=type==='text';
+  const ta=document.getElementById(isText?'ta-text':'ta-prod');
+  const max=isText?6:5;
+  const hint=document.getElementById(isText?'h-text':'h-prod');
+  const msgId=isText?'audit-text':'audit-prod';
+
+  if(cws(ta.value)>max){
+    ta.value=trimToMax(ta.value,max);
+    shakeEl(ta);
+    toast('已達字數上限','wa');
+  }
+
+  if(options.audit){
+    // 商品型標題離開欄位時若為空白，強制回填預設值（CTA 不可空白）
+    if(!isText && ta.value.trim()===''){
+      ta.value=PROD_DEFAULT;
+      toast(`標題不可空白，已填入「${PROD_DEFAULT}」`,'ok');
+    }
+    const before=ta.value;
+    const audited=runAudit(before,msgId);
+    if(audited!==before){
+      const curLen=cws(audited);
+      ta.value=curLen>max?trimToMax(audited,max):audited;
+      toast('已依規則自動修正','ok');
+    }
+  } else {
+    // 輸入過程不做全文修正；等游標離開欄位後再依完整前後文判斷。
+    clearAuditMessage(msgId);
+  }
+
+  const w=cws(ta.value);
+  hint.textContent=`${w} / ${max}字`;
+  hint.className='hint'+(w>=max?' over':'');
+  ta.className='ta'+(w>=max?' over':'');
+
+  if(isText) S.text=ta.value;
+  else S.prod=ta.value;
+
+  push();
+  draw();
+}
+
+function onTxt(e){ updateTextField('text',{audit:false}); }
+function onProd(e){ updateTextField('prod',{audit:false}); }
+
+function applyTextAuditOnBlur(type){
+  updateTextField(type,{audit:true});
+}
+
+function shakeEl(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+// split into lines max 3 char-widths each
+function lines(text,mx=3){
+  const ls=[];
+  String(text||'').split(/\n/).forEach(part=>{
+    const arr=[...part]; let ln='',lw=0;
+    for(const ch of arr){
+      const w=cw(ch);
+      if(lw+w>mx+.001&&ln){ ls.push(ln); ln=ch; lw=w; }
+      else{ ln+=ch; lw+=w; }
+    }
+    if(ln) ls.push(ln);
+    else if(part==='') ls.push('');
+  });
+  return ls;
+}
+
+// ══════════════════════════════════════════════
+// IMAGE — sidebar upload
+// ══════════════════════════════════════════════
+function loadImgData(dataUrl){
+  S.orig=S.proc=dataUrl;
+  S.imgScale=1.0; S.imgOffX=0; S.imgOffY=0;
+  _cachedImgSrc=null; _cachedImgEl=null;
+  showPrev(dataUrl); push(); draw();
+}
+function onFile(e){ const f=e.target.files[0]; if(!f) return; readFile(f); }
+function readFile(f){ const r=new FileReader(); r.onload=ev=>loadImgData(ev.target.result); r.readAsDataURL(f); }
+function showPrev(src){ document.getElementById('pImg').src=src; document.getElementById('prevWrap').style.display=''; }
+function resetImg(){ S.proc=S.orig; S.imgScale=1; S.imgOffX=0; S.imgOffY=0; showPrev(S.proc); push(); draw(); }
+function clearImg(){ S.orig=S.proc=null; document.getElementById('prevWrap').style.display='none'; document.getElementById('fIn').value=''; push(); draw(); }
+
+// Sidebar drag-drop (for upload zone)
+const uz=document.getElementById('upzone');
+uz.addEventListener('dragover',e=>{ e.preventDefault(); uz.classList.add('drag'); });
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
+uz.addEventListener('drop',e=>{ e.preventDefault(); uz.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith('image/')) readFile(f); });
+
+// ══════════════════════════════════════════════
+// PRODUCT CANVAS — drag image directly onto canvas
+// ══════════════════════════════════════════════
+function setupProd2Drop(){
+  const cf2=document.getElementById('cf2');
+  cf2.addEventListener('dragover',e=>{ e.preventDefault(); cf2.classList.add('dragover'); });
+  cf2.addEventListener('dragleave',()=>cf2.classList.remove('dragover'));
+  cf2.addEventListener('drop',e=>{
+    e.preventDefault(); cf2.classList.remove('dragover');
+    const f=e.dataTransfer.files[0];
+    if(f&&f.type.startsWith('image/')){ readFile(f); toast('圖片已載入','ok'); }
+  });
+}
+
+// ══════════════════════════════════════════════
+// PRODUCT CANVAS — mouse LEFT drag to move image
+// ══════════════════════════════════════════════
+function setupProd2Drag(){
+  const cv2=document.getElementById('cv2');
+  let dragging=false,startX=0,startY=0,baseOffX=0,baseOffY=0;
+
+  cv2.addEventListener('mousedown',e=>{
+    if(e.button!==0||!S.proc) return;
+    // Only allow drag if cursor is inside the circle (cx=162,cy=158,r=150)
+    const rect=cv2.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*(360/rect.width);
+    const my=(e.clientY-rect.top)*(360/rect.height);
+    const cx=12+150,cy=8+150;
+    if(Math.hypot(mx-cx,my-cy)>150) return;
+    dragging=true;
+    startX=e.clientX; startY=e.clientY;
+    baseOffX=S.imgOffX; baseOffY=S.imgOffY;
+    cv2.style.cursor='grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const rect=cv2.getBoundingClientRect();
+    const scaleX=360/rect.width,scaleY=360/rect.height;
+    S.imgOffX=baseOffX+(e.clientX-startX)*scaleX;
+    S.imgOffY=baseOffY+(e.clientY-startY)*scaleY;
+    d2(); // live redraw without pushing history
+  });
+
+  document.addEventListener('mouseup',e=>{
+    if(!dragging) return;
+    dragging=false;
+    cv2.style.cursor='';
+    push(); // commit final position to history
+  });
+
+  // Show grab cursor when hovering over circle with image
+  cv2.addEventListener('mousemove',e=>{
+    if(dragging||!S.proc) return;
+    const rect=cv2.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*(360/rect.width);
+    const my=(e.clientY-rect.top)*(360/rect.height);
+    const cx=12+150,cy=8+150;
+    cv2.style.cursor=Math.hypot(mx-cx,my-cy)<=150?'grab':'default';
+  });
+  cv2.addEventListener('mouseleave',()=>{ if(!dragging) cv2.style.cursor=''; });
+}
+
+// ══════════════════════════════════════════════
+// DRAW
+// ══════════════════════════════════════════════
+function draw(){ d1(); d2(); }
+
+function contrast(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return (.299*r+.587*g+.114*b)>140?'#222':'#fff';
+}
+
+function fillCirc(ctx,cx,cy,r,fill){
+  ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill(); ctx.restore();
+}
+
+// Shared top-right X badge for both Text/Product canvases.
+// X font size is controlled only by the sidebar X字級 control.
+const TOP_RIGHT_X_BADGE_RADIUS = 48;
+
+function getXFontPxForVisibleHeight(ctx,targetVisibleHeight){
+  const baseFontPx=100;
+  ctx.font=`700 ${baseFontPx}px ${FONT_SNS_BOLD}`;
+  const baseMetrics=ctx.measureText('X');
+  const baseVisibleHeight=(baseMetrics.actualBoundingBoxAscent||0)+(baseMetrics.actualBoundingBoxDescent||0);
+  if(!baseVisibleHeight) return targetVisibleHeight;
+  return targetVisibleHeight*baseFontPx/baseVisibleHeight;
+}
+
+function drawX(ctx,cx,cy){
+  fillCirc(ctx,cx,cy,TOP_RIGHT_X_BADGE_RADIUS,'#555555');
+  ctx.save();
+  const targetVisibleHeight=runtimeXFontSize||X_FONT_SIZE_DEFAULT;
+  const adjustedFontPx=getXFontPxForVisibleHeight(ctx,targetVisibleHeight);
+  ctx.font=`700 ${adjustedFontPx}px ${FONT_SNS_BOLD}`;
+  ctx.fillStyle='#fff';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  const m=ctx.measureText('X');
+  const textH=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
+  const optY=cy-m.actualBoundingBoxDescent+textH/2;
+  ctx.fillText('X',cx,optY);
+  ctx.restore();
+}
+
+function roundRect(ctx,x,y,w,h,r,fill){
+  ctx.save(); ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath(); ctx.fillStyle=fill; ctx.fill(); ctx.restore();
+}
+
+// ── Text canvas ──
+function d1(){
+  const cv=document.getElementById('cv1');
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,360,360);
+  const col=S.color;
+  fillCirc(ctx,180,180,150,col);
+  drawX(ctx,255.3+48,8+48);
+
+  const ls=lines(S.text,3);
+  if(ls.length && !inlineEditor){
+    let y=104;
+    ls.forEach(line=>{
+      ctx.save();
+      const SZ=74;
+      ctx.font=`500 ${SZ}px ${FONT_SNS}`;
+      const chars=[...line];
+      const mets=chars.map(ch=>({ch,w:ctx.measureText(ch).width}));
+      const tot=mets.reduce((s,m)=>s+m.w,0);
+      let x=180-tot/2;
+      mets.forEach(({ch,w})=>{
+        ctx.fillStyle=S.textColor;
+        ctx.textBaseline='top';
+        ctx.textAlign='left';
+        ctx.fillText(ch,x,y);
+        x+=w;
+      });
+      ctx.restore();
+      y+=SZ*1.08;
+    });
+  }
+}
+
+// ── Image cache to prevent flash on redraw ──
+let _cachedImgSrc=null, _cachedImgEl=null;
+function getCachedImg(src,cb){
+  if(_cachedImgSrc===src&&_cachedImgEl&&_cachedImgEl.complete){
+    cb(_cachedImgEl); return;
+  }
+  const img=new Image();
+  img.onload=()=>{ _cachedImgSrc=src; _cachedImgEl=img; cb(img); };
+  img.src=src;
+}
+
+// ── Product canvas ──
+function d2(){
+  const cv=document.getElementById('cv2');
+  const ctx=cv.getContext('2d');
+  const col=S.color;
+  const cx=12+150, cy=8+150;
+
+  if(S.proc){
+    getCachedImg(S.proc,img=>{
+      ctx.clearRect(0,0,360,360);
+      // 圓形底色功能保留；有商品圖時底色半徑略微內縮，避免 Canvas 抗鋸齒在外緣透出色邊。
+      fillCirc(ctx,cx,cy,148,col);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx,cy,150,0,Math.PI*2); ctx.clip();
+      // 商品圖永遠至少完整覆蓋圓形範圍；保留放大功能，但避免縮小後露出底色。
+      const coverScale=Math.max(304/img.width,304/img.height);
+      const sc=coverScale*Math.max(0.2,S.imgScale);
+      const dw=img.width*sc, dh=img.height*sc;
+      ctx.drawImage(img, cx-dw/2+S.imgOffX, cy-dh/2+S.imgOffY, dw, dh);
+      ctx.restore();
+      d2ui(ctx);
+    });
+  } else {
+    ctx.clearRect(0,0,360,360);
+    fillCirc(ctx,cx,cy,150,col);
+    d2ui(ctx);
+  }
+}
+
+function d2ui(ctx){
+  drawX(ctx,255.3+48,8+48);
+  roundRect(ctx,6,249,312,64,32,S.ctaColor||'#1a47ae');
+
+  const raw=ensureProd(S.prod);
+  const chars=[...raw,' ','▶'];
+  const mets=chars.map(ch=>{
+    const sz=ch==='▶'?25:46;
+    ctx.font=`500 ${sz}px ${FONT_SNS}`;
+    return{ch,sz,w:ctx.measureText(ch).width};
+  });
+  const tot=mets.reduce((s,m)=>s+m.w,0);
+  let x=6+156-tot/2;
+  const by=249+32;
+  mets.forEach(({ch,sz,w})=>{
+    ctx.font=`500 ${sz}px ${FONT_SNS}`;
+    ctx.fillStyle='#fff';
+    ctx.textBaseline='middle';
+    ctx.textAlign='left';
+    ctx.fillText(ch,x,by);
+    x+=w;
+  });
+}
+
+// ══════════════════════════════════════════════
+// CROP
+// ══════════════════════════════════════════════
+let C={x:20,y:20,w:200,h:200,drag:0,res:0,hd:'',sx:0,sy:0,ox:0,oy:0,ow:0,oh:0};
+function openCrop(){
+  if(!S.proc){ toast('請先上傳圖片','err'); return; }
+  document.getElementById('crImg').src=S.proc;
+  document.getElementById('ov-crop').classList.add('open');
+  setTimeout(initCrop,60);
+}
+function initCrop(){
+  const a=document.getElementById('crArea');
+  const aw=a.clientWidth,ah=a.clientHeight,s=Math.min(aw,ah)*.7;
+  C={x:(aw-s)/2,y:(ah-s)/2,w:s,h:s,drag:0,res:0,hd:'',sx:0,sy:0,ox:0,oy:0,ow:0,oh:0};
+  syncCrop();
+}
+function syncCrop(){ const b=document.getElementById('cBox'); b.style.cssText=`left:${C.x}px;top:${C.y}px;width:${C.w}px;height:${C.h}px`; }
+document.getElementById('cBox').addEventListener('mousedown',e=>{
+  e.preventDefault(); const h=e.target.dataset.h;
+  if(h){C.res=1;C.hd=h;}else C.drag=1;
+  C.sx=e.clientX;C.sy=e.clientY;C.ox=C.x;C.oy=C.y;C.ow=C.w;C.oh=C.h;
+  document.addEventListener('mousemove',mvCrop); document.addEventListener('mouseup',upCrop);
+});
+function mvCrop(e){
+  const dx=e.clientX-C.sx,dy=e.clientY-C.sy;
+  const a=document.getElementById('crArea'),aw=a.clientWidth,ah=a.clientHeight;
+  if(C.drag){C.x=Math.max(0,Math.min(aw-C.w,C.ox+dx));C.y=Math.max(0,Math.min(ah-C.h,C.oy+dy));}
+  else if(C.res){
+    const h=C.hd; let nx=C.ox,ny=C.oy,nw=C.ow,nh=C.oh;
+    if(h.includes('r')) nw=Math.max(40,C.ow+dx);
+    if(h.includes('l')){nw=Math.max(40,C.ow-dx);nx=C.ox+C.ow-nw;}
+    if(h.includes('b')) nh=Math.max(40,C.oh+dy);
+    if(h.includes('t')){nh=Math.max(40,C.oh-dy);ny=C.oy+C.oh-nh;}
+    C.x=Math.max(0,nx);C.y=Math.max(0,ny);C.w=Math.min(aw-C.x,nw);C.h=Math.min(ah-C.y,nh);
+  }
+  syncCrop();
+}
+function upCrop(){ C.drag=C.res=0; document.removeEventListener('mousemove',mvCrop); document.removeEventListener('mouseup',upCrop); }
+function doCrop(){
+  const img=document.getElementById('crImg'),a=document.getElementById('crArea');
+  const sx=img.naturalWidth/a.clientWidth,sy=img.naturalHeight/a.clientHeight;
+  const cv=document.createElement('canvas');
+  cv.width=Math.round(C.w*sx); cv.height=Math.round(C.h*sy);
+  cv.getContext('2d').drawImage(img,C.x*sx,C.y*sy,cv.width,cv.height,0,0,cv.width,cv.height);
+  S.proc=cv.toDataURL('image/png'); S.imgScale=1; S.imgOffX=0; S.imgOffY=0;
+  _cachedImgSrc=null; _cachedImgEl=null;
+  showPrev(S.proc); closeMo('ov-crop'); push(); draw(); toast('裁切完成','ok');
+}
+
+// ══════════════════════════════════════════════
+// BG REMOVE
+// ══════════════════════════════════════════════
+let bgOrig=null;
+function openBg(){
+  if(!S.proc){ toast('請先上傳圖片','err'); return; }
+  document.getElementById('ov-bg').classList.add('open');
+  const img=new Image(); img.crossOrigin='anonymous';
+  img.onload=()=>{
+    const cv=document.getElementById('bgCv');
+    cv.width=img.width; cv.height=img.height;
+    cv.getContext('2d').drawImage(img,0,0);
+    bgOrig=cv.getContext('2d').getImageData(0,0,cv.width,cv.height);
+    prevBg(1);
+  };
+  img.src=S.proc;
+}
+function prevBg(t){
+  document.getElementById('tolv').textContent=t;
+  if(!bgOrig) return;
+  const d=new Uint8ClampedArray(bgOrig.data),w=bgOrig.width,h=bgOrig.height;
+  const pts=[[0,0],[w-1,0],[0,h-1],[w-1,h-1]];
+  const samp=pts.map(([x,y])=>{ const i=(y*w+x)*4; return[d[i],d[i+1],d[i+2]]; });
+  const tn=parseInt(t)*3;
+  for(let i=0;i<d.length;i+=4){
+    if(samp.some(([r,g,b])=>Math.abs(d[i]-r)+Math.abs(d[i+1]-g)+Math.abs(d[i+2]-b)<tn)) d[i+3]=0;
+  }
+  document.getElementById('bgCv').getContext('2d').putImageData(new ImageData(d,bgOrig.width,bgOrig.height),0,0);
+}
+function applyBg(){
+  S.proc=document.getElementById('bgCv').toDataURL('image/png');
+  _cachedImgSrc=null; _cachedImgEl=null;
+  showPrev(S.proc); closeMo('ov-bg'); push(); draw(); toast('去背完成','ok');
+}
+
+// ══════════════════════════════════════════════
+// STATE PERSIST / RESTORE UI
+// ══════════════════════════════════════════════
+function applyStateToUI(shouldDraw=true){
+  document.getElementById('hex-in').value=S.color;
+  document.getElementById('col-in').value=S.color;
+  document.getElementById('txt-hex').value=S.textColor;
+  document.getElementById('txt-col').value=S.textColor;
+  if(document.getElementById('cta-hex')) document.getElementById('cta-hex').value=S.ctaColor||'#1a47ae';
+  if(document.getElementById('cta-col')) document.getElementById('cta-col').value=S.ctaColor||'#1a47ae';
+  document.getElementById('ta-text').value=S.text;
+  S.prod=ensureProd(S.prod);
+  document.getElementById('ta-prod').value=S.prod;
+  document.querySelectorAll('#sws .sw').forEach(s=>s.classList.toggle('on',s.title===S.color));
+  document.querySelectorAll('#txt-sws .sw').forEach(s=>s.classList.toggle('on',s.title===S.textColor));
+  const tw=cws(S.text), pw=cws(S.prod);
+  const ht=document.getElementById('h-text');
+  const hp=document.getElementById('h-prod');
+  const tt=document.getElementById('ta-text');
+  const tp=document.getElementById('ta-prod');
+  ht.textContent=`${tw} / 6字`; ht.className='hint'+(tw>=6?' over':''); tt.className='ta'+(tw>=6?' over':'');
+  hp.textContent=`${pw} / 5字`; hp.className='hint'+(pw>=5?' over':''); tp.className='ta'+(pw>=5?' over':'');
+  if(S.proc) showPrev(S.proc);
+  else { document.getElementById('prevWrap').style.display='none'; document.getElementById('fIn').value=''; }
+  upH();
+  if(shouldDraw) draw();
+}
+
+// ══════════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════════
+function push(){
+  hist=hist.slice(0,hi+1);
+  hist.push(JSON.stringify(S));
+  hi=hist.length-1;
+  upH();
+  persistEditorState();
+}
+function undo(){ if(hi>0){hi--;load(hist[hi]);upH();persistEditorState();} }
+function redo(){ if(hi<hist.length-1){hi++;load(hist[hi]);upH();persistEditorState();} }
+function load(json){
+  S=JSON.parse(json);
+  applyStateToUI(true);
+}
+function upH(){
+  const cu=hi>0,cr=hi<hist.length-1;
+  ['b-undo'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=!cu;});
+  ['b-redo'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=!cr;});
+}
+
+// ══════════════════════════════════════════════
+// DOWNLOAD
+// ══════════════════════════════════════════════
+function canvasToBlob(canvas){
+  return new Promise((resolve,reject)=>{
+    try{
+      canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('canvas.toBlob failed')),'image/png');
+    }catch(e){ reject(e); }
+  });
+}
+
+function makeCanvasCopy(canvas){
+  const copy=document.createElement('canvas');
+  copy.width=canvas.width;
+  copy.height=canvas.height;
+  copy.getContext('2d').drawImage(canvas,0,0);
+  return copy;
+}
+
+function canvasCopyToBlob(canvas){
+  return canvasToBlob(makeCanvasCopy(canvas));
+}
+
+function canvasCopyToDataUrl(canvas){
+  return makeCanvasCopy(canvas).toDataURL('image/png');
+}
+
+function dataUrlToBlob(dataUrl){
+  return fetch(dataUrl).then(res=>res.blob());
+}
+
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  a.style.position='fixed';
+  a.style.left='-9999px';
+  a.style.top='-9999px';
+  document.body.appendChild(a);
+  a.dispatchEvent(new MouseEvent('click',{bubbles:false,cancelable:true,view:window}));
+  setTimeout(()=>{
+    a.remove();
+    URL.revokeObjectURL(url);
+  },60000);
+}
+
+function downloadCanvasCopy(canvas, filename){
+  return canvasCopyToBlob(canvas).then(blob=>downloadBlob(blob,filename));
+}
+
+function dl(type,evt){
+  if(evt){ evt.preventDefault(); evt.stopPropagation(); }
+  syncStateFromUI();
+  persistEditorState();
+  const src=document.getElementById(type==='text'?'cv1':'cv2');
+  downloadCanvasCopy(src,`floating-${type}-${Date.now()}.png`)
+    .then(()=>{ persistEditorState(); toast(`${type==='text'?'文案':'商品'}型已下載 ✓`,'ok'); })
+    .catch(err=>{ console.warn(err); toast('下載失敗，請再試一次','err'); });
+  return false;
+}
+
+function savePendingProductDownload(filename,dataUrl){
+  try{
+    sessionStorage.setItem(HBN_PENDING_DOWNLOAD_KEY,JSON.stringify({filename,dataUrl,ts:Date.now()}));
+  }catch(e){
+    console.warn('Pending product download save failed',e);
+  }
+}
+
+function getPendingProductDownload(){
+  try{
+    const raw=sessionStorage.getItem(HBN_PENDING_DOWNLOAD_KEY);
+    if(!raw) return null;
+    const payload=JSON.parse(raw);
+    if(!payload||!payload.filename||!payload.dataUrl) return null;
+    return payload;
+  }catch(e){
+    console.warn('Pending product download read failed',e);
+    return null;
+  }
+}
+
+function clearPendingProductDownload(){
+  try{ sessionStorage.removeItem(HBN_PENDING_DOWNLOAD_KEY); }catch(e){}
+}
+
+function ensureSecondDownloadPanel(){
+  let panel=document.getElementById('second-download-panel');
+  if(panel) return panel;
+  panel=document.createElement('div');
+  panel.id='second-download-panel';
+  panel.style.cssText='position:fixed;right:18px;bottom:18px;z-index:260;background:#13161f;border:1px solid #4a90e2;border-radius:12px;box-shadow:0 14px 36px rgba(0,0,0,.38);padding:12px;width:230px;color:#dde3f0;font-family:inherit;display:none';
+  panel.innerHTML=`
+    <div style="font-size:12px;font-weight:700;margin-bottom:5px;color:#fff">還差第 2 張 PNG</div>
+    <div style="font-size:10px;color:#8898b8;line-height:1.5;margin-bottom:10px">瀏覽器會擋連續自動下載，請再點一次下載商品型。</div>
+    <button type="button" id="second-download-btn" style="width:100%;border:0;border-radius:9px;background:#4a90e2;color:#fff;font-size:12px;font-weight:700;padding:9px 10px;cursor:pointer;font-family:inherit">下載商品型 PNG</button>
+    <button type="button" id="second-download-cancel" style="width:100%;border:1px solid #323a56;border-radius:9px;background:transparent;color:#8898b8;font-size:11px;padding:7px 10px;margin-top:7px;cursor:pointer;font-family:inherit">取消</button>`;
+  document.body.appendChild(panel);
+  panel.querySelector('#second-download-btn').addEventListener('click',downloadPendingProductPng);
+  panel.querySelector('#second-download-cancel').addEventListener('click',()=>{
+    clearPendingProductDownload();
+    hideSecondDownloadPanel();
+    toast('已取消商品型下載','wa');
+  });
+  return panel;
+}
+
+function showSecondDownloadPanel(){
+  const pending=getPendingProductDownload();
+  if(!pending) return;
+  const panel=ensureSecondDownloadPanel();
+  panel.style.display='block';
+}
+
+function hideSecondDownloadPanel(){
+  const panel=document.getElementById('second-download-panel');
+  if(panel) panel.style.display='none';
+}
+
+function showPendingProductDownloadIfAny(){
+  if(getPendingProductDownload()){
+    showSecondDownloadPanel();
+    toast('請點右下角下載第 2 張商品型 PNG','wa');
+  }
+}
+
+function downloadPendingProductPng(evt){
+  if(evt){ evt.preventDefault(); evt.stopPropagation(); }
+  const pending=getPendingProductDownload();
+  if(!pending){ hideSecondDownloadPanel(); return false; }
+  dataUrlToBlob(pending.dataUrl)
+    .then(blob=>{
+      downloadBlob(blob,pending.filename);
+      clearPendingProductDownload();
+      hideSecondDownloadPanel();
+      persistEditorState();
+      toast('2 張 PNG 已下載完成 ✓','ok');
+    })
+    .catch(err=>{ console.warn(err); toast('商品型 PNG 下載失敗，請再試一次','err'); });
+  return false;
+}
+
+function dlAll(evt){
+  if(evt){ evt.preventDefault(); evt.stopPropagation(); }
+  syncStateFromUI();
+  persistEditorState();
+
+  const ts=Date.now();
+  const cvText=document.getElementById('cv1');
+  const cvProduct=document.getElementById('cv2');
+  const productFilename=`floating-product-${ts}.png`;
+
+  // 最穩定做法：第一張用這次點擊下載；第二張先暫存，顯示按鈕讓使用者再點一次。
+  // 這能避開 Chrome/Edge/Safari 對「同一次點擊連續多檔下載」的阻擋，也避免 Live Server reload 中斷第二張。
+  try{
+    savePendingProductDownload(productFilename,canvasCopyToDataUrl(cvProduct));
+  }catch(e){
+    console.warn(e);
+    toast('商品型 PNG 暫存失敗，請改用上方商品型 PNG 按鈕','err');
+    return false;
+  }
+
+  downloadCanvasCopy(cvText,`floating-text-${ts}.png`)
+    .then(()=>{
+      persistEditorState();
+      showSecondDownloadPanel();
+      toast('文案型已下載，請點右下角下載商品型 PNG','ok');
+    })
+    .catch(err=>{ console.warn(err); toast('文案型 PNG 下載失敗，請再試一次','err'); });
+  return false;
+}
+
+
+// inline canvas editor
+let inlineEditor=null;
+
+function enableCanvasTextEdit(){
+  const cv=document.getElementById('cv1');
+
+  cv.addEventListener('click',(e)=>{
+    const rect=cv.getBoundingClientRect();
+    const y=(e.clientY-rect.top)*(360/rect.height);
+
+    // 點文案顯示區時，直接在圓色塊上原地編輯
+    if(y>=88 && y<=245){
+      openInlineEditor();
+    }
+  });
+}
+
+function plainTextFromEditable(el){
+  return (el.innerText||'').replace(/\u00a0/g,' ');
+}
+
+function setEditablePlainText(el,text){
+  el.textContent=text||'';
+}
+
+function placeCaretAtEnd(el){
+  el.focus();
+  const range=document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function syncInlineTextToSidebar(value){
+  S.text=value;
+  const ta=document.getElementById('ta-text');
+  ta.value=value;
+
+  const w=cws(value.replace(/\n/g,''));
+  const hint=document.getElementById('h-text');
+  hint.textContent=`${w} / 6字`;
+  hint.className='hint'+(w>=6?' over':'');
+  ta.className='ta'+(w>=6?' over':'');
+  persistEditorState();
+}
+
+function trimMultilineTextToMax(value,max){
+  let w=0;
+  let out='';
+  for(const ch of [...value]){
+    if(ch==='\n'){
+      out+=ch;
+      continue;
+    }
+    const cW=cw(ch);
+    if(w+cW>max+0.001) break;
+    w+=cW;
+    out+=ch;
+  }
+  return out.replace(/\n{3,}/g,'\n\n');
+}
+
+function openInlineEditor(){
+  if(inlineEditor) return;
+
+  const wrap=document.getElementById('cf1');
+  const ed=document.createElement('div');
+  ed.className='canvas-text-editor';
+  ed.contentEditable='true';
+  ed.spellcheck=false;
+  ed.style.setProperty('--canvas-text-color',S.textColor||'#fff');
+  setEditablePlainText(ed,S.text||'');
+
+  wrap.appendChild(ed);
+  inlineEditor=ed;
+
+  // 暫時隱藏 canvas 文字，只保留圓色塊與 X，避免文字重疊；編輯器位置與 canvas 文字位置一致。
+  d1();
+
+  setTimeout(()=>placeCaretAtEnd(ed),0);
+
+  ed.addEventListener('input',()=>{
+    const before=plainTextFromEditable(ed);
+    const trimmed=trimMultilineTextToMax(before,6);
+    if(before!==trimmed){
+      setEditablePlainText(ed,trimmed);
+      placeCaretAtEnd(ed);
+      shakeEl(ed);
+      toast('已達字數上限','wa');
+    }
+    syncInlineTextToSidebar(trimmed);
+  });
+
+  ed.addEventListener('paste',(e)=>{
+    e.preventDefault();
+    const text=(e.clipboardData||window.clipboardData).getData('text/plain');
+    document.execCommand('insertText',false,text);
+  });
+
+  function finishInlineEdit(){
+    if(!inlineEditor) return;
+    const val=trimMultilineTextToMax(plainTextFromEditable(inlineEditor),6);
+    inlineEditor.remove();
+    inlineEditor=null;
+
+    const ta=document.getElementById('ta-text');
+    ta.value=val;
+    updateTextField('text',{audit:true});
+    push();
+    draw();
+  }
+
+  ed.addEventListener('blur',finishInlineEdit);
+
+  ed.addEventListener('keydown',(e)=>{
+    if(e.key==='Enter'){
+      // Enter 保留原地斷行；避免 contenteditable 產生 div/p 等元素造成排版跳動。
+      e.preventDefault();
+      document.execCommand('insertLineBreak');
+      const val=trimMultilineTextToMax(plainTextFromEditable(ed),6);
+      if(val!==plainTextFromEditable(ed)){
+        setEditablePlainText(ed,val);
+        placeCaretAtEnd(ed);
+      }
+      syncInlineTextToSidebar(val);
+    }
+    if(e.key==='Escape'){
+      e.preventDefault();
+      inlineEditor.remove();
+      inlineEditor=null;
+      draw();
+    }
+  });
+}
+
+window.addEventListener('load',()=>{
+  setTimeout(enableCanvasTextEdit,300);
+});
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function closeMo(id){ document.getElementById(id).classList.remove('open'); }
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast show'+(type?' '+type:'');
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.className='toast',2600);
+}
+</script>
+
+
+
+<!-- Product zoom plugin: 商品圖縮放外掛 -->
+<script src="js/product-zoom-plugin.js"></script>
+
+<!-- Manual plugin: 說明書外掛 -->
+<script src="js/manual-plugin.js"></script>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 # 06｜曝光資源 JBP
 
-文件狀態：現行程式已確認；Firebase 雲端部署狀態需實機/環境確認
+文件狀態：現行程式已確認；2026-11-19 已移除 Firebase 回饋功能（feedback plugin、管理頁、rules）
 
 盤點日期：2026-08-26
 
@@ -14,7 +14,7 @@ JBP 是曝光資源編輯器，採「主控制頁 + 多個 layout iframe」架�
 
 這個子系統與主 BOD 的 `blocks/` schema 不同：JBP 的版型來源主要是固定 HTML、CSS、config CSS 與共用 `layout-runtime.js`。
 
-同一目錄也保留 `sba.html`、`logo-editor-plugin.js`、`jbpbn.html.bak-*` 等獨立版/備份檔。本文件以主入口實際嵌入的 `jbpbn.html` 與其 `js/` 模組為現行基線；修改 legacy/backup 前應先確認是否仍有部署或使用者依賴。
+2026-11-19 起曝光資源本體已併進本專案的 `shopee2/`（主工具 iframe 載入 `shopee2/index.html`）；舊的 `sba.html`、備份檔與重複的 `bn-*-plugin.js` 已刪除，`jbp/js/` 只保留 MS 仍會載入的外掛（如 `boda-level-plugin.js`、`help-settings.js`、`index.js`、`logo-editor-plugin.js`）。本文件其餘段落仍是 2026-08 的盤點內容，尚待整份更新。
 
 ## 2. 目前版型 registry
 
@@ -77,9 +77,6 @@ JBP 以 `async=false` 動態插入四個核心 plugin，並以 query timestamp �
 | `jbp/js/editor-plugin.js` | 商品圖片編輯、裁切、去背等操作 |
 | `jbp/js/product-zoom-plugin.js` | 商品圖片縮放與版面配置 |
 | `jbp/js/banwords-engine-hbn.js` | Excel 禁用語規則、輸入攔截、文字轉換、例外規則 |
-| `jbp/js/feedback-plugin.js` | 使用者反饋與 Firebase 初始化/匿名登入/送出 |
-| `jbp/js/feedback-admin.js` | 管理者反饋查詢、更新、刪除 |
-| `jbp/js/manual-plugin.js` | 使用說明/FAQ 相關 UI |
 
 ## 5. layout-runtime 的責任
 
@@ -134,9 +131,7 @@ JBP 也會處理 JSON export/import、清除全部狀態與自動 save/load。�
 - 禁用語規則來源為 `banwords.xlsx` 的指定工作表；直接雙擊 HTML 時 fetch 可能被瀏覽器擋下，系統提供手動選取 fallback。
 - 文字 input/contenteditable 的轉換與提示由 `banwords-engine-hbn.js` 和 state/plugin bridge 共同完成。
 
-## 9. 回饋與 Firebase
+## 9. 回饋
 
-`feedback-plugin.js` 會在需要時動態載入 Firebase 10.14.1 compat 的 app/auth/firestore，使用匿名登入或管理者帳密，並由 `feedback-config.js` 提供設定。`firestore.rules`、`storage.rules` 位於 `jbp/`。
-
-工程上應將它視為可選的外部整合：主編輯與下載流程不應因 feedback service 暫時不可用而無法使用。實際 Firebase project、規則部署與權限仍需在目標環境驗證。
+JBP 舊的 Firebase 回饋功能（`feedback-plugin.js`、`feedback-config.js`、`feedback-admin.js`、`feedback-admin.html`、`firestore.rules`、`storage.rules`）已於 2026-11-19 移除，系統不再連線任何 Firebase 服務。主工具左側欄的「使用反饋表」改開 Google 表單（網址寫在 `index.html` 的 `feedbackUrl`）；曝光資源內的支援按鈕由 `jbp/js/help-settings.js` 讀根目錄 `config.json` 的 `helpLinks`。
 

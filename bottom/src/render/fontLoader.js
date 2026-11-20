@@ -19,12 +19,10 @@
  */
 (function () {
   var FONT_FAMILY = "ShopeeNotoSansContent";
-  /* 字體來源依序嘗試：先用 MS repo 自己的 ../fonts/woff2/，失敗才改抓 GitHub Pages 的同一份 WOFF2。
-     不下載 18MB 級 TTF，減少弱網路使用者的首次載入量；
-     主工具最左側「整包下載」就會拿不到任何吸底圖片。 */
+  /* 字體只讀本專案自己的 ../fonts/woff2/（MS/fonts/woff2），不連外部網站。
+     不下載 18MB 級 TTF，減少弱網路使用者的首次載入量。 */
   var BASE_URLS = [
     "../fonts/woff2/",
-    "https://jimmywu-commits.github.io/MS/fonts/woff2/",
   ];
 
   var FACES = [

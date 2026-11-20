@@ -1,0 +1,32 @@
+﻿恢復原規則版：驗證紀錄
+2026-10-30
+
+原始依據：2026-10-29 已交付 ZIP 內 js/bn-editor-plugin.js；與下載修正前備份逐位元組相同。
+容量表、品質參數、品質預測函式與全部壓縮函式：逐字相同。
+壓縮呼叫與分層請求條件：已恢復原碼。
+壓縮核心文字 SHA-256：0c5b5d05e8bdab3b73c1722b35836b194a1f629392e2c761fcd266f275021d54
+
+實際 Chromium + html2canvas 1.4.1 + JSZip，啟用跨來源檢查，重新通過 19 組下載測試：
+1. normal HBN download, original layer-request rule, unchanged below-limit PNG, terminal overlay/flags restored
+2. actual product wheel zoom + adjusted background scale/position downloads and preserves all source styles
+3. canvas preview scale is normalized only in the clone; exported dimensions and marker pixels stay exact
+4. background/foreground layers, transparent foreground, original styles and background unchanged
+5. six background fit/basis combinations with center offset match browser-rendered sample pixels
+6. render rejection restores every edited element, reports a cause, and next download succeeds
+7. optional layer failure keeps main image and never leaves original background transparent/hidden
+8. missing background has explicit error, clears busy state, immediately retries successfully
+9. remote background without CORS fails clearly; allowed CORS is embedded safely and downloads
+10. IMG background path after center zoom and offsets, with products and logos
+11. original layered compression dispatch and original output pixel dimensions retained
+12. multiple-layout ZIP uses local JSZip and includes both images and editable JSON
+13. one failed layout does not stall the remaining ZIP; failure count and finished overlay are correct
+14. SearchICON downloads original PNG and additional 84x84 PNG
+15. missing local renderer closes overlay and failed loader can be retried
+16. late completion of older rotation cannot overwrite latest image or export state
+17. 34 catalog layout names exercise shared capture branches using synthetic layout fixtures
+18. reproduced old 12-second failure; same 13-second render succeeds after fix; never-ready fonts fail and unlock
+19. no browser JavaScript exceptions and no CDN/network dependency for render or ZIP
+
+34 個版位名稱使用相同共用 runtime 的模擬畫布測試分支。完整正式版型 HTML/CSS、公司字型與素材不在目前附件中，因此不表示逐一驗證所有正式作品的視覺細節。
+
+保留的是背景定位、載入等待、錯誤還原與重試等下載修正；不採用上次額外的品質預測範圍與延後分層排程調整。

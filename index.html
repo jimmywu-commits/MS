@@ -1957,9 +1957,9 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
         <div id="exposure-fallback">
           <div class="ef-icon">🖼️</div>
           <div class="ef-title">找不到「曝光資源」的程式檔</div>
-          <div class="ef-desc">請把整包 JBP 編輯器（index.html、js/、html/、bgimg/、fonts/、bn測底圖 …）<br>
-            放到跟這個 index.html 同一層的 <b>jbp/</b> 資料夾裡，重新整理即可。</div>
-          <div class="ef-desc">目前找的路徑：<b>../shopee2/index.html</b></div>
+          <div class="ef-desc">請確認曝光資源編輯器（index.html、js/、html/、bgimg/、fonts/、bn測底圖 …）<br>
+            放在跟這個 index.html 同一層的 <b>shopee2/</b> 資料夾裡，重新整理即可。</div>
+          <div class="ef-desc">目前找的路徑：<b>shopee2/index.html</b></div>
         </div>
       </div>
     </div>
@@ -1971,7 +1971,7 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
         <div id="color-fallback">
           <div class="ef-icon">🎨</div>
           <div class="ef-title">找不到「背景色」的程式檔</div>
-          <div class="ef-desc">請確認 <b>../shopee2/color/color-tool.html</b> 檔案存在。</div>
+          <div class="ef-desc">請確認 <b>shopee2/color/color-tool.html</b> 檔案存在。</div>
         </div>
       </div>
     </div>
@@ -29899,15 +29899,10 @@ function bindMaintControls() {
   if (reload) reload.addEventListener('click', function () { resetMaintTheme(); maintLoaded = false; ensureMaintLoaded(); });
 }
 
-/* 主程式在 E:\GitHub\MS，曝光資源在兄弟資料夾 E:\GitHub\shopee2。
-   本機 file://／localhost 使用相對兄弟路徑；GitHub Pages 使用兩個 repo 的明確網址。
-   外掛仍從 MS/jbp/js 載入，不應從 shopee2 內尋找。 */
-var BODA_USE_LOCAL_SIBLINGS = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+/* 2026-11-19：曝光資源（shopee2）已併進本專案的 shopee2/ 資料夾，本機與 GitLab Pages
+   都讀同一份、同網域，不再連 GitHub。外掛仍從 MS/jbp/js 載入，不應從 shopee2 內尋找。 */
 var EXPOSURE_PLUGIN_BASE_LOCAL = new URL('jbp/js/', new URL('./', location.href)).href;
-var EXPOSURE_SRC_LOCAL  = '../shopee2/index.html?host=boda&pluginBase=' + encodeURIComponent(EXPOSURE_PLUGIN_BASE_LOCAL) + '&v=20261119-additional-modal';
-var EXPOSURE_SRC_REMOTE = 'https://jimmywu-commits.github.io/shopee2/index.html?host=boda&pluginBase=https://jimmywu-commits.github.io/MS/jbp/js/&v=20261119-additional-modal';
-var EXPOSURE_SRC = BODA_USE_LOCAL_SIBLINGS
-  ? EXPOSURE_SRC_LOCAL : EXPOSURE_SRC_REMOTE;
+var EXPOSURE_SRC = 'shopee2/index.html?host=boda&pluginBase=' + encodeURIComponent(EXPOSURE_PLUGIN_BASE_LOCAL) + '&v=20261119-additional-modal';
 var exposureLoaded = false;
 var exposureChildLoading = false; /* iframe 內仍在載入字體／畫布時，父頁不可提早收起提示。 */
 var exposureChildLoadingFallbackTimer = 0;
@@ -30084,13 +30079,13 @@ function ensureExposureLoaded(options) {
   var frame = document.getElementById('exposure-frame');
   if (!frame) { appLoadingFinish('曝光資源元件不存在'); return; }
   var settled = false;
-  var triedFallback = false;
   frame.addEventListener('load', function () {
     try {
       var doc = frame.contentDocument || frame.contentWindow.document;
-      if (doc && doc.title && /404|not found/i.test(doc.title) && !triedFallback) {
-        triedFallback = true;
-        frame.src = (EXPOSURE_SRC === EXPOSURE_SRC_LOCAL) ? EXPOSURE_SRC_REMOTE : EXPOSURE_SRC_LOCAL;
+      if (doc && doc.title && /404|not found/i.test(doc.title)) {
+        settled = true;
+        wrap.classList.add('missing');
+        appLoadingFinish('找不到曝光資源（shopee2/index.html）');
         return;
       }
     } catch (e) {}
@@ -30181,11 +30176,6 @@ function ensureExposureLoaded(options) {
     }, 400);
   });
   frame.addEventListener('error', function () {
-    if (!triedFallback) {
-      triedFallback = true;
-      frame.src = (EXPOSURE_SRC === EXPOSURE_SRC_LOCAL) ? EXPOSURE_SRC_REMOTE : EXPOSURE_SRC_LOCAL;
-      return;
-    }
     settled = true;
     wrap.classList.add('missing');
     appLoadingFinish('曝光資源載入失敗');
@@ -30194,11 +30184,8 @@ function ensureExposureLoaded(options) {
   setTimeout(function () { if (!settled) { wrap.classList.add('missing'); appLoadingFinish('曝光資源載入逾時'); } }, 12000);
 }
 
-/* 背景色＝兄弟 repo shopee2/color/color-tool.html，用 iframe 載入（第一次進到這一頁才載）。 */
-var COLOR_TOOL_SRC_LOCAL  = '../shopee2/color/color-tool.html?host=boda&v=20261116-confirm';
-var COLOR_TOOL_SRC_REMOTE = 'https://jimmywu-commits.github.io/shopee2/color/color-tool.html?host=boda&v=20261116-confirm';
-var COLOR_TOOL_SRC = BODA_USE_LOCAL_SIBLINGS
-  ? COLOR_TOOL_SRC_LOCAL : COLOR_TOOL_SRC_REMOTE;
+/* 背景色＝本專案 shopee2/color/color-tool.html，用 iframe 載入（第一次進到這一頁才載）。 */
+var COLOR_TOOL_SRC = 'shopee2/color/color-tool.html?host=boda&v=20261116-confirm';
 var colorToolLoaded = false;
 function syncColorToolPageDownloadLabel(frame) {
   try {
@@ -30228,13 +30215,12 @@ function ensureColorToolLoaded() {
   var frame = document.getElementById('color-frame');
   if (!frame) return;
   var settled = false;
-  var triedFallback = false;
   frame.addEventListener('load', function () {
     try {
       var doc = frame.contentDocument || frame.contentWindow.document;
-      if (doc && doc.title && /404|not found/i.test(doc.title) && !triedFallback) {
-        triedFallback = true;
-        frame.src = (COLOR_TOOL_SRC === COLOR_TOOL_SRC_LOCAL) ? COLOR_TOOL_SRC_REMOTE : COLOR_TOOL_SRC_LOCAL;
+      if (doc && doc.title && /404|not found/i.test(doc.title)) {
+        settled = true;
+        wrap.classList.add('missing');
         return;
       }
       syncColorToolPageDownloadLabel(frame);
@@ -30262,11 +30248,6 @@ function ensureColorToolLoaded() {
     }, 300);
   });
   frame.addEventListener('error', function () {
-    if (!triedFallback) {
-      triedFallback = true;
-      frame.src = (COLOR_TOOL_SRC === COLOR_TOOL_SRC_LOCAL) ? COLOR_TOOL_SRC_REMOTE : COLOR_TOOL_SRC_LOCAL;
-      return;
-    }
     settled = true;
     wrap.classList.add('missing');
   });
@@ -31717,9 +31698,7 @@ ensureBlocksLoaded(function () {
 <script id="boda-help-script">
 (function(){
   var feedbackUrl='https://docs.google.com/forms/d/e/1FAIpQLSdUnE4CC48TqjM__ucjOOC-b-D8tgCijuNBRQENf2pBaysCsQ/viewform?usp=dialog';
-  var manualUrl = BODA_USE_LOCAL_SIBLINGS
-    ? '../shopee2/JBP編輯器使用說明書.pdf#view=FitH'
-    : 'https://jimmywu-commits.github.io/shopee2/JBP編輯器使用說明書.pdf#view=FitH';
+  var manualUrl = 'shopee2/JBP編輯器使用說明書.pdf#view=FitH';
   var guideUrl='manual/index.html';
   var videoUrl='mov/index.html'; /* 教學影片頁：由影片選單開啟獨立播放頁 */
   var feedbackButton=document.getElementById('boda-help-feedback'),manualButton=document.getElementById('boda-help-manual');

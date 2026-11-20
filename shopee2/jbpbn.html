@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BN 編輯器</title>
+  <meta http-equiv="refresh" content="0;url=index.html#jbp">
+</head>
+<body>
+  <p>正在前往 JBP 編輯器…</p>
+  <p><a id="jbp-link" href="index.html#jbp">若未自動轉址，請點此開啟。</a></p>
+  <script>
+    (function () {
+      /* 保留 BODA 等入口傳入的 query parameters，再切換到 JBP 模式。 */
+      var target = 'index.html' + (window.location.search || '') + '#jbp';
+      var link = document.getElementById('jbp-link');
+      if (link) link.href = target;
+      window.location.replace(target);
+    }());
+  </script>
+</body>
+</html>

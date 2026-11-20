@@ -47,8 +47,8 @@
 ## 字體（重要）
 
 專案指定字體為 **ShopeeNotoSans(content)**，由
-[src/render/fontLoader.js](src/render/fontLoader.js) 用 `FontFace` API 優先從
-`../fonts/woff2/` 載入，失敗時回退到 `https://jimmywu-commits.github.io/MS/fonts/woff2/`。
+[src/render/fontLoader.js](src/render/fontLoader.js) 用 `FontFace` API 從
+本專案的 `../fonts/woff2/` 載入，不連外部網站。
 
 **載兩個字重**：
 

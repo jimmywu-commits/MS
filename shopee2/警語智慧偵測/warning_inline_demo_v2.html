@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>警語提示（內嵌版）Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+TC:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F5F0; --ink:#1F1E1D; --ink-soft:#6B6862; --line:#E4E0D8;
+    --good:#2FAE72; --bad:#E5484D;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; padding:40px 20px; background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans TC', sans-serif; }
+  .wrap{ max-width:560px; margin:0 auto; }
+  h1{ font-size:16px; font-weight:600; margin:0 0 4px; }
+  .sub{ color:var(--ink-soft); font-size:12.5px; margin:0 0 20px; line-height:1.6; }
+
+  .editor{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px; }
+  .field{ margin-bottom:12px; }
+  .field:last-child{ margin-bottom:0; }
+  label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; }
+  input[type=text]{
+    width:100%; border:1px solid var(--line); border-radius:7px; padding:9px 11px;
+    font-size:14px; font-family:inherit; background:#fff; color:var(--ink);
+  }
+  input[type=text]:focus{ outline:2px solid #FBD9CE; border-color:#EE4D2D; }
+
+  .status-line{ margin-top:6px; font-size:12px; display:flex; align-items:center; gap:6px; }
+  .status-line.pass{ color:#0F6E56; }
+  .status-line.fail{ color:#A32D2D; }
+  .status-line.none{ color:var(--ink-soft); }
+
+  .field-issue{ display:none; margin-top:5px; font-size:11.5px; color:#A32D2D; line-height:1.5; }
+  .field-issue.show{ display:block; }
+
+  /* inline warning panel — lives right under the field, pushes content down, no overlay */
+  .inline-panel{
+    display:none; margin-top:10px; background:#13162B; border:1.5px solid #E8B93B;
+    border-radius:10px; padding:14px 16px; color:#F2D77E;
+  }
+  .inline-panel.open{ display:block; }
+  .panel-head{ display:flex; align-items:flex-start; gap:8px; font-size:13px; margin-bottom:8px; line-height:1.55; }
+  .panel-head b{ color:#fff; }
+  .coupon-auto{ font-size:11.5px; color:#8FE3B7; margin-bottom:8px; }
+  .coupon-suggest{
+    font-size:11.5px; color:#F2D77E; margin-bottom:8px; display:flex; align-items:center;
+    gap:8px; flex-wrap:wrap;
+  }
+  .panel-checks{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:8px; }
+  .panel-checks label{ display:flex; align-items:center; gap:5px; font-size:13px; color:#F2D77E; white-space:nowrap; margin:0; }
+  .panel-checks input[type=checkbox]{ width:15px; height:15px; accent-color:#E8B93B; }
+  /* 主/副標已有的項目：自動打勾、壓深色、不可再點 */
+  .panel-checks label.locked{ color:#8A8970; cursor:not-allowed; }
+  .panel-checks label.locked input[type=checkbox]{ accent-color:#5E5D45; filter:brightness(.75); cursor:not-allowed; }
+  .inline-input{
+    width:86px !important; border:1px solid #4A4B2E !important; border-radius:6px; padding:4px 7px !important;
+    font-size:12.5px !important; font-family:inherit; background:#1C1F3A !important; color:#fff !important;
+  }
+  .panel-note{ font-size:12px; color:#D9D8D4; line-height:1.6; }
+  .panel-preview-row{ display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap; }
+  .panel-preview{
+    flex:1; min-width:140px; background:#0C0E1E; border-radius:7px; padding:7px 10px; font-size:12px;
+    color:#B9E6CF;
+  }
+  .confirm-btn{
+    border:none; background:#E8914A; color:#1F1300; border-radius:20px; padding:8px 16px;
+    font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;
+  }
+  .confirm-btn:hover{ filter:brightness(1.08); }
+  .confirm-btn.secondary{ background:transparent; border:1px solid #6B6A4E; color:#D9D8C8; }
+  .confirm-btn.secondary:hover{ background:rgba(255,255,255,.06); filter:none; }
+
+  .field > label{ display:inline-flex; width:100%; justify-content:space-between; }
+  .counter{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); }
+  .counter.over{ color:var(--bad); font-weight:600; }
+
+  /* developer-only toast: confirms which rule the backend picked up */
+  .dev-toast{
+    position:fixed; right:16px; bottom:16px; max-width:340px; background:#1F1E1D; color:#8FE3B7;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; line-height:1.55;
+    padding:10px 12px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.18);
+    opacity:0; transform:translateY(8px); transition:opacity .2s, transform .2s;
+    pointer-events:none; z-index:10;
+  }
+  .dev-toast.show{ opacity:1; transform:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>警語提示（內嵌版）Demo</h1>
+  <p class="sub">主/副標出現「蝦幣」時，小字欄位下方會直接展開提示（不是跳出視窗），勾選後套用對應小字。其他優惠關鍵字只在後台檢查，不對使用者顯示提示。</p>
+
+  <div class="editor">
+    <div class="field">
+      <label>主標 <span class="counter" id="mainCounter">0/8</span></label>
+      <input type="text" id="mainTitle" placeholder="例：滿$200享9折">
+      <div class="field-issue" id="mainIssue"></div>
+    </div>
+    <div class="field">
+      <label>副標 <span class="counter" id="subCounter">0/7</span></label>
+      <input type="text" id="subTitle" placeholder="例：領券享蝦幣8%回饋">
+      <div class="field-issue" id="subIssue"></div>
+    </div>
+    <div class="field">
+      <label>小字（日期＋警語） <span class="counter" id="smallCounter">0/14</span></label>
+      <input type="text" id="smallText" placeholder="例：5/18 - 5/25 期間限定">
+
+      <!-- 蝦幣 -->
+      <div class="inline-panel" id="shrimpPanel">
+        <div class="panel-head">⚠️ <span>蝦幣文案需補充有什麼條件門檻可領券或最高回饋上限，若無條件即可領券，或無回饋上限，則無需補充警語</span></div>
+        <div class="coupon-suggest" id="couponSuggest" style="display:none;"></div>
+        <div class="panel-checks">
+          <label id="couponRow"><input type="checkbox" id="chkCoupon"> 需要領券</label>
+          <label>
+            <input type="checkbox" id="chkThreshold"> 有門檻
+            <input type="text" id="thresholdValue" class="inline-input" placeholder="輸入數字" style="display:none;">
+          </label>
+          <label id="capRow">
+            <input type="checkbox" id="chkCap"> 有上限
+            <input type="text" id="capValue" class="inline-input" placeholder="輸入數字" style="display:none;">
+          </label>
+        </div>
+        <div class="panel-preview-row">
+          <div class="panel-preview" id="panelPreview">（目前無需補充警語）</div>
+          <button class="confirm-btn secondary" id="btnNoneNeeded" type="button">以上皆無需補充</button>
+          <button class="confirm-btn" id="btnConfirmShrimp" type="button">確認</button>
+        </div>
+      </div>
+
+      <div class="status-line none" id="statusLine">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="dev-toast" id="devToast"></div>
+
+<script>
+/* =========================================================================
+   Config
+   ========================================================================= */
+// Developer-only: shows a corner toast (and console.info) telling you which
+// rule the backend matched. Users never see the generic reminder anymore —
+// flip this to false before shipping.
+const DEV_MODE = true;
+
+const SHRIMP_KEYWORD = '蝦幣';
+const TRIGGER_KEYWORDS = ['回饋', '滿額', '蝦幣', '送', '贈', '禮', '登錄'];
+const HEADLINE_LIMITS = { mainTitle: 8, subTitle: 7 };
+const SMALL_LIMIT = 14;
+const COUPON_WORD = '領券';
+
+/* =========================================================================
+   使用者看得到的所有提示文案 — 要改字直接改這裡
+   ========================================================================= */
+const MSG = {
+  // 小字狀態列
+  smallEmpty:        '— 小字留白',
+  smallDateOnly:     '✓ 小字為日期格式',
+  smallNoPromoBad:   '✗ 警語只能補充主/副標已有的優惠，不可以加入新的優惠文案',
+  smallBanned:       '✗ 警語只能補充主/副標已有的優惠，不可以加入新的優惠文案',
+  smallShrimpBad:    '✗ 因主標/副標提及蝦幣回饋，小字需依規定補上警語',
+  smallForeignPromo: '✗ 警語只能補充主/副標已有的優惠，不可以加入新的優惠文案',
+  smallOk:           '✓ 小字已補充對應警語',
+
+  // 主/副標（顯示時前面會自動加 ✗）
+  headlinePunct:     chars => `主/副標不可使用標點符號：${chars}`,
+  headlineSpace:     '主副標文案不可加空格',
+
+  // 蝦幣面板裡的領券提示
+  couponNoRoom:      f => `⚠ ${f}字數已滿，勾選「需要領券」後將改為在小字補充「需領券」`,
+  couponHint:        f => `「領券」要加在提到蝦幣回饋的${f}最前面（不是小字），勾選右邊「需要領券」即可加入`,
+  couponFallback:    f => `${f}字數已滿，無法加入「領券」，已改為在小字補充「需領券」`,
+};
+
+let dismissedWhileSmallTextWas = null; // null = never explicitly dismissed
+let shrimpCapVerb = '享';               // 享 / 回饋 / 領 / '' — keeps whatever the user typed
+let shrimpCapSuffix = '';               // 最高X蝦幣回饋 的結尾「回饋」
+let shrimpThresholdSuffix = '';         // 滿$X使用 的「使用」
+
+/* =========================================================================
+   Mode detection
+   ========================================================================= */
+function combinedHeadline(){
+  return document.getElementById('mainTitle').value + ' ' + document.getElementById('subTitle').value;
+}
+function detectMode(){
+  const combined = combinedHeadline();
+  const matched = TRIGGER_KEYWORDS.filter(k => combined.includes(k));
+  if(matched.includes(SHRIMP_KEYWORD)) return { mode:'shrimp', matched };
+  if(matched.length)                    return { mode:'generic', matched };
+  return { mode:'none', matched };
+}
+function mainSubHasCoupon(){
+  return combinedHeadline().includes(COUPON_WORD);
+}
+
+// promo "mechanism" groups — used (generic mode only) to detect when the small
+// text brings in a promotion type the main/sub title never mentioned at all
+const PROMO_GROUPS = [
+  { name: '蝦幣回饋', words: ['蝦幣', '回饋'] },
+  { name: '折扣／折抵', words: ['折扣', '折抵', '現折', '折價'] },
+  { name: '滿額贈品', words: ['滿額贈', '贈品', '加贈'] },
+  { name: '折數', words: ['折'] },
+  { name: '贈禮／登錄', words: ['送', '贈', '禮', '登錄'] },
+];
+function matchedGroups(text){
+  return PROMO_GROUPS.filter(g => g.words.some(w => text.includes(w))).map(g => g.name);
+}
+
+const BANNED_PHRASES = ['限搶', '限量搶購', '手刀搶購'];
+function findBannedPhrase(text){
+  return BANNED_PHRASES.find(p => text.includes(p)) || null;
+}
+
+/* =========================================================================
+   Small-text templates
+   ========================================================================= */
+// 蝦幣: 需領券 / 滿$X / 最高X蝦幣 (最高享／最高回饋／最高領 也可以)
+// 門檻後面可接「使用」（滿$100使用）；上限的「回饋」放前放後都可以（最高回饋X蝦幣、最高X蝦幣回饋）
+const SHRIMP_TEXT_PATTERN = /^(需領券)?(滿\$([\d,]+)(使用)?)?(最高(享|回饋|領)?([\d,]+)蝦幣(回饋)?)?$/;
+// 主/副標已經寫了上限（例：最高領450蝦幣）→ 小字不用再補上限
+const HEADLINE_CAP_RE = /最高(享|回饋|領)?[\d,]+蝦幣/;
+
+// 一般優惠的小字白名單：日期後面只能由這些片段組成（可多個、可空格分隔），
+// 其他文案一律擋掉。when = 主/副標要符合的條件才允許該片段。
+const SMALL_WHITELIST = [
+  { name: '門檻',     re: /^滿\$[\d,]+(贈|送)?/ },
+  { name: '數量上限', re: /^限量[\d,]+(份|組|個)/ },
+  { name: '送完為止', re: /^(贈完為止|送完為止|數量有限)/ },
+  { name: '參加條件', re: /^需登錄/ },
+  { name: '指定商品', re: /^指定商品/, when: h => /贈|送|折/.test(h) }, // 主副標有贈送或折扣才可以
+];
+// 日期後面的文字（不算空格）有多少比例被白名單片段覆蓋到，用加權字數算
+// （中文 1、英數 0.5）。達到這個比例就算通過。
+const WHITELIST_PASS_RATIO = 0.5;
+function whitelistCoverage(remainder, headline){
+  const s = remainder.replace(/\s+/g, '');
+  if(!s) return 1;
+  const covered = new Array(s.length).fill(false);
+  for(const w of SMALL_WHITELIST){
+    if(w.when && !w.when(headline)) continue;
+    const re = new RegExp(w.re.source.replace(/^\^/, ''), 'g');
+    let m;
+    while((m = re.exec(s))){
+      for(let i = m.index; i < m.index + m[0].length; i++) covered[i] = true;
+      if(!m[0].length) re.lastIndex++;
+    }
+  }
+  let total = 0, hit = 0;
+  for(let i = 0; i < s.length; i++){
+    const wt = weightedLength(s[i]);
+    total += wt;
+    if(covered[i]) hit += wt;
+  }
+  return hit / total;
+}
+function matchesSmallWhitelist(remainder, headline){
+  return whitelistCoverage(remainder, headline) >= WHITELIST_PASS_RATIO;
+}
+
+// 區間的連接符號在離開欄位前可能還是 ~、～、至…，這裡先一律當作日期辨識，
+// 離開欄位時才統一改成 " - "（cleanUpSmallTextDate）
+const DATE_RANGE_SEP = '\\s*[-~～－—–至到]\\s*';
+const DATE_BODY = `\\d{1,2}\\/\\d{1,2}(${DATE_RANGE_SEP}\\d{1,2}\\/\\d{1,2})?( (一日限定|期間限定|限定))?( \\d{1,2}:\\d{2}-\\d{1,2}:\\d{2})?`;
+const DATE_ONLY_PATTERN = new RegExp(`^$|^${DATE_BODY}$`);
+const DATE_PREFIX = new RegExp(`^${DATE_BODY}`);
+function stripDatePrefix(text){
+  const m = text.match(DATE_PREFIX);
+  if(!m) return text.trim();
+  return text.slice(m[0].length).trim();
+}
+
+// Rebuilds the small text as "date prefix (if any) + freshly generated text".
+function applyWarningToSmallText(newWarningText){
+  const smallInput = document.getElementById('smallText');
+  const dateMatch = smallInput.value.match(DATE_PREFIX);
+  const datePrefix = dateMatch ? dateMatch[0] : '';
+  if(datePrefix && newWarningText){
+    smallInput.value = `${datePrefix} ${newWarningText}`;
+  } else {
+    smallInput.value = datePrefix || newWarningText;
+  }
+}
+
+function digitsOnly(raw){ return raw.replace(/[^\d]/g, ''); }
+function formatThresholdValue(raw){
+  const d = digitsOnly(raw);
+  return d ? '$' + Number(d).toLocaleString('en-US') : '';
+}
+function formatCapValue(raw){
+  const d = digitsOnly(raw);
+  return d ? Number(d).toLocaleString('en-US') + '蝦幣' : '';
+}
+
+/* =========================================================================
+   蝦幣 panel
+   ========================================================================= */
+document.getElementById('thresholdValue').addEventListener('input', updateShrimpPanel);
+document.getElementById('thresholdValue').addEventListener('blur', (e)=>{
+  e.target.value = formatThresholdValue(e.target.value);
+  updateShrimpPanel();
+});
+document.getElementById('capValue').addEventListener('input', updateShrimpPanel);
+document.getElementById('capValue').addEventListener('blur', (e)=>{
+  e.target.value = formatCapValue(e.target.value);
+  updateShrimpPanel();
+});
+
+function shrimpHeadlineFieldId(){
+  if(document.getElementById('mainTitle').value.includes(SHRIMP_KEYWORD)) return 'mainTitle';
+  if(document.getElementById('subTitle').value.includes(SHRIMP_KEYWORD)) return 'subTitle';
+  return null;
+}
+
+function updateCouponSuggestion(autoHasCoupon){
+  const suggestEl = document.getElementById('couponSuggest');
+  if(autoHasCoupon){ suggestEl.style.display = 'none'; return; }
+
+  const targetId = shrimpHeadlineFieldId();
+  if(!targetId){ suggestEl.style.display = 'none'; return; }
+
+  const labels = { mainTitle: '主標', subTitle: '副標' };
+  const current = weightedLength(document.getElementById(targetId).value);
+  const wouldOverflow = current + weightedLength(COUPON_WORD) > HEADLINE_LIMITS[targetId];
+
+  suggestEl.innerHTML = wouldOverflow
+    ? MSG.couponNoRoom(labels[targetId])
+    : MSG.couponHint(labels[targetId]);
+  suggestEl.style.display = 'flex';
+}
+
+document.getElementById('chkCoupon').addEventListener('change', (e)=>{
+  if(!e.target.checked) return;
+  const targetId = shrimpHeadlineFieldId();
+  const labels = { mainTitle: '主標', subTitle: '副標' };
+
+  if(targetId){
+    const field = document.getElementById(targetId);
+    const wouldOverflow = weightedLength(field.value) + weightedLength(COUPON_WORD) > HEADLINE_LIMITS[targetId];
+    if(!wouldOverflow){
+      if(!field.value.includes(COUPON_WORD)){
+        field.value = COUPON_WORD + field.value;
+        field.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+      e.target.checked = false;
+      updateCounters();
+      updateShrimpPanel();
+      return;
+    }
+    document.getElementById('couponSuggest').innerHTML = MSG.couponFallback(labels[targetId]);
+    document.getElementById('couponSuggest').style.display = 'flex';
+  }
+  updateShrimpPanel();
+});
+
+function setLocked(rowId, chkId, locked, reason){
+  const row = document.getElementById(rowId);
+  const chk = document.getElementById(chkId);
+  if(locked){
+    chk.checked = true;
+    chk.disabled = true;
+    row.classList.add('locked');
+    row.title = reason;
+  } else if(chk.disabled){
+    // 主/副標拿掉了這一項 → 解鎖並取消勾選，讓使用者自己決定
+    chk.disabled = false;
+    chk.checked = false;
+    row.classList.remove('locked');
+    row.title = '';
+  }
+}
+
+function buildShrimpText(){
+  // 主/副標已經寫了的項目：勾選框直接打勾、變深色、不能再點
+  const autoHasCoupon = mainSubHasCoupon();
+  setLocked('couponRow', 'chkCoupon', autoHasCoupon, '主/副標已有「領券」');
+  updateCouponSuggestion(autoHasCoupon);
+
+  const capMatch = combinedHeadline().match(HEADLINE_CAP_RE);
+  setLocked('capRow', 'chkCap', !!capMatch, capMatch ? `主/副標已有「${capMatch[0]}」` : '');
+
+  const thresholdChecked = document.getElementById('chkThreshold').checked;
+  const capChecked = !capMatch && document.getElementById('chkCap').checked;
+  document.getElementById('thresholdValue').style.display = thresholdChecked ? 'inline-block' : 'none';
+  document.getElementById('capValue').style.display = capChecked ? 'inline-block' : 'none';
+
+  const targetId = shrimpHeadlineFieldId();
+  const headlineHasRoom = targetId &&
+    weightedLength(document.getElementById(targetId).value) + weightedLength(COUPON_WORD) <= HEADLINE_LIMITS[targetId];
+  const couponInSmallText = !autoHasCoupon && document.getElementById('chkCoupon').checked && !headlineHasRoom;
+
+  const parts = [];
+  if(couponInSmallText) parts.push('需領券');
+  if(thresholdChecked){
+    const v = formatThresholdValue(document.getElementById('thresholdValue').value);
+    if(v) parts.push(`滿${v}${shrimpThresholdSuffix}`);
+  }
+  if(capChecked){
+    const v = formatCapValue(document.getElementById('capValue').value);
+    if(v) parts.push(`最高${shrimpCapVerb}${v}${shrimpCapSuffix}`);
+  }
+  return parts.join('');
+}
+
+function updateShrimpPanel(){
+  const text = buildShrimpText();
+  document.getElementById('panelPreview').textContent = text || '（目前無需補充警語）';
+}
+
+['chkCoupon','chkThreshold','chkCap'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateShrimpPanel);
+});
+
+document.getElementById('btnConfirmShrimp').addEventListener('click', ()=>{
+  applyWarningToSmallText(buildShrimpText());
+  dismissedWhileSmallTextWas = document.getElementById('smallText').value;
+  document.getElementById('shrimpPanel').classList.remove('open');
+  checkStatus();
+  updateCounters();
+});
+
+document.getElementById('btnNoneNeeded').addEventListener('click', ()=>{
+  ['chkCoupon','chkThreshold','chkCap'].forEach(id=>{
+    const chk = document.getElementById(id);
+    if(!chk.disabled) chk.checked = false; // 鎖定的（主/副標已有）維持打勾
+  });
+  document.getElementById('thresholdValue').value = '';
+  document.getElementById('capValue').value = '';
+  applyWarningToSmallText('');
+  updateShrimpPanel();
+  dismissedWhileSmallTextWas = document.getElementById('smallText').value;
+  document.getElementById('shrimpPanel').classList.remove('open');
+  checkStatus();
+  updateCounters();
+});
+
+function syncShrimpCheckboxesFromText(){
+  if(detectMode().mode !== 'shrimp') return;
+  const remainder = stripDatePrefix(document.getElementById('smallText').value);
+  const m = remainder.match(SHRIMP_TEXT_PATTERN);
+  if(!m || remainder === '') return;
+
+  // groups: 1 需領券 · 2 門檻 · 3 門檻數字 · 4 使用 · 5 上限 · 6 享/回饋/領 · 7 上限數字 · 8 結尾回饋
+  // 勾選框完全跟著小字走：小字刪掉某一項，對應的勾選也取消
+  // （鎖定的勾選框不跟著改，維持打勾）
+  const setIfFree = (id, v) => { const c = document.getElementById(id); if(!c.disabled) c.checked = v; };
+  setIfFree('chkCoupon', !!m[1]);
+  setIfFree('chkThreshold', !!m[2]);
+  setIfFree('chkCap', !!m[5]);
+  if(m[2]){
+    shrimpThresholdSuffix = m[4] || ''; // 保留使用者手打的「使用」
+    document.getElementById('thresholdValue').value = '$' + m[3];
+  }
+  if(m[5]){
+    shrimpCapVerb = m[6] || '';   // 享 / 回饋 / 領 / 不寫
+    shrimpCapSuffix = m[8] || ''; // 結尾的「回饋」
+    document.getElementById('capValue').value = m[7] + '蝦幣';
+  }
+}
+
+/* =========================================================================
+   Dev toast
+   ========================================================================= */
+let lastDevSignature = '';
+let devToastTimer = null;
+const MODE_LABELS = {
+  shrimp: '蝦幣結構化檢查（使用者看得到面板）',
+  generic: '一般優惠檢查（使用者端不顯示提示）',
+};
+function devNotify(mode, matched){
+  if(!DEV_MODE) return;
+  const sig = mode + ':' + matched.join(',');
+  if(sig === lastDevSignature) return;
+  lastDevSignature = sig;
+  if(mode === 'none') return;
+  const msg = `[DEV] 偵測到「${matched.join('、')}」→ ${MODE_LABELS[mode]}`;
+  console.info(msg);
+  const el = document.getElementById('devToast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(devToastTimer);
+  devToastTimer = setTimeout(()=> el.classList.remove('show'), 3000);
+}
+
+/* =========================================================================
+   Panel visibility
+   ========================================================================= */
+// fromHeadline: only headline edits are allowed to strip leftover promo text
+// out of the small text — never while the person is editing the small text.
+function syncPanels(fromHeadline = true){
+  const { mode, matched } = detectMode();
+  const smallInput = document.getElementById('smallText');
+  const small = smallInput.value;
+
+  const dismissed = dismissedWhileSmallTextWas !== null &&
+    dismissedWhileSmallTextWas === small &&
+    (small.trim() === '' || validateSmallText().ok);
+  const alreadyValid = small.trim() !== '' && validateSmallText().ok;
+
+  document.getElementById('shrimpPanel').classList.toggle('open', mode === 'shrimp' && !dismissed && !alreadyValid);
+
+  if(mode === 'shrimp') updateShrimpPanel();
+
+  if(mode === 'none' && fromHeadline){
+    const dateMatch = small.match(DATE_PREFIX);
+    if(dateMatch && dateMatch[0] !== small){
+      smallInput.value = dateMatch[0];
+    }
+  }
+  devNotify(mode, matched);
+  checkStatus();
+}
+
+/* =========================================================================
+   Small-text validation
+   ========================================================================= */
+function validateSmallText(){
+  const { mode, matched } = detectMode();
+  const combined = combinedHeadline();
+  const small = document.getElementById('smallText').value;
+
+  // 小字留白一律允許（滿額這類優惠不一定要寫小字）
+  if(small.trim() === ''){
+    return { ok:true, level:'none', matched, msg: MSG.smallEmpty };
+  }
+
+  if(mode === 'none'){
+    return DATE_ONLY_PATTERN.test(small)
+      ? { ok:true, matched, msg: MSG.smallDateOnly }
+      : { ok:false, matched, msg: MSG.smallNoPromoBad };
+  }
+
+  const banned = findBannedPhrase(small);
+  if(banned) return { ok:false, matched, msg: MSG.smallBanned };
+
+  // 只有日期 — 合規，但跟優惠內容無關，不說它「對應」了哪個優惠
+  if(DATE_ONLY_PATTERN.test(small)){
+    return { ok:true, matched, msg: MSG.smallDateOnly };
+  }
+
+  const remainder = stripDatePrefix(small);
+
+  if(mode === 'shrimp'){
+    if(!SHRIMP_TEXT_PATTERN.test(remainder)){
+      return { ok:false, matched, msg: MSG.smallShrimpBad };
+    }
+  } else {
+    const badMsg = MSG.smallForeignPromo;
+    // 白名單覆蓋率不夠 → 擋
+    if(!matchesSmallWhitelist(remainder, combined)) return { ok:false, matched, msg: badMsg };
+    // 覆蓋率夠，但夾帶了主/副標沒提過的優惠類型（例：主副標只有贈品，小字卻寫 9折）→ 擋
+    const foreignGroups = matchedGroups(remainder).filter(g => !matchedGroups(combined).includes(g));
+    if(foreignGroups.length) return { ok:false, matched, msg: badMsg };
+  }
+
+  return { ok:true, matched, msg: MSG.smallOk };
+}
+
+function checkStatus(){
+  const result = validateSmallText();
+  const statusLine = document.getElementById('statusLine');
+  statusLine.className = 'status-line ' + (result.level || (result.ok ? 'pass' : 'fail'));
+  statusLine.textContent = result.msg;
+}
+
+/* =========================================================================
+   Headline rules: no punctuation, no spaces next to Chinese
+   ========================================================================= */
+const CJK = '\\u4e00-\\u9fff';
+function headlineIssues(text){
+  const issues = [];
+  // allowed exceptions: thousands comma inside a number (1,000) and a decimal
+  // point right before 折／% (8.5折, 2.5%) — everything else is punctuation
+  const scrubbed = text
+    .replace(/(\d),(?=\d{3})/g, '$1')
+    .replace(/(\d)\.(?=\d+(折|%))/g, '$1');
+  const bad = scrubbed.match(new RegExp(`[^${CJK}A-Za-z0-9 $%]`, 'g'));
+  if(bad) issues.push(MSG.headlinePunct([...new Set(bad)].join(' ')));
+  if(new RegExp(`[${CJK}] | [${CJK}]`).test(text)) issues.push(MSG.headlineSpace);
+  return issues;
+}
+function updateHeadlineIssues(id){
+  const el = document.getElementById(id === 'mainTitle' ? 'mainIssue' : 'subIssue');
+  const issues = headlineIssues(document.getElementById(id).value);
+  el.textContent = issues.map(s => '✗ ' + s).join('　');
+  el.classList.toggle('show', issues.length > 0);
+}
+function removeSpacesAroundCJK(text){
+  return text
+    .replace(new RegExp(`\\s+(?=[${CJK}])`, 'g'), '')
+    .replace(new RegExp(`(?<=[${CJK}])\\s+`, 'g'), '')
+    .trim();
+}
+
+/* =========================================================================
+   Number auto-format ($ + thousands comma) — price context only
+   ========================================================================= */
+// A bare number is left alone unless something tells us it's a price:
+//  - it already has a $            → keep $, add commas
+//  - followed by 蝦幣／%／折       → add commas, never $
+//  - preceded by a price word      → add $ and commas (滿200 → 滿$200)
+//  - anything else                 → untouched (99大促, 2026新品, 1元搶購)
+// Numbers glued to letters, "." or "/" are treated as part of a model name,
+// date or event code and never touched (3C, iPhone15, 5G, 11.11, 9/9).
+const PRICE_PREFIX = '現折|折抵|現抵|立減|下殺|低至|只要|特價|原價|售價|最高|滿|折|省|殺|減|抵|價|享';
+const NO_DOLLAR_UNITS = '蝦幣|%|折';
+const SKIP_AFTER_RE = /^(月|日|號|個|件|組|组|人|次|款|色|天|週|周|年|元|入|份|吋|寸)/;
+const PROMO_NUMBER_RE = new RegExp(`(${PRICE_PREFIX})?(\\$)?(\\d[\\d,]*)(${NO_DOLLAR_UNITS})?`, 'g');
+
+function autoFormatPromoNumbers(text){
+  return text.replace(PROMO_NUMBER_RE, (match, prefix, dollar, digits, unit, offset, full) => {
+    prefix = prefix || '';
+    const clean = digits.replace(/,/g, '');
+    if(!clean) return match;
+
+    const digitStart = offset + prefix.length + (dollar ? 1 : 0);
+    const before = full[digitStart - 1] || '';
+    const after = full[offset + match.length] || '';
+    if(/[A-Za-z.\/]/.test(before) || (!unit && /[A-Za-z.\/]/.test(after))) return match;
+    if(!unit && SKIP_AFTER_RE.test(full.slice(offset + match.length))) return match;
+
+    const formatted = Number(clean).toLocaleString('en-US');
+    if(unit) return prefix + formatted + unit;
+    if(dollar || prefix) return prefix + '$' + formatted;
+    return match;
+  });
+}
+
+/* =========================================================================
+   Counters
+   ========================================================================= */
+// CJK and full-width count as 1, everything else as 0.5
+function weightedLength(str){
+  let total = 0;
+  for(const ch of str){
+    total += /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(ch) ? 1 : 0.5;
+  }
+  return total;
+}
+// 小字：日期和後方文字之間那一個空格不計入字數
+function smallTextLength(v){
+  const m = v.match(DATE_PREFIX);
+  const hasSeparator = m && v.length > m[0].length && v[m[0].length] === ' ';
+  return weightedLength(v) - (hasSeparator ? 0.5 : 0);
+}
+function updateCounterFor(inputId, counterId, limit){
+  const v = document.getElementById(inputId).value;
+  const len = inputId === 'smallText' ? smallTextLength(v) : weightedLength(v);
+  const el = document.getElementById(counterId);
+  el.textContent = `${Number.isInteger(len) ? len : len.toFixed(1)}/${limit}`;
+  el.classList.toggle('over', len > limit);
+}
+function updateCounters(){
+  updateCounterFor('mainTitle', 'mainCounter', HEADLINE_LIMITS.mainTitle);
+  updateCounterFor('subTitle', 'subCounter', HEADLINE_LIMITS.subTitle);
+  updateCounterFor('smallText', 'smallCounter', SMALL_LIMIT);
+}
+
+/* =========================================================================
+   Small-text date clean-up (on blur)
+   ========================================================================= */
+// 已經自動補過限定字樣的日期。使用者刪掉後不會再補回去，同一個日期只補一次。
+const autoSuffixedDates = new Set();
+
+function cleanUpSmallTextDate(value){
+  let v = value;
+  // 區間連接符號統一成 " - "：11/1~11/2、11/1～11/2、11/1-11/2、11/1至11/2 → 11/1 - 11/2
+  v = v.replace(/(\d{1,2}\/\d{1,2})\s*[-~～－—–至到]\s*(\d{1,2}\/\d{1,2})/g, '$1 - $2');
+  v = v.replace(/(\d{1,2}\/\d{1,2})(一日限定|期間限定|限定)/g, '$1 $2');
+
+  // 日期後面沒有限定字樣就自動補上（不分情境）：單日補一日限定，區間補期間限定
+  const dm = v.match(/^\d{1,2}\/\d{1,2}( - \d{1,2}\/\d{1,2})?/);
+  if(dm){
+    const datePart = dm[0];
+    const rest = v.slice(datePart.length);
+    const hasSuffix = /^\s*(一日限定|期間限定|限定)/.test(rest);
+    if(!hasSuffix && !autoSuffixedDates.has(datePart)){
+      const suffix = dm[1] ? '期間限定' : '一日限定';
+      v = `${datePart} ${suffix}` + (rest.trim() ? ' ' + rest.trimStart() : '');
+    }
+    autoSuffixedDates.add(datePart);
+  }
+
+  // 日期和後方文字黏在一起時補一個空格："9/25滿額再享9折" → "9/25 一日限定 滿額再享9折"
+  const m = v.match(DATE_PREFIX);
+  if(m && v.length > m[0].length && !/\s/.test(v[m[0].length])){
+    v = m[0] + ' ' + v.slice(m[0].length);
+  }
+  return v;
+}
+
+/* =========================================================================
+   Wiring
+   ========================================================================= */
+['mainTitle','subTitle'].forEach(id=>{
+  const input = document.getElementById(id);
+  input.addEventListener('input', ()=>{
+    syncPanels(true);
+    updateCounters();
+    updateHeadlineIssues(id);
+  });
+  input.addEventListener('blur', (e)=>{
+    const fixed = autoFormatPromoNumbers(removeSpacesAroundCJK(e.target.value));
+    if(fixed !== e.target.value){
+      e.target.value = fixed;
+      syncPanels(true);
+      updateCounters();
+    }
+    updateHeadlineIssues(id);
+  });
+});
+
+document.getElementById('smallText').addEventListener('input', ()=>{
+  syncShrimpCheckboxesFromText();
+  updateShrimpPanel();
+  checkStatus();
+  updateCounters();
+});
+
+document.getElementById('smallText').addEventListener('blur', (e)=>{
+  let value = cleanUpSmallTextDate(e.target.value);
+  const dateMatch = value.match(DATE_PREFIX);
+  if(dateMatch){
+    value = dateMatch[0] + autoFormatPromoNumbers(value.slice(dateMatch[0].length));
+  } else {
+    value = autoFormatPromoNumbers(value);
+  }
+  if(value !== e.target.value){
+    e.target.value = value;
+    syncShrimpCheckboxesFromText();
+    updateCounters();
+  }
+  // re-evaluate panels when leaving the field (not on every keystroke, so the
+  // panel doesn't flicker open/closed mid-typing) — this is what "blocks"
+  // hand-typed promo copy in the small text
+  syncPanels(false);
+});
+
+checkStatus();
+updateCounters();
+</script>
+</body>
+</html>

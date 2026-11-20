@@ -106,7 +106,7 @@ function harness(options = {}) {
     ['http://localhost:8000/MS/index.html', 'http://localhost:8000/MS/fonts/'],
     ['http://127.0.0.1:8000/index.html', 'http://127.0.0.1:8000/fonts/'],
     ['file:///E:/GitHub/MS/index.html', 'file:///E:/GitHub/MS/fonts/'],
-    ['https://jimmywu-commits.github.io/MS/index.html', 'https://jimmywu-commits.github.io/MS/fonts/']
+    ['https://pages.example.test/MS/index.html', 'https://pages.example.test/MS/fonts/']
   ];
   for (const [url, expectedBase] of scenarios) {
     const styles = [], location = new URL(url);

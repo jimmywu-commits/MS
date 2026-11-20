@@ -26,7 +26,7 @@
       background: #000;
       box-shadow: 0 12px 40px rgba(0,0,0,.35);
     }
-    video { display: block; width: 100%; height: auto; background: #000; }
+    video { display: block; width: 100%; height: auto; aspect-ratio: 1944 / 1080; background: #000; }
     .note { margin: 12px 0 0; color: #aaa; font-size: 13px; }
   </style>
 </head>
@@ -34,13 +34,203 @@
   <main>
     <h1>MS編輯器操作影片</h1>
     <div class="video-shell">
-      <video controls preload="metadata" playsinline>
-        <!-- GitHub Pages 會把 Git LFS 檔案當成 pointer 發布；改用 GitHub 的媒體端點取得實際影片。 -->
-        <source src="https://media.githubusercontent.com/media/jimmywu-commits/MS/main/mov/MS_tutorial_merged_subtitled.mp4" type="video/mp4">
-        您的瀏覽器不支援 HTML5 影片播放。
-      </video>
+      <video id="tutorial" controls playsinline preload="metadata"></video>
     </div>
-    <p class="note">若瀏覽器未自動播放，請按播放鍵開始觀看。</p>
+    <p class="note" id="note">若瀏覽器未自動播放，請按播放鍵開始觀看。</p>
   </main>
+<script>
+/* 教學影片拆成 3 個小於 100MB 的檔案（MS_tutorial_part1~3.mp4，同一資料夾），
+   以免超過 GitHub 單檔上限；不用 Git LFS，所以 GitHub／GitLab Pages 都直接讀這個資料夾。
+   三個檔案是同一支「分段 MP4」依片段切開：每段開頭都有同一份初始化資料，時間軸連續。
+   播放器用 Media Source Extensions 把三段依序接進同一個 <video>，
+   進度條顯示完整長度、接縫處完全連續；拖到還沒載入的位置時，
+   依 MS_tutorial.json 的片段索引用 HTTP Range 只抓需要的那一段。 */
+(function () {
+  'use strict';
+  var MANIFEST_URL = 'MS_tutorial.json';
+  var AHEAD_PLAYING = 60;   /* 播放中預先緩衝的秒數 */
+  var AHEAD_IDLE = 12;      /* 還沒按播放前只先載一小段 */
+  var KEEP_BEHIND = 30;     /* 播放點之前保留的秒數，其餘釋放記憶體 */
+  var CHUNK_BYTES = 6 * 1024 * 1024;
+
+  var video = document.getElementById('tutorial');
+  var note = document.getElementById('note');
+
+  function fail(msg) { note.textContent = msg; }
+
+  /* 抓檔案的某一段。伺服器若不支援 Range（例如本機 python http.server 回 200），
+     就讀串流跳到需要的位置，抓夠了就停止。 */
+  function fetchRange(url, start, end, signal) {
+    return fetch(url, { headers: { Range: 'bytes=' + start + '-' + (end - 1) }, signal: signal })
+      .then(function (res) {
+        if (res.status === 206) return res.arrayBuffer();
+        if (!res.ok) throw new Error('HTTP ' + res.status + '：' + url);
+        var reader = res.body.getReader();
+        var out = new Uint8Array(end - start);
+        var pos = 0, filled = 0;
+        function pump() {
+          return reader.read().then(function (r) {
+            if (r.done) throw new Error('檔案提前結束：' + url);
+            var chunk = r.value;
+            var cStart = pos, cEnd = pos + chunk.length;
+            pos = cEnd;
+            var a = Math.max(start, cStart), b = Math.min(end, cEnd);
+            if (b > a) { out.set(chunk.subarray(a - cStart, b - cStart), a - start); filled += b - a; }
+            if (filled >= end - start) { reader.cancel(); return out.buffer; }
+            return pump();
+          });
+        }
+        return pump();
+      });
+  }
+
+  function startMse(m) {
+    var MS = window.ManagedMediaSource || window.MediaSource;
+    if (!MS || !MS.isTypeSupported(m.mime)) return false;
+    var ms = new MS();
+    if (window.ManagedMediaSource && MS === window.ManagedMediaSource) video.disableRemotePlayback = true;
+    video.src = URL.createObjectURL(ms);
+
+    var frags = m.fragments.map(function (f) { return { part: f[0], offset: f[1], size: f[2], t: f[3] }; });
+    var sb = null, next = 0, busy = false, controller = null, ended = false, started = false;
+
+    function waitIdle() {
+      if (!sb.updating) return Promise.resolve();
+      return new Promise(function (r) { sb.addEventListener('updateend', r, { once: true }); });
+    }
+    function append(buf) {
+      return waitIdle().then(function () {
+        return new Promise(function (resolve, reject) {
+          function done() { sb.removeEventListener('error', bad); resolve(); }
+          function bad() { sb.removeEventListener('updateend', done); reject(new Error('影片資料無法播放')); }
+          sb.addEventListener('updateend', done, { once: true });
+          sb.addEventListener('error', bad, { once: true });
+          try { sb.appendBuffer(buf); } catch (e) {
+            sb.removeEventListener('updateend', done); sb.removeEventListener('error', bad); reject(e);
+          }
+        });
+      });
+    }
+    function remove(a, b) {
+      if (!(b > a)) return Promise.resolve();
+      return waitIdle().then(function () {
+        return new Promise(function (r) { sb.addEventListener('updateend', r, { once: true }); sb.remove(a, b); });
+      });
+    }
+    function bufferedEndAt(t) {
+      var br = video.buffered;
+      for (var i = 0; i < br.length; i++) {
+        if (t >= br.start(i) - 0.3 && t <= br.end(i) + 0.05) return br.end(i);
+      }
+      return -1;
+    }
+    function fragIndexAt(t) {
+      var i = 0;
+      while (i + 1 < frags.length && frags[i + 1].t <= t) i++;
+      return i;
+    }
+    /* 釋放播放點前面太舊、以及之前跳轉留下的遠方緩衝 */
+    function evict() {
+      var t = video.currentTime, jobs = Promise.resolve();
+      var br = video.buffered;
+      for (var i = 0; i < br.length; i++) {
+        var s = br.start(i), e = br.end(i);
+        if (e < t - KEEP_BEHIND || s > t + AHEAD_PLAYING * 2) jobs = jobs.then(remove.bind(null, s, e));
+        else if (s < t - KEEP_BEHIND) jobs = jobs.then(remove.bind(null, s, t - KEEP_BEHIND));
+      }
+      return jobs;
+    }
+    function appendWithRetry(buf) {
+      return append(buf).catch(function (err) {
+        if (err && err.name === 'QuotaExceededError') return evict().then(function () { return append(buf); });
+        throw err;
+      });
+    }
+
+    function pump() {
+      if (!sb || busy) return;
+      if (next >= frags.length) {
+        if (!ended && ms.readyState === 'open' && !sb.updating) { ended = true; try { ms.endOfStream(); } catch (e) {} }
+        return;
+      }
+      var t = video.currentTime;
+      var bEnd = bufferedEndAt(t);
+      var ahead = bEnd < 0 ? 0 : bEnd - t;
+      if (ahead > (started ? AHEAD_PLAYING : AHEAD_IDLE)) return;
+      var first = next, last = next, bytes = frags[next].size;
+      while (last + 1 < frags.length && frags[last + 1].part === frags[first].part && bytes + frags[last + 1].size <= CHUNK_BYTES) {
+        last++; bytes += frags[last].size;
+      }
+      var part = m.parts[frags[first].part];
+      busy = true;
+      controller = new AbortController();
+      var myController = controller;
+      fetchRange(part.file, frags[first].offset, frags[last].offset + frags[last].size, controller.signal)
+        .then(function (buf) {
+          if (myController !== controller) return;
+          return evict().then(function () { return appendWithRetry(buf); }).then(function () {
+            if (myController === controller) next = last + 1;
+          });
+        })
+        .then(function () { if (myController === controller) { busy = false; pump(); } })
+        .catch(function (err) {
+          if (myController !== controller) return;
+          busy = false;
+          if (err && err.name === 'AbortError') return;
+          fail('影片載入中斷：' + (err && err.message ? err.message : err) + '（重新整理頁面可再試一次）');
+        });
+    }
+
+    /* 拖動進度條：目標位置還沒載入就改從那個片段開始抓 */
+    video.addEventListener('seeking', function () {
+      if (!sb) return;
+      var t = video.currentTime;
+      var bEnd = bufferedEndAt(t);
+      var target = bEnd >= 0 ? Math.min(fragIndexAt(Math.max(0, bEnd - 0.5)) + 1, frags.length) : fragIndexAt(t);
+      if (target === next && busy) return;
+      if (controller) controller.abort();
+      controller = null;
+      busy = false;
+      ended = false;
+      next = target;
+      waitIdle().then(pump);
+    });
+    video.addEventListener('play', function () { started = true; pump(); });
+    video.addEventListener('timeupdate', pump);
+    video.addEventListener('waiting', pump);
+
+    ms.addEventListener('sourceopen', function () {
+      if (sb) return;
+      try {
+        ms.duration = m.duration;
+        sb = ms.addSourceBuffer(m.mime);
+      } catch (e) { fail('這個瀏覽器無法播放這支影片：' + e.message); return; }
+      busy = true;
+      fetchRange(m.parts[0].file, 0, m.initSize)
+        .then(append)
+        .then(function () { busy = false; pump(); })
+        .catch(function (err) { busy = false; fail('影片載入失敗：' + (err && err.message ? err.message : err)); });
+    }, { once: true });
+    return true;
+  }
+
+  /* 不支援 Media Source 的舊瀏覽器：依序播放三個檔案（換段時可能有極短停頓）。 */
+  function startSequential(m) {
+    var i = 0;
+    function load(n, autoplay) {
+      i = n;
+      video.src = m.parts[n].file;
+      if (autoplay) video.play().catch(function () {});
+    }
+    video.addEventListener('ended', function () { if (i + 1 < m.parts.length) load(i + 1, true); });
+    load(0, false);
+  }
+
+  fetch(MANIFEST_URL, { cache: 'no-cache' })
+    .then(function (r) { if (!r.ok) throw new Error('找不到 ' + MANIFEST_URL); return r.json(); })
+    .then(function (m) { if (!startMse(m)) startSequential(m); })
+    .catch(function (err) { fail('影片載入失敗：' + (err && err.message ? err.message : err)); });
+})();
+</script>
 </body>
 </html>

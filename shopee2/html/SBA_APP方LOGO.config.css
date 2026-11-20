@@ -1,0 +1,149 @@
+/* ================================================
+   SBA_APP方LOGO.config.css
+   ★ 系統設定檔，不要貼 PS 的 CSS 進來
+   ★ PS 維護的 CSS 完全不需要修改
+   ================================================ */
+
+/* ── 畫布設定 ── */
+:root {
+  --canvas-w:  1200px;
+  --canvas-h:  400px;
+  --canvas-bg: #c2dff3;
+  --bg-img:    ;
+
+  /*
+   圖層清單：class名稱|預設文字
+   純佔位框留空（|後面不填）
+   順序由低 z-index 到高 z-index
+   ★ 文字內容不可含逗號「,」（逗號是圖層分隔符）
+  */
+  --layers: "bg|,文案保護|,商品範圍|,logo範圍|,cta底|,逛逛去|逛逛去,cta三角標|,主標|主標$1023起,日期|5/18 12:00 - 5/25 11:59 中文,副標|副標$1023起,漸層左|,漸層右|,漸層上|,漸層下|";
+}
+
+/* ── logo範圍、商品範圍：opacity 改 rgba，避免影響子元素 ── */
+.logo範圍  { background-color: rgba(235, 104, 119, 0.4); opacity: 1; }
+.商品範圍  { background-color: rgba(235, 104, 119, 0.4); opacity: 1; }
+
+/* ── cta三角標：純 CSS 三角形 ── */
+.cta三角標 {
+  position: absolute;
+  box-sizing: content-box;
+  background: transparent;
+  width: 0;
+  height: 0;
+  border-top:    9.5px solid transparent;
+  border-bottom: 9.5px solid transparent;
+  border-left:   10px solid rgb(255, 255, 255);
+  left: 1138px;
+  top: 351px;
+  z-index: 292;
+}
+
+/* ── transform-origin 全域修正 ── */
+* { transform-origin: 0 0; }
+
+/* ── 文字圖層位置修正 ── */
+.主標        { left: 172px;     top: 136px; line-height: 1; white-space: nowrap; }
+.副標        { left: 172px;     top: 183.3px; line-height: 1; white-space: nowrap; }
+.日期        { left: 172px;     top: 255px;   line-height: 1; white-space: nowrap;
+  font-family: "ShopeeNotoSans (content)";
+  font-weight: 400;
+}
+.逛逛去 {
+  font-family: "ShopeeNotoSans (content)";
+  font-weight: 300; left: 1035px; top: 344.5px; line-height: 1; white-space: nowrap; letter-spacing: 0.1em; }
+
+/* ══════════════════════════════════════
+   漸層圖層
+   ★ 顏色改 --canvas-bg 對應的色碼
+   ★ left/top/width/height 依版位調整
+══════════════════════════════════════ */
+
+/* ── 漸層左（啟用中）── */
+.漸層左 {
+  position: absolute;
+  left: 600px;
+  top: 0;
+  width: 100px;
+  height: 400px;
+  background: linear-gradient(
+    to right,
+    #c2dff3 0%,
+    rgba(194, 223, 243, 0) 89.744%,
+    rgba(194, 223, 243, 0) 100%
+  );
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 3;
+  --grad-dir: to right;
+}
+
+/* ── 文案保護色塊 ── */
+.文案保護 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 602px;
+  height: 400px;
+  background: #c2dff3;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── 漸層右（目前關閉）── */
+.漸層右 {
+  display: none;
+  position: absolute;
+  left: 1100px;
+  top: 0;
+  width: 100px;
+  height: 400px;
+  background: linear-gradient(
+    to left,
+    #c2dff3 0%,
+    rgba(194, 223, 243, 0) 89.744%,
+    rgba(194, 223, 243, 0) 100%
+  );
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 3;
+  --grad-dir: to left;
+}
+
+/* ── 漸層上（目前關閉）── */
+.漸層上 {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1200px;
+  height: 88px;
+  background: linear-gradient(
+    to bottom,
+    #c2dff3 0%,
+    rgba(194, 223, 243, 0) 90.909%,
+    rgba(194, 223, 243, 0) 100%
+  );
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ── 漸層下（目前關閉）── */
+.漸層下 {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1200px;
+  height: 88px;
+  background: linear-gradient(
+    to top,
+    #c2dff3 0%,
+    rgba(194, 223, 243, 0) 90.909%,
+    rgba(194, 223, 243, 0) 100%
+  );
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 100;
+}

@@ -1,0 +1,51 @@
+BN 編輯器網址版位對照與 #logo 更新說明（2026-11-05）
+
+來源：本次上傳的 shopee(20261105-031534).zip。
+
+安裝：
+將此 ZIP 的 index.html 覆蓋至原本的 shopee/index.html，再按 Ctrl+F5。
+本次程式只新增「完全等於 #logo」的專用對應。
+原有版位關鍵字、組合入口、背景圖庫模式、下載與畫質規則皆未修改。
+
+新入口：
+index.html#logo → 首頁LOGO牆.html（只顯示這一個版位）
+大小寫不影響結果，例如 #LOGO 也可以。
+原本 #logo 會按檔名片段匹配到 27 個含 logo 的版位；本次新增專用對應以避免誤選。
+
+目前預設的分類入口（右側省略 .html）：
+#logo         → 首頁LOGO牆【本次新增】
+#hbn          → HBN_橫式LOGO、HBN_方式LOGO
+#ddcard       → ddcard方logo、ddcard橫logo、ddcard無logo
+#ig           → IG橫logo排版、IG方logo排版
+#coin         → Coin_pageBN_APP方LOGO、Coin_pageBN_APP橫LOGO
+#fb_post      → FB_POST_方LOGO、FB_POST_橫LOGO
+#scbn         → SCBN_APP
+#lpbn         → LPBN_APP方LOGO、LPBN_APP橫LOGO、LPBN_PC方LOGO、LPBN_PC橫LOGO、LPBN_APP、LPBN_PC
+#sba          → SBA_APP方LOGO、SBA_APP橫LOGO、SBA_PC
+#ams          → AMS BN-方logo、AMS BN-橫logo
+#ar           → AR、AR_LOGO
+#search_image → Search_Image1logo、Search_Image2logo、Search_Image3logo
+#searchicon   → SearchICON_LOGO、SearchICON_PRODUCT、SearchICON_TEXT
+
+模式入口（不是特定版位）：
+#all       → 不以版位關鍵字篩選，保留原本勾選狀態與手動選擇；使用完整背景圖庫。
+#jbp、#jpb → JBP 模式，不以版位關鍵字篩選，保留原本勾選狀態；背景圖庫依既有入口／等級規則。
+無 #       → 依原本勾選狀態顯示。
+
+組合入口：
+例如 index.html#hbnddcard 會顯示 HBN 和 ddcard，共 5 個版位。
+既有分類組合使用聯集（符合其中一個即顯示）。
+#logo 是獨立入口的專用別名；沒有額外改寫其他組合的解析規則。
+原有程式也會接受檔名片段，所以預設關鍵字不是所有可能網址字串的完整列舉。
+
+原碼另外定義的中文關鍵字（原有問題，本次未修改）：
+#logo牆   → 原本意圖對應 首頁LOGO牆。
+#活動總覽 → 原本意圖對應 活動總覽_方式LOGO、活動總覽_橫式LOGO。
+瀏覽器會將中文 hash 編碼成 %…，目前解析器沒有解碼，因此實際輸入這兩種中文網址會無法篩選。
+首頁LOGO牆請改用本次新增的 index.html#logo。
+
+驗證：
+1. 56 組既有入口／檔名條件比對結果與上傳原碼一致。
+2. Chromium 實際開啟 #logo：左側列表與右側預覽皆僅有首頁LOGO牆，並沿用網址指定時固定勾選的規則。
+3. 切換 #hbn、切回 #LOGO、重新整理 #LOGO 均正常，沒有瀏覽器 JavaScript 例外。
+4. 與原檔的差異只有 parseHashKeywords 內新增兩行；檔案換行格式保持原樣。

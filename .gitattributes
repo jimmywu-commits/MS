@@ -1,1 +1,2 @@
-mov/MS_tutorial_merged_subtitled.mp4 filter=lfs diff=lfs merge=lfs -text
+# 教學影片切成 3 段（每段 < 100MB），以一般檔案存放、不走 Git LFS，GitHub／GitLab Pages 才能直接讀取。
+mov/*.mp4 binary

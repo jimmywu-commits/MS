@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HBN 取色工具</title>
+<style>
+  @font-face{font-family:"ShopeeNotoSans (content)";font-weight:300;src:url("../fonts/ShopeeNotoSans(content)-Regular.woff2") format("woff2"),url("../fonts/ShopeeNotoSans(content)-Regular.ttf") format("truetype")}
+  @font-face{font-family:"ShopeeNotoSans (content)";font-weight:400;src:url("../fonts/ShopeeNotoSans(content)-Medium.woff2") format("woff2"),url("../fonts/ShopeeNotoSans(content)-Medium.ttf") format("truetype")}
+  @font-face{font-family:"ShopeeNotoSans (content)";font-weight:700;src:url("../fonts/ShopeeNotoSans(content)-Bold.woff2") format("woff2"),url("../fonts/ShopeeNotoSans(content)-Bold.ttf") format("truetype")}
+  :root{
+    --bg:#f5f6f8; --card:#fff; --text:#1f2328; --muted:#6b7280; --line:#e5e7eb; --accent:#ee4d2d; --ok:#15803d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --bg:#15171a; --card:#1f2226; --text:#e8eaed; --muted:#9aa0a6; --line:#33373d; }
+  }
+  :root[data-theme="dark"]{ --bg:#15171a; --card:#1f2226; --text:#e8eaed; --muted:#9aa0a6; --line:#33373d; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif;padding:16px}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  h1{font-size:18px;margin:0}
+  .path{color:var(--muted);font-size:12px;word-break:break-all}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button:disabled{opacity:.5;cursor:default}
+  label.chk{display:flex;gap:6px;align-items:center;color:var(--muted)}
+  #drop{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted);margin-bottom:12px}
+  #drop.over{border-color:var(--accent);color:var(--accent)}
+  #status{color:var(--muted);font-size:13px;margin:6px 0 12px}
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle;text-align:left}
+  th{font-weight:600;color:var(--muted);font-size:12px;white-space:nowrap;background:var(--bg)}
+  tr:last-child td{border-bottom:0}
+  td.thumb{width:320px}
+  td.thumb canvas{width:300px;height:90px;display:block;border-radius:6px;border:1px solid var(--line)}
+  td.name{font-weight:600;max-width:160px;word-break:break-all}
+  .sw{display:flex;flex-direction:column;align-items:flex-start;gap:4px;cursor:pointer;user-select:none}
+  .sw .box{width:64px;height:36px;border-radius:6px;border:1px solid rgba(0,0,0,.15);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+  .sw code{font:12px/1 ui-monospace,Consolas,monospace}
+  .sw.empty .box{background:repeating-linear-gradient(45deg,#ccc 0 6px,#eee 6px 12px)}
+  .sw.copied code{color:var(--ok)}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px}
+  @media (max-width:900px){ td.thumb{width:200px} td.thumb canvas{width:180px;height:54px} }
+  /* tabs */
+  nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  nav.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:10px 16px;color:var(--muted);font-weight:600}
+  nav.tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
+  section[hidden]{display:none}
+  td .mini{font-size:11px;color:var(--muted);padding:2px 0 0;border:0}
+  /* simulator: preview stays in the work area; editing tools sit at the right */
+  .sim{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,340px);gap:16px;align-items:start}
+  .sim > div:first-child{grid-column:2;grid-row:1}
+  .sim > div:last-child{grid-column:1;grid-row:1;min-width:0}
+  /* Keep controls and color values visible, while removing explanatory copy. */
+  .sim > div:first-child .card h2,
+  .sim > div:first-child .card .note,
+  .sim > div:first-child .opts .d{display:none}
+  .sim > div:first-child .card:last-child{display:none}
+  @media (max-width:900px){
+    .sim{grid-template-columns:1fr}
+    .sim > div:first-child{grid-column:1;grid-row:2}
+    .sim > div:last-child{grid-column:1;grid-row:1}
+  }
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--muted);font-weight:600}
+  .field{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .field label{width:84px;color:var(--muted);font-size:13px}
+  .field input[type=color]{width:40px;height:32px;border:1px solid var(--line);border-radius:6px;padding:0;background:none;cursor:pointer}
+  .field input[type=text]{width:100px;font:13px ui-monospace,Consolas,monospace;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text)}
+  .field select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit}
+  .preview{position:relative;width:100%;aspect-ratio:1200/360;border-radius:10px;overflow:hidden;border:1px solid var(--line);font-family:"ShopeeNotoSans (content)","Noto Sans TC","Microsoft JhengHei",sans-serif;container-type:inline-size}
+  .preview .logo{position:absolute;left:4%;top:26%;height:14%;width:18%;border-radius:6px;background:rgba(255,255,255,.55);border:1px dashed rgba(0,0,0,.25)}
+  .preview .t1{position:absolute;left:4%;top:42%;font-size:2.9cqw;font-weight:300;line-height:1}
+  .preview .t2{position:absolute;left:4%;top:55%;font-size:4.6cqw;font-weight:700;line-height:1;letter-spacing:.02em}
+  .preview .t3{position:absolute;left:4%;top:76%;font-size:1.7cqw;font-weight:300;line-height:1}
+  .preview .cta{position:absolute;right:2%;bottom:7%;padding:.9cqw 2cqw;border-radius:.5cqw;font-size:1.9cqw;font-weight:300;line-height:1}
+  .refs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media (max-width:900px){ .refs{grid-template-columns:1fr} }
+  .ref h3{font-size:13px;color:var(--muted);font-weight:600;margin:0 0 6px}
+  .canvas{border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-family:"ShopeeNotoSans (content)","Noto Sans TC","Microsoft JhengHei",sans-serif}
+  .price{display:flex;align-items:baseline;gap:14px;font-weight:700}
+  .price .old{font-size:18px;text-decoration:line-through;font-weight:500}
+  .price .new{font-size:24px}
+  .menu{display:flex;gap:0;font-size:15px}
+  .menu span{padding:8px 18px;white-space:nowrap}
+  .menu span.b4{border-radius:0 6px 6px 0}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px;color:var(--muted)}
+  .legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.2);vertical-align:-2px;margin-right:4px}
+  .legend code{font:11px ui-monospace,Consolas,monospace;cursor:pointer}
+  .roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px}
+  .role{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card)}
+  .role .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .role .nm{font-weight:600;font-size:13px}
+  .role .box{position:relative;height:40px;border-radius:6px;border:1px solid rgba(0,0,0,.15);margin-bottom:6px;cursor:pointer;overflow:hidden}
+  .role .box input[type=color]{position:absolute;inset:-6px;width:calc(100% + 12px);height:calc(100% + 12px);opacity:0;cursor:pointer;border:0;padding:0}
+  .role .box::after{content:'✎';position:absolute;right:5px;bottom:3px;font-size:11px;color:rgba(0,0,0,.45);background:rgba(255,255,255,.75);border-radius:3px;padding:0 3px;pointer-events:none}
+  .role.edited{border-color:var(--accent)}
+  .role .top code{cursor:pointer}
+  .role .undo{border:0;background:none;color:var(--accent);font-size:11px;padding:0 2px;cursor:pointer;margin-left:4px}
+  .refs .roles{margin-top:8px}
+  .refs .role{padding:8px}
+  .refs .role .box{height:30px}
+  .role code{font:12px ui-monospace,Consolas,monospace}
+  .role .cr{font-size:12px;color:var(--muted);margin-top:4px}
+  .ok{color:var(--ok);font-weight:600} .bad{color:#dc2626;font-weight:600} .warnc{color:#d97706;font-weight:600}
+  .opts{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .opt{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer}
+  .opt.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .opt .box{width:48px;height:32px;border-radius:6px;border:1px solid rgba(0,0,0,.15);flex:none}
+  .opt .d{font-size:12px;color:var(--muted)}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .note li{margin-bottom:2px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>HBN Banner 取色工具</h1>
+    <div class="path">固定資料夾：同目錄下的 hbndemo/（E:\GitHub\shopee2\color\hbndemo）</div>
+  </div>
+  <div class="bar" id="pickBar">
+    <button id="btnPick" class="primary">選擇 / 載入 hbn 資料夾</button>
+    <button id="btnReload" disabled>重新掃描</button>
+    <label class="chk"><input type="checkbox" id="chkBox" checked> 顯示偵測框</label>
+    <button id="btnCsv" disabled>複製 CSV</button>
+    <button id="btnDl" disabled>下載 CSV</button>
+    <input type="file" id="fileFallback" webkitdirectory multiple accept="image/*" hidden>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="sim">配色模擬</button>
+  <button data-tab="pick">取色</button>
+</nav>
+<section id="tab-pick">
+<div id="drop">也可以直接把圖片拖進來</div>
+<div id="status">尚未載入圖片。</div>
+
+<table id="tbl" hidden>
+  <thead><tr>
+    <th>縮圖</th><th>檔名</th><th>底色<br><small>左上角</small></th><th>主標</th><th>副標</th><th>警語</th><th>CTA 文字</th><th>CTA 底色</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+<p class="hint">規則：底色＝畫面左上角；主標＝副標上方那行；副標＝左側墨量最大的一行；警語＝副標下方小字（可能沒有）；CTA＝右下「放心買 安心退」按鈕，底色為按鈕色塊、文字為按鈕內文字。點色票可複製色碼；每格下方為對底色（CTA 文字為對 CTA 底）的對比度 CR。</p>
+</section>
+
+<section id="tab-sim" hidden>
+<div class="sim">
+  <div>
+    <div class="card" style="position:relative">
+      <h2>輸入</h2>
+      <div class="field"><label>底色</label><input type="color" id="simBg" value="#77C3DB"><input type="text" id="simBgHex" value="#77C3DB" maxlength="7"></div>
+      <button id="simRandom">隨機一個底色</button>
+      <button id="simLink" type="button" style="display:none;position:absolute;right:10px;bottom:10px;width:32px;height:32px;padding:0;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--text);line-height:1" title="與曝光資源底色連動中">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+      </button>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>副標候選（點選套用）</h2>
+      <div class="opts" id="simOpts"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>輸出</h2>
+      <div class="bar" style="margin:0"><button id="simCsv" class="primary">輸出 CSV 檔</button><button id="simReset">重設手動修改</button></div>
+      <div class="note" style="margin-top:8px">依「色票.xlsx」格式輸出：D2 背景色、D8/D9 滑過底/字、D10/D11 一般底/字、D12/D13 按下底/字、D27/D28 副標、D32 活動價、D33 原價灰；其餘列依表內 VLOOKUP 邏輯帶入對應色。</div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>規則</h2>
+      <ul class="note" style="margin:0;padding-left:18px">
+        <li>先看底色明度：淺底走深色字；深底走白主標＋淺黃/米副標。</li>
+        <li>主標＝底色同色相、明度降 35–45，對底色 CR ≥ 3。</li>
+        <li>副標＝跳色：換到色相差夠大的高彩色（暖色 ≥ 60°，冷色 ≥ 90°）且對底色 CR ≥ 3，暖色排前面；做不到 CR 3 會標示需加粗體/描邊。深底則用淺黃/米。</li>
+        <li>警語（日期）與副標同色，不引入第三色。</li>
+        <li>參考畫布：價格與選單背景都是底色；原價＝灰（對底色 CR ≥ 3）、活動價＝副標色；選單一般＝底色略加深/加淺，一般字標準與滑過字同色、會被吃色才改主標色；滑過＝主標色底白字，按下＝近白底＋同色系中間色字。</li>
+        <li>CTA 底色用品牌色（對底色 CR ≥ 3），不足時改用副標色；CTA 文字一律白字，只有 CTA 底偏淺（白字 CR &lt; 3）才改深色字。</li>
+        <li>整張只用 4 色：底、深、強調、白。</li>
+      </ul>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <h2>預覽</h2>
+      <div class="preview" id="simPreview">
+        <div class="logo"></div>
+        <div class="t1" id="pvMain">強牌聯手品牌日</div>
+        <div class="t2" id="pvSub">加碼券最高5折</div>
+        <div class="t3" id="pvWarn">6/1 一日限定</div>
+        <div class="cta" id="pvCta">放心買 安心退 ▸</div>
+      </div>
+      <div class="roles" id="simRoles"></div>
+      <div class="refs">
+        <div class="ref">
+          <h3>配色參考・價格</h3>
+          <div class="canvas" id="rfPrice"><div class="price"><span class="old" id="rfOld">$000.000</span><span class="new" id="rfNew">活動價$000.000</span></div></div>
+          <div class="roles" id="rfPriceRoles"></div>
+        </div>
+        <div class="ref">
+          <h3>配色參考・選單（1、3 一般／2 滑過／4 滑過＋按下）</h3>
+          <div class="canvas" id="rfMenu"><div class="menu"><span class="b1">類別</span><span class="b2">類別</span><span class="b3">類別</span><span class="b4">下拉選單</span></div></div>
+          <div class="roles" id="rfMenuRoles"></div>
+        </div>
+      </div>
+      <div class="bar" style="margin-top:12px"><button id="simCopy">複製全部色碼</button><span class="hint">點色塊可手動換色，點色碼可複製</span><span id="simMsg" class="hint"></span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<script>
+/* ========== 取色演算法（以 1200x360 版型為基準，其他尺寸會等比例換算） ========== */
+const CTA_BOX=[942,292,1174,332];
+const COLS=['bg','main','sub','warn','ctatxt','ctabg'];
+const LABELS={bg:'底色',main:'主標',sub:'副標',warn:'警語',ctatxt:'CTA文字',ctabg:'CTA底色'};
+
+const hex=c=>c?'#'+c.map(v=>Math.round(v).toString(16).padStart(2,'0')).join('').toUpperCase():null;
+const dist=(r,g,b,c)=>Math.hypot(r-c[0],g-c[1],b-c[2]);
+
+function median(arr){ const a=Array.from(arr).sort((x,y)=>x-y); return a[a.length>>1]; }
+
+function runs(flags,gap,minlen){
+  const out=[]; const n=flags.length; let i=0;
+  while(i<n){
+    if(flags[i]){
+      const s=i;
+      while(i<n){
+        if(flags[i]){i++;continue;}
+        let ahead=false; for(let k=i+1;k<Math.min(n,i+1+gap);k++) if(flags[k]){ahead=true;break;}
+        if(ahead) i++; else break;
+      }
+      if(i-s>=minlen) out.push([s,i-1]);
+    }
+    i++;
+  }
+  return out;
+}
+
+// pix: array of [r,g,b]; 回傳眾數色（量化 24 → 取 bin 平均 → 再取 30 距離內平均）
+function modeColour(pix,bgref,strong=true){
+  if(pix.length<10) return null;
+  if(strong&&bgref){
+    const ds=pix.map(p=>dist(p[0],p[1],p[2],bgref));
+    const sorted=[...ds].sort((a,b)=>a-b);
+    const p95=sorted[Math.min(sorted.length-1,Math.floor(sorted.length*0.95))];
+    const thr=0.6*p95;
+    pix=pix.filter((p,i)=>ds[i]>=thr);
+    if(pix.length<3) return null;
+  }
+  const bins=new Map();
+  for(const p of pix){
+    const k=((p[0]/24)|0)*1024+((p[1]/24)|0)*32+((p[2]/24)|0);
+    const b=bins.get(k)||{n:0,r:0,g:0,b:0}; b.n++; b.r+=p[0]; b.g+=p[1]; b.b+=p[2]; bins.set(k,b);
+  }
+  let best=null; for(const b of bins.values()) if(!best||b.n>best.n) best=b;
+  let c=[best.r/best.n,best.g/best.n,best.b/best.n];
+  let n=0,r=0,g=0,bb=0;
+  for(const p of pix){ if(dist(p[0],p[1],p[2],c)<30){n++;r+=p[0];g+=p[1];bb+=p[2];} }
+  return n?[r/n,g/n,bb/n]:c;
+}
+
+function analyze(img){
+  const W=img.naturalWidth,H=img.naturalHeight;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d',{willReadFrequently:true}); ctx.drawImage(img,0,0);
+  const d=ctx.getImageData(0,0,W,H).data;
+  const sx=W/1200, sy=H/360;
+  const X=v=>Math.round(v*sx), Y=v=>Math.round(v*sy);
+  const px=(x,y)=>{const i=(y*W+x)*4; return [d[i],d[i+1],d[i+2]];};
+
+  // 底色：左上角 6x6 平均
+  let bg=[0,0,0],n=0;
+  for(let y=0;y<Y(6);y++)for(let x=0;x<X(6);x++){const p=px(x,y);bg[0]+=p[0];bg[1]+=p[1];bg[2]+=p[2];n++;}
+  bg=bg.map(v=>v/n);
+
+  // 每列區域背景（左欄 30..560 的中位數）
+  const rowbg=new Array(H);
+  const rs=new Uint8Array(X(560)-X(30)),gs=new Uint8Array(rs.length),bs=new Uint8Array(rs.length);
+  for(let y=0;y<H;y++){
+    let k=0; for(let x=X(30);x<X(560);x++){const i=(y*W+x)*4; rs[k]=d[i];gs[k]=d[i+1];bs[k]=d[i+2];k++;}
+    rowbg[y]=[median(rs),median(gs),median(bs)];
+  }
+  // 墨點遮罩
+  const ink=new Uint8Array(W*H);
+  for(let y=0;y<H;y++){const rb=rowbg[y];for(let x=0;x<W;x++){const i=(y*W+x)*4; if(dist(d[i],d[i+1],d[i+2],rb)>55) ink[y*W+x]=1;}}
+  const inkCount=(y,x0,x1)=>{let c=0;for(let x=x0;x<x1;x++)c+=ink[y*W+x];return c;};
+
+  // 左側 logo 偵測（x 30..155 內有高度 >=75 的直立物件）
+  let X0=X(30);
+  const leftFlags=[]; for(let y=Y(100);y<Y(300);y++) leftFlags.push(inkCount(y,X(30),X(155))>=3?1:0);
+  const logoRuns=runs(leftFlags,3,1).filter(r=>r[1]-r[0]>=Y(75));
+  if(logoRuns.length){
+    const ya=Y(100)+logoRuns[0][0], yb=Y(100)+logoRuns[0][1];
+    let maxCol=-1;
+    for(let x=X(30);x<X(155);x++){let c=0;for(let y=ya;y<=yb;y++)c+=ink[y*W+x]; if(c>=3) maxCol=x;}
+    if(maxCol>=0) X0=maxCol+X(5);
+  }
+
+  // 列剖面 → 文字帶
+  const prof=[]; for(let y=0;y<H;y++) prof.push(inkCount(y,X0,X(480))>=6?1:0);
+  const bands=[];
+  for(const [s,e] of runs(prof,3,Y(8))){
+    if(s<Y(80)||s>Y(300)) continue;
+    let mass=0; for(let y=s;y<=e;y++) mass+=inkCount(y,X0,X(480));
+    bands.push({y0:s,y1:e,h:e-s+1,mass});
+  }
+  const sel={main:null,sub:null,warn:null};
+  if(bands.length){
+    let i=0; for(let k=1;k<bands.length;k++) if(bands[k].mass>bands[i].mass) i=k;
+    const sub=bands[i]; sel.sub=sub;
+    if(i>0&&sub.y0-bands[i-1].y1<=Y(25)&&bands[i-1].h>=Y(18)&&bands[i-1].h<=Y(52)) sel.main=bands[i-1];
+    if(i+1<bands.length&&bands[i+1].y0-sub.y1<=Y(45)&&bands[i+1].h<=Y(34)) sel.warn=bands[i+1];
+  }
+  const out={bg,boxes:{}};
+  for(const k of ['main','sub','warn']){
+    const b=sel[k]; if(!b){out[k]=null;continue;}
+    // 欄剖面：從左側第一段開始，遇到 >45px 空白就停（排除右側商品）
+    let xa=-1,xb=-1;
+    for(let x=X0;x<X(560);x++){
+      let has=0; for(let y=b.y0;y<=b.y1;y++) if(ink[y*W+x]){has=1;break;}
+      if(!has) continue;
+      if(xa<0){xa=x;xb=x;continue;}
+      if(x-xb>X(45)) break;
+      xb=x;
+    }
+    if(xa<0){out[k]=null;continue;}
+    const pix=[]; let rb=[0,0,0],cnt=0;
+    for(let y=b.y0;y<=b.y1;y++){
+      const r=rowbg[y]; rb[0]+=r[0];rb[1]+=r[1];rb[2]+=r[2];cnt++;
+      for(let x=xa;x<=xb;x++){ if(ink[y*W+x]) pix.push(px(x,y)); }
+    }
+    rb=rb.map(v=>v/cnt);
+    out[k]=modeColour(pix,rb,true);
+    out.boxes[k]=[xa,b.y0,xb,b.y1];
+  }
+  // CTA
+  const [cx0,cy0,cx1,cy1]=[X(CTA_BOX[0]),Y(CTA_BOX[1]),X(CTA_BOX[2]),Y(CTA_BOX[3])];
+  const cta=[]; for(let y=cy0;y<cy1;y++)for(let x=cx0;x<cx1;x++) cta.push(px(x,y));
+  const ctabg=modeColour(cta,null,false);
+  out.ctabg=ctabg;
+  out.ctatxt=modeColour(cta.filter(p=>dist(p[0],p[1],p[2],ctabg)>80),ctabg,true);
+  out.boxes.cta=[cx0,cy0,cx1,cy1];
+  out.size=[W,H];
+  return out;
+}
+
+/* ========== 載入圖片：http 目錄列表 / File System Access / 檔案選取 / 拖放 ========== */
+const IMG_RE=/\.(jpe?g|png|webp|gif|bmp)$/i;
+let dirHandle=null;
+const $=s=>document.querySelector(s);
+const tbody=$('#tbl tbody'); const results=[];
+
+function setStatus(t){$('#status').textContent=t;}
+
+async function loadFromHttpListing(){
+  const res=await fetch('hbndemo/',{cache:'no-store'}); if(!res.ok) throw new Error('no listing');
+  const html=await res.text(); const doc=new DOMParser().parseFromString(html,'text/html');
+  const names=[...doc.querySelectorAll('a[href]')].map(a=>decodeURIComponent(a.getAttribute('href'))).filter(n=>IMG_RE.test(n)&&!n.includes('/'));
+  if(!names.length) throw new Error('no images');
+  const files=[];
+  for(const nm of names){ const r=await fetch('hbndemo/'+encodeURIComponent(nm)); files.push(new File([await r.blob()],nm)); }
+  return files;
+}
+
+/* 記住資料夾 handle（IndexedDB） */
+const idb={
+  open(){return new Promise((ok,err)=>{const q=indexedDB.open('hbn-color-tool',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>ok(q.result);q.onerror=()=>err(q.error);});},
+  async get(k){const db=await this.open();return new Promise((ok,err)=>{const t=db.transaction('kv').objectStore('kv').get(k);t.onsuccess=()=>ok(t.result);t.onerror=()=>err(t.error);});},
+  async set(k,v){const db=await this.open();return new Promise((ok,err)=>{const t=db.transaction('kv','readwrite').objectStore('kv').put(v,k);t.onsuccess=()=>ok();t.onerror=()=>err(t.error);});}
+};
+async function filesFromDirHandle(h){
+  const files=[];
+  for await(const [name,entry] of h.entries()){ if(entry.kind==='file'&&IMG_RE.test(name)) files.push(await entry.getFile()); }
+  return files;
+}
+async function pickFolder(){
+  if(window.showDirectoryPicker){
+    try{
+      let h=dirHandle||await idb.get('dir').catch(()=>null);
+      if(h){ const p=await h.requestPermission({mode:'read'}); if(p!=='granted') h=null; }
+      if(!h){ h=await window.showDirectoryPicker({mode:'read'}); await idb.set('dir',h).catch(()=>{}); }
+      dirHandle=h; $('#btnReload').disabled=false;
+      await processFiles(await filesFromDirHandle(h));
+      return;
+    }catch(e){ if(e&&e.name==='AbortError') return; console.warn(e); }
+  }
+  $('#fileFallback').click();
+}
+
+async function processFiles(files){
+  files=[...files].filter(f=>IMG_RE.test(f.name)).sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant',{numeric:true}));
+  tbody.innerHTML=''; results.length=0;
+  if(!files.length){setStatus('找不到圖片。');return;}
+  $('#tbl').hidden=false;
+  let i=0;
+  for(const f of files){
+    i++; setStatus(`分析中 ${i}/${files.length}：${f.name}`);
+    try{
+      const img=await loadImage(f);
+      const r=analyze(img); r.name=f.name; r.img=img; results.push(r); renderRow(r);
+    }catch(e){ console.error(e); const r={name:f.name,error:String(e)}; results.push(r); renderRow(r); }
+  }
+  setStatus(`完成，共 ${files.length} 張。`);
+  $('#btnCsv').disabled=$('#btnDl').disabled=false;
+}
+function loadImage(file){return new Promise((ok,err)=>{const url=URL.createObjectURL(file);const im=new Image();im.onload=()=>{URL.revokeObjectURL(url);ok(im);};im.onerror=err;im.src=url;});}
+
+function renderRow(r){
+  const tr=document.createElement('tr');
+  const tdThumb=document.createElement('td'); tdThumb.className='thumb';
+  if(r.img){ const cv=document.createElement('canvas'); cv.width=r.img.naturalWidth; cv.height=r.img.naturalHeight; drawThumb(cv,r); tdThumb.appendChild(cv); r.cv=cv; }
+  tr.appendChild(tdThumb);
+  const tdName=document.createElement('td'); tdName.className='name'; tdName.textContent=r.name+(r.error?'（讀取失敗）':''); tr.appendChild(tdName);
+  for(const k of COLS){
+    const td=document.createElement('td'); const h=r.error?null:hex(r[k]);
+    const div=document.createElement('div'); div.className='sw'+(h?'':' empty'); div.title=h?'點擊複製 '+h:'未偵測到';
+    div.innerHTML=`<div class="box" style="background:${h||'transparent'}"></div><code>${h||'—'}</code>`;
+    if(h) div.onclick=()=>{navigator.clipboard.writeText(h).then(()=>{div.classList.add('copied');setTimeout(()=>div.classList.remove('copied'),800);});};
+    td.appendChild(div);
+    if(h&&k!=='bg'){
+      const ref=k==='ctatxt'?r.ctabg:r.bg; const v=contrast(r[k],ref); const need=k==='warn'?4.5:3;
+      const m=document.createElement('div'); m.className='mini'; m.innerHTML=`CR <span class="${v>=need?'ok':(v>=need-1?'warnc':'bad')}">${v.toFixed(1)}</span>`; td.appendChild(m);
+    }
+    if(k==='bg'&&h){ const b=document.createElement('button'); b.textContent='套入模擬'; b.style.cssText='margin-top:6px;padding:3px 8px;font-size:12px'; b.onclick=()=>{setSimBg(h);switchTab('sim');}; td.appendChild(b); }
+    tr.appendChild(td);
+  }
+  tbody.appendChild(tr);
+}
+function drawThumb(cv,r){
+  const ctx=cv.getContext('2d'); ctx.drawImage(r.img,0,0);
+  if(!$('#chkBox').checked) return;
+  ctx.lineWidth=3;
+  const colors={main:'#ff2d2d',sub:'#2dff4a',warn:'#ff2dff',cta:'#ffe92d'};
+  for(const [k,b] of Object.entries(r.boxes||{})){ ctx.strokeStyle=colors[k]; ctx.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]); }
+}
+$('#chkBox').onchange=()=>results.forEach(r=>r.cv&&drawThumb(r.cv,r));
+
+function csv(){
+  const head=['檔名',...COLS.map(k=>LABELS[k])];
+  const lines=[head.join(',')];
+  for(const r of results) lines.push([`"${r.name.replace(/"/g,'""')}"`,...COLS.map(k=>r.error?'':(hex(r[k])||''))].join(','));
+  return lines.join('\r\n');
+}
+$('#btnCsv').onclick=()=>navigator.clipboard.writeText(csv()).then(()=>setStatus('CSV 已複製到剪貼簿。'));
+$('#btnDl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv()],{type:'text/csv;charset=utf-8'}));a.download='hbn-colors.csv';a.click();};
+$('#btnPick').onclick=pickFolder;
+$('#btnReload').onclick=async()=>{ if(dirHandle) processFiles(await filesFromDirHandle(dirHandle)); else if(location.protocol.startsWith('http')) processFiles(await loadFromHttpListing()); };
+$('#fileFallback').onchange=e=>processFiles(e.target.files);
+const drop=$('#drop');
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};
+drop.ondragleave=()=>drop.classList.remove('over');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');processFiles(e.dataTransfer.files);};
+
+
+/* ========== 色彩工具 ========== */
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [0,2,4].map(i=>parseInt(h.substr(i,2),16));}
+function rgbToHsl([r,g,b]){r/=255;g/=255;b/=255;const M=Math.max(r,g,b),m=Math.min(r,g,b);let h=0,s=0,l=(M+m)/2;if(M!==m){const d=M-m;s=l>.5?d/(2-M-m):d/(M+m);switch(M){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;default:h=(r-g)/d+4;}h*=60;}return [h,s*100,l*100];}
+function hslToRgb([h,s,l]){h=((h%360)+360)%360;s/=100;l/=100;const c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2;let r,g,b;if(h<60)[r,g,b]=[c,x,0];else if(h<120)[r,g,b]=[x,c,0];else if(h<180)[r,g,b]=[0,c,x];else if(h<240)[r,g,b]=[0,x,c];else if(h<300)[r,g,b]=[x,0,c];else[r,g,b]=[c,0,x];return [(r+m)*255,(g+m)*255,(b+m)*255];}
+function lum(c){const f=v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);};return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]);}
+function contrast(a,b){const la=lum(a),lb=lum(b);return (Math.max(la,lb)+0.05)/(Math.min(la,lb)+0.05);}
+const hueDiff=(a,b)=>{const d=Math.abs(a-b)%360;return Math.min(d,360-d);};
+
+// 從起始 L 往 dir 方向逐步調整，直到對 ref 的 CR >= target
+function fitL(h,s,l,dir,ref,target){
+  l=clamp(l,0,100);
+  for(let i=0;i<120;i++){const c=hslToRgb([h,s,l]);if(contrast(c,ref)>=target)return {rgb:c,l,ok:true};const nl=l+dir;if(nl<0||nl>100)break;l=nl;}
+  return {rgb:hslToRgb([h,s,clamp(l,0,100)]),l,ok:false};
+}
+
+function suggest(bgHex,brandHex){
+  const bg=hexToRgb(bgHex); const [H,S,L]=rgbToHsl(bg);
+  const crW=contrast([255,255,255],bg), crK=contrast([0,0,0],bg);
+  const light=crK>=crW;           // 淺底：黑字比白字清楚
+  // 主標
+  let main;
+  if(light){ main=fitL(H,clamp(Math.max(S,35),0,85),L-40,-1,bg,3); }
+  else { main={rgb:[255,255,255],ok:crW>=3}; }
+  // 深底：淺黃/米本身就是跳色，列為第一候選；淺底不提供同色系加深
+  const options=[];
+  if(!light){ const mono=fitL(48,95,80,+1,bg,4.5); options.push({key:'cream',name:'淺黃/米（深底）',rgb:mono.rgb,cr:contrast(mono.rgb,bg),ok:mono.ok,warm:1,desc:'深底標準跳色'}); }
+  // 副標 B：跳色
+  // 暖色優先（實際案例的跳色只有黃／粉紅／橘）；冷色僅列為參考
+  const cands=[[55,'黃',1],[335,'粉紅',1],[5,'紅',1],[22,'橘',1],[300,'紫紅',0],[150,'綠',0],[212,'藍',0]];
+  for(const [h,nm,warm] of cands){
+    // 灰/白/黑底（彩度低）任何色相都可跳；有色底：暖色跳色色相差 ≥ 60°，冷色 ≥ 90°
+    if(S>=10 && hueDiff(h,H)<(warm?60:90)) continue;
+    const r=light?fitL(h,92,62,-1,bg,3):fitL(h,90,62,+1,bg,3);
+    const cr=contrast(r.rgb,bg); const rl=rgbToHsl(r.rgb)[2];
+    const vivid=light?rl>=38:rl<=90;   // 為了達標而變得太暗/太淡 → 降權
+    options.push({key:'acc'+h,name:'跳色・'+nm+(warm?'':'（冷色，參考）'),rgb:r.rgb,cr,ok:r.ok&&vivid,warm,
+      desc:r.ok?(vivid?'色相差 '+Math.round(hueDiff(h,H))+'°':'達標後偏暗，彩度流失'):'無法達 CR 3，需粗體＋描邊/陰影'});
+  }
+  const byPref=(a,b)=>(b.ok-a.ok)||(b.warm-a.warm)||(b.cr-a.cr);
+  const ordered=light?options.sort(byPref):[options[0],...options.slice(1).sort(byPref)];
+  const pick=ordered[0];   // 跳色優先：可用 > 暖色 > CR
+  return {bg,light,H,S,L,main:main.rgb,mainOk:main.ok,options:ordered,pick,brand:hexToRgb(brandHex)};
+}
+
+/* BODA 推來的自動 CTA 字色（rgb 陣列）；獨立使用時為 null，走自己的規則 */
+var _linkedCtaTxt=null;
+function finish(sg,subRgb,ov={}){
+  const bg=sg.bg, brand=sg.brand, main=ov.main||sg.main; subRgb=ov.sub||subRgb;
+  const crS=contrast(subRgb,bg);
+  const warn=subRgb, warnSrc='與副標同色';
+  /* CTA 底色：跟主標同色（副標色則餵給促標底色、圓標底色）。
+     保底順序（每步對底色 CR ≥ 3）：主標 → 副標 → 品牌色 → 主標。
+     主標若是黑／灰（曝光資源的 CTA 底禁用），深底改用純白；與 shopee/index.html bnAutoCtaBackground()、
+     BODA index.html getExposureAutoCtaBg() 同一套，三處要一起改。 */
+  const crM=contrast(main,bg);
+  const ctaBlocked=c=>{const mx=Math.max(c[0],c[1],c[2]),mn=Math.min(c[0],c[1],c[2]);return mn<245&&(mx<=32||mx-mn<=24);};
+  let ctabg,ctaSrc;
+  if(crM>=3&&!ctaBlocked(main)){ctabg=main;ctaSrc='主標色';}
+  else if(crM>=3&&contrast([255,255,255],bg)>=3){ctabg=[255,255,255];ctaSrc='白色（主標色是黑／灰，CTA 底禁用）';}
+  else if(crS>=3){ctabg=subRgb;ctaSrc='副標色（主標色對底色不足）';}
+  else if(contrast(brand,bg)>=3){ctabg=brand;ctaSrc='品牌色（主標、副標對底色不足）';}
+  else {ctabg=main;ctaSrc='主標色（對底色不足）';}
+  // CTA 字：標準為白字；只有 CTA 底偏淺（白字 CR < 3）才換：深底用底色本身（如 Paula's 米底紅字）→ 主標色 → 黑
+  let ctatxt=[255,255,255], ctaTxtSrc='白字（標準）';
+  if(contrast(ctatxt,ctabg)<3){
+    const tries=sg.light?[main]:[bg,main];
+    ctatxt=tries.find(c=>contrast(c,ctabg)>=4.5)||[0,0,0];
+    ctaTxtSrc='CTA 底偏淺，改深色字';
+  }
+  // ---- 參考畫布：價格
+  const {H,S,L,light}=sg;
+  const tintS=clamp(S,20,100);
+  const priceBg=bg;   // 價格底＝底色本身
+  const grey=fitL(H,8,light?50:60,light?-1:+1,priceBg,3).rgb;   // 原價灰：微帶底色色相的中性灰，對底色 CR ≥ 3
+  const priceNew=subRgb;
+  // ---- 參考畫布：選單
+  const menuBg=bg;
+  const btnNormal=light?hslToRgb([H,S,clamp(L-6,0,100)]):hslToRgb([H,S,clamp(L+6,0,100)]);   // 一般：底色略加深/加淺
+  const btnHover=main, btnHoverTxt=contrast([255,255,255],main)>=3?[255,255,255]:(light?priceBg:bg);   // 滑過：主標色底、白字
+  // 一般字：標準與滑過字同色；只有在一般底上會被吃色（CR < 3）時，才改用主標色（必要時再微調到 CR ≥ 3）
+  let btnNormalTxt=btnHoverTxt, btnNormalTxtSrc='與滑過字同色';
+  if(contrast(btnHoverTxt,btnNormal)<3){ const mh=rgbToHsl(main); btnNormalTxt=fitL(mh[0],mh[1],mh[2],light?-1:+1,btnNormal,3).rgb; btnNormalTxtSrc='滑過字會被吃色，改主標色'; }
+  const btnActive=light?hslToRgb([H,tintS,96]):hslToRgb([H,tintS,10]);   // 按下：近白（深底則近黑）
+  const btnActiveTxt=fitL(H,clamp(Math.max(S,45),0,90),light?62:55,light?-1:+1,btnActive,3).rgb;   // 同色系中間色
+  // 嵌在 BODA 裡且連動時，CTA 文字直接採用曝光資源／匯入工單目前的自動 CTA 字色（三處同色）
+  if(!ov.ctatxt && _linkedCtaTxt){ ctatxt=_linkedCtaTxt; ctaTxtSrc='跟曝光資源'; }
+  const out={bg,main,sub:subRgb,warn,warnSrc,ctatxt,ctaTxtSrc,ctabg,ctaSrc,
+    ref:{priceBg,grey,priceNew,menuBg,btnNormal,btnNormalTxt,btnHover,btnHoverTxt,btnActive,btnActiveTxt},btnNormalTxtSrc};
+  // 手動覆寫（葉節點角色）
+  for(const k of ['warn','ctatxt','ctabg']) if(ov[k]) out[k]=ov[k];
+  for(const k of Object.keys(out.ref)) if(ov[k]) out.ref[k]=ov[k];
+  return out;
+}
+
+/* ========== 模擬頁 UI ========== */
+let simState=null;
+function setSimBg(h){$('#simBg').value=h;$('#simBgHex').value=h.toUpperCase();runSim();}
+function validHex(v){return /^#?[0-9a-fA-F]{6}$/.test(v)?('#'+v.replace('#','')).toUpperCase():null;}
+const BRAND='#EE4D2D';   // CTA 品牌色（蝦皮橘），不在介面上呈現
+function runSim(){
+  const bgHex=validHex($('#simBgHex').value)||$('#simBg').value;
+  const sg=suggest(bgHex,BRAND);
+  simState={sg,subKey:sg.pick.key,ov:{}};
+  renderSim();
+}
+function renderSim(){
+  const {sg,subKey}=simState; const opt=sg.options.find(o=>o.key===subKey)||sg.options[0];
+  const res=finish(sg,opt.rgb,simState.ov); simState.res=res;
+  const box=$('#simOpts'); box.innerHTML='';
+  for(const o of sg.options){
+    const d=document.createElement('div'); d.className='opt'+(o.key===opt.key?' sel':'');
+    d.innerHTML=`<div class="box" style="background:${hex(o.rgb)}"></div><div><div><b>${o.name}</b> <code>${hex(o.rgb)}</code></div><div class="d">CR ${o.cr.toFixed(1)} <span class="${o.ok?'ok':'warnc'}">${o.ok?'可用':'注意'}</span>・${o.desc}</div></div>`;
+    d.onclick=()=>{simState.subKey=o.key;delete simState.ov.sub;renderSim();};
+    box.appendChild(d);
+  }
+  $('#simPreview').style.background=hex(res.bg);
+  $('#pvMain').style.color=hex(res.main); $('#pvSub').style.color=hex(res.sub); $('#pvWarn').style.color=hex(res.warn);
+  $('#pvCta').style.background=hex(res.ctabg); $('#pvCta').style.color=hex(res.ctatxt);
+  const ov=simState.ov;
+  roleCards($('#simRoles'),[
+    ['bg','底色',res.bg,null,null,sg.light?'淺底 → 深色文字':'深底 → 白主標、淺色副標'],
+    ['main','主標',res.main,res.bg,3,ov.main?'手動':'底色同色相、降明度'],
+    ['sub','副標',res.sub,res.bg,3,ov.sub?'手動':opt.name],
+    ['warn','警語',res.warn,res.bg,3,ov.warn?'手動':res.warnSrc],
+    ['ctatxt','CTA 文字',res.ctatxt,res.ctabg,3,(ov.ctatxt?'手動':res.ctaTxtSrc)+'，對 CTA 底'],
+    ['ctabg','CTA 底色',res.ctabg,res.bg,3,ov.ctabg?'手動':res.ctaSrc],
+  ]);
+  renderRefs(res.ref);
+}
+/* 角色色卡：點色碼複製；點色塊開啟選色器可手動覆寫（key='bg' 直接改底色）。
+   色卡只在第一次（或欄位組成改變時）建立，之後一律「原地」更新顏色與文字。
+   以前每次重畫都整排砍掉重建：選色器一拖就觸發重畫（60ms 後），開著選色視窗的那個 input 被刪掉，
+   瀏覽器就把選色視窗關掉——使用者還沒選好就跳掉。 */
+function roleCards(rb,items){
+  const cards={};
+  Array.from(rb.children).forEach(el=>{ if(el.dataset&&el.dataset.key) cards[el.dataset.key]=el; });
+  const sameLayout=items.length===rb.children.length&&items.every(it=>cards[it[0]]);
+  if(!sameLayout){
+    rb.innerHTML='';
+    for(const item of items){ const d=createRoleCard(item[0]); rb.appendChild(d); cards[item[0]]=d; }
+  }
+  for(const item of items) fillRoleCard(cards[item[0]],item);
+}
+function createRoleCard(key){
+  const d=document.createElement('div'); d.className='role'; d.dataset.key=key;
+  d.innerHTML=`<div class="top"><span class="nm"></span><span><code title="點擊複製"></code></span></div><div class="box" title="點擊手動換色"><input type="color"></div><div class="cr"></div>`;
+  const code=d.querySelector('code');
+  code.onclick=()=>{ const h=code.textContent; navigator.clipboard.writeText(h).then(()=>{$('#simMsg').textContent='已複製 '+h;}); };
+  const inp=d.querySelector('input'); let t=null;
+  /* 事件裡一律讀當下的 simState：換底色時 runSim 會換一個新的 simState，舊的 ov 已經不是現在用的那份。 */
+  const apply=v=>{ if(key==='bg'){ setSimBg(v); } else { simState.ov[key]=hexToRgb(v); renderSim(); } };
+  inp.oninput=e=>{ const v=e.target.value.toUpperCase(); clearTimeout(t); t=setTimeout(()=>apply(v),60); };
+  /* 選色視窗關閉時補套最後一次的顏色（避免最後一下剛好還在 60ms 延遲裡） */
+  inp.onchange=e=>{ clearTimeout(t); const v=e.target.value.toUpperCase(); if(v!==String(code.textContent).toUpperCase()) apply(v); };
+  return d;
+}
+function fillRoleCard(d,[key,nm,c,ref,need,desc]){
+  const h=hex(c); const edited=!!simState.ov[key];
+  d.className='role'+(edited?' edited':'');
+  d.querySelector('.nm').textContent=nm;
+  const code=d.querySelector('code'); code.textContent=h;
+  let u=d.querySelector('.undo');
+  if(edited&&!u){
+    u=document.createElement('button'); u.className='undo'; u.title='還原建議色'; u.textContent='↺';
+    u.onclick=()=>{ delete simState.ov[key]; renderSim(); };
+    code.parentNode.appendChild(u);
+  } else if(!edited&&u){ u.remove(); }
+  d.querySelector('.box').style.background=h;
+  const inp=d.querySelector('input');
+  /* 使用者正在這個選色器裡選色時不要動它的值（選色視窗會跳動）；其他色卡照常更新。 */
+  if(document.activeElement!==inp) inp.value=h.toLowerCase();
+  let cr='';
+  if(ref){const v=contrast(c,ref);cr=`CR <span class="${v>=need?'ok':(v>=need-1?'warnc':'bad')}">${v.toFixed(1)}</span> / 需 ${need}`;}
+  d.querySelector('.cr').innerHTML=`${desc}${cr?'<br>'+cr:''}`;
+}
+function renderRefs(r){
+  $('#rfPrice').style.background=hex(r.priceBg);
+  $('#rfOld').style.color=hex(r.grey); $('#rfNew').style.color=hex(r.priceNew);
+  const ov=simState.ov;
+  roleCards($('#rfPriceRoles'),[['bg','背景（底色）',r.priceBg,null,null,'同底色'],['grey','原價灰',r.grey,r.priceBg,3,ov.grey?'手動':'中性灰，對底色'],['priceNew','活動價',r.priceNew,r.priceBg,3,ov.priceNew?'手動':'副標色']]);
+  $('#rfMenu').style.background=hex(r.menuBg);
+  const m=$('#rfMenu');
+  for(const k of ['b1','b3']){const e=m.querySelector('.'+k);e.style.background=hex(r.btnNormal);e.style.color=hex(r.btnNormalTxt);}
+  const b2=m.querySelector('.b2'); b2.style.background=hex(r.btnHover); b2.style.color=hex(r.btnHoverTxt);
+  const b4=m.querySelector('.b4'); b4.style.background=hex(r.btnActive); b4.style.color=hex(r.btnActiveTxt);
+  roleCards($('#rfMenuRoles'),[['bg','背景（底色）',r.menuBg,null,null,'同底色'],
+    ['btnNormal','一般底',r.btnNormal,null,null,ov.btnNormal?'手動':'底色略加深/加淺'],['btnNormalTxt','一般字',r.btnNormalTxt,r.btnNormal,3,ov.btnNormalTxt?'手動':simState.res.btnNormalTxtSrc+'，對一般底'],
+    ['btnHover','滑過底',r.btnHover,r.menuBg,3,ov.btnHover?'手動':'主標色，對背景'],['btnHoverTxt','滑過字',r.btnHoverTxt,r.btnHover,3,ov.btnHoverTxt?'手動':'白字，對滑過底'],
+    ['btnActive','按下底',r.btnActive,r.menuBg,1.5,ov.btnActive?'手動':'同色相近白，對背景'],['btnActiveTxt','按下字',r.btnActiveTxt,r.btnActive,3,ov.btnActiveTxt?'手動':'同色系中間色，對按下底']]);
+}
+$('#simCopy').onclick=()=>{const r=simState.res,f=r.ref;
+  const rows=[['底色',r.bg],['主標',r.main],['副標',r.sub],['警語',r.warn],['CTA文字',r.ctatxt],['CTA底色',r.ctabg],
+    ['價格背景',f.priceBg],['原價灰',f.grey],['活動價',f.priceNew],
+    ['選單背景',f.menuBg],['選單一般底',f.btnNormal],['選單一般字',f.btnNormalTxt],['選單滑過底',f.btnHover],['選單滑過字',f.btnHoverTxt],['選單按下底',f.btnActive],['選單按下字',f.btnActiveTxt]];
+  const t=rows.map(([n,c])=>n+'\t'+hex(c)).join('\n');
+  navigator.clipboard.writeText(t).then(()=>{$('#simMsg').textContent='已複製 '+rows.length+' 色';});};
+$('#simBg').oninput=e=>{$('#simBgHex').value=e.target.value.toUpperCase();runSim();};
+$('#simBgHex').onchange=e=>{const v=validHex(e.target.value);if(v){$('#simBg').value=v;runSim();}};
+
+/* ========== 輸出 CSV（格式同 色票.xlsx） ========== */
+const SHEET_ROWS=[["Component", "Position", "Detail", "Color", "對照邏輯"], ["Page Style", "Page Background Color", "(現在 GD 固定會提供的顏色) 頁面底色", "#FFFFFF", "Page Background Color"], ["Page Style", "Header Background Color", "頁面標題底色跟頁面底色相同", "=VLOOKUP(E3,B:D,3,0)", "Page Background Color"], ["Page Style", "Page Title Text Color", "頁面標題文字顏色", "=VLOOKUP(E4,B:D,3,0)", "Unselected Sticky Tab Text Color"], ["Page Style", "Page Header Icons Color Before Page Scrolled Up", "標題 Icon 點選前的顏色", "=VLOOKUP(E5,B:D,3,0)", "Unselected Sticky Tab Text Color"], ["Page Style", "Page Header Icons Color After Page Scrolled Up", "標題 Icon 點選後的顏色", "=VLOOKUP(E6,B:D,3,0)", "Unselected Sticky Tab Text Color"], ["Anchor Tab Bar", "Component Background", "錨點背景色", "=VLOOKUP(E7,B:D,3,0)", "Page Background Color"], ["Anchor Tab Bar", "Selected Sticky Tab Bg Color", "(現在 GD 固定會提供的顏色)", "#d12f60", "Selected Sticky Tab Bg Color"], ["Anchor Tab Bar", "Selected Sticky Tab Text Color", "", "#FFFFFF", "Selected Sticky Tab Text Color"], ["Anchor Tab Bar", "Unselected Sticky Tab Bg Color", "", "#FFFFFF", "Unselected Sticky Tab Bg Color"], ["Anchor Tab Bar", "Unselected Sticky Tab Text Color", "", "#d12f60", "Unselected Sticky Tab Text Color"], ["Anchor Tab Bar", "Show More and Dropdown > More Background Color", "", "#FFFFFF", "Show More and Dropdown > More Background Color"], ["Anchor Tab Bar", "Show More and Dropdown > More Icon and Text Color", "", "#d12f60", "Show More and Dropdown > More Icon and Text Color"], ["Gap", "Color", "Gap 的顏色跟頁面底色一樣", "=VLOOKUP(E14,B:D,3,0)", "Page Background Color"], ["Voucher Grid", "Able to Claim All Vouchers > Claim All Button Borderline Color", "一鑑領取 Voucher 按鈕外框顏色", "=VLOOKUP(E15,B:D,3,0)", "Unselected Sticky Tab Bg Color"], ["Voucher Grid", "Able to Claim All Voucher > Claim All Button Background Color", "一鑑領取 Voucher 按鈕背景顏色", "=VLOOKUP(E16,B:D,3,0)", "Selected Sticky Tab Bg Color"], ["Voucher Grid", "Able to Claim All Voucher > Claim All Button Text Color", "一鑑領取 Voucher 按鈕文字顏色", "=VLOOKUP(E17,B:D,3,0)", "Unselected Sticky Tab Text Color"], ["Product Collection", "Multi Tabs > Selected Tab Background Color", "Product Collection Tab 選擇後的背景顏色", "=VLOOKUP(E18,B:D,3,0)", "Selected Sticky Tab Bg Color"], ["Product Collection", "Multi Tabs > Selected Tab Text Color", "Product Collection Tab 選擇後的文字顏色", "=VLOOKUP(E19,B:D,3,0)", "Selected Sticky Tab Text Color"], ["Product Collection", "Multi Tabs > Unselected Tab Background Color", "Product Collection Tab 選擇前的背景顏色", "=VLOOKUP(E20,B:D,3,0)", "Unselected Sticky Tab Bg Color"], ["Product Collection", "Multi Tabs > Unselected Tab Text Color", "Product Collection Tab 選擇前的文字顏色", "=VLOOKUP(E21,B:D,3,0)", "Unselected Sticky Tab Text Color"], ["Product Collection", "Footer/Header See All Color", "Product Collection 看全部的顏色", "=VLOOKUP(E22,B:D,3,0)", "Selected Sticky Tab Bg Color"], ["Product Collection", "Product Collection", "Product Collection 看全部的顏色", "=VLOOKUP(E23,B:D,3,0)", "Selected Sticky Tab Bg Color"], ["CTA Button", "Button Text Color", "系統 CTA 文字顏色", "=VLOOKUP(E24,B:D,3,0)", "Selected Sticky Tab Text Color"], ["CTA Button", "Background Color", "系統 CTA 背景顏色", "=VLOOKUP(E25,B:D,3,0)", "Selected Sticky Tab Bg Color"], ["CTA Button", "Border Color", "系統 CTA 邊框顏色", "=VLOOKUP(E26,B:D,3,0)", "Unselected Sticky Tab Bg Color"], ["時間軸", "Text Color (時間)", "(現在 GD 固定會提供的顏色)", "9D1500", "Text Color (時間)"], ["時間軸", "Text Color (提醒我)", "", "EE4E68", "Text Color (提醒我)"], ["Header", "Header Text Color", "系統標的文字顏色", "=VLOOKUP(E29,B:D,3,0)", "Selected Sticky Tab Text Color"], ["Header", "Display Trapezoidal/Rectangle Bg under Text > Text Background Color", "系統標的背景顏色", "=VLOOKUP(E30,B:D,3,0)", "Selected Sticky Tab Bg Color"], ["Header", "Display See All > See All Color", "系統標 \"看更多\" 的文字顏色", "=VLOOKUP(E31,B:D,3,0)", "Selected Sticky Tab Text Color"], ["Section: MSBN_A-1-1 \nSection: MSBN_A-1-2 \nSection: MSBN_A-2-1 \nSection: MSBN_A-2-2 \nSection: MSBN_A-3-1", "Text Color (**活動價$000,000**)", "(現在 GD 固定會提供的顏色)", "9D1500", "Text Color (**活動價$000,000**)"], ["Section: MSBN_A-1-1 \nSection: MSBN_A-1-2 \nSection: MSBN_A-2-1 \nSection: MSBN_A-2-2 \nSection: MSBN_A-3-1", "Text Color (<s>$000,000</s>)", "(現在 GD 固定會提供的顏色)", "EE4E68", "Text Color (<s>$000,000</s>)"]];
+// 第 1 列為表頭；D 欄為 "#RRGGBB"/"RRGGBB" 字面值，或 =VLOOKUP(E,B:D,3,0) 參照 E 欄名稱對應列的 D 值
+function buildSheet(){
+  const r=simState.res,f=r.ref;
+  const fill={ 2:r.bg, 8:f.btnHover, 9:f.btnHoverTxt, 10:f.btnNormal, 11:f.btnNormalTxt, 12:f.btnActive, 13:f.btnActiveTxt,
+    27:r.sub, 28:r.sub, 32:f.priceNew, 33:f.grey };
+  const rows=SHEET_ROWS.map(x=>x.slice());
+  // 先填字面值（沿用範本是否帶 #）
+  for(const [rowNo,c] of Object.entries(fill)){ const i=+rowNo-1; const tpl=String(rows[i][3]||''); const h=hex(c); rows[i][3]=tpl.startsWith('#')?h:h.slice(1); }
+  // 再解 VLOOKUP：E 名稱 → 第一個 B 欄相同的列的 D 值
+  const byName={}; for(let i=1;i<rows.length;i++){ const nm=rows[i][1]; if(nm&&!(nm in byName)) byName[nm]=i; }
+  for(let i=1;i<rows.length;i++){ const d=String(rows[i][3]||''); if(d.startsWith('=')){ const j=byName[rows[i][4]]; rows[i][3]=(j!==undefined&&!String(rows[j][3]).startsWith('='))?rows[j][3]:''; } }
+  return rows;
+}
+function toCsv(rows){ const q=v=>{v=String(v??'');return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}; return rows.map(r=>r.map(q).join(',')).join('\r\n'); }
+$('#simCsv').onclick=()=>{
+  const rows=buildSheet(); const csv='\ufeff'+toCsv(rows);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='色票_'+hex(simState.res.bg).slice(1)+'.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  $('#simMsg').textContent='已輸出 '+a.download;
+};
+$('#simReset').onclick=()=>{simState.ov={};renderSim();$('#simMsg').textContent='已還原為建議色';};
+$('#simRandom').onclick=()=>{const h=Math.random()*360,s=35+Math.random()*60,l=Math.random()<0.75?62+Math.random()*28:30+Math.random()*16;setSimBg(hex(hslToRgb([h,s,l])));};
+
+/* ========== 頁簽 ========== */
+function switchTab(name,fromHash){
+  if(name!=='pick'&&name!=='sim') name='sim';
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  $('#tab-pick').hidden=name!=='pick'; $('#tab-sim').hidden=name!=='sim'; $('#pickBar').style.display=name==='pick'?'':'none';
+  if(!fromHash && location.hash!=='#'+name) history.replaceState(null,'','#'+name);   // 兩個頁簽各有獨立網址：…html#sim / …html#pick
+  try{localStorage.setItem('hbn-tab',name);}catch(e){}
+}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+window.addEventListener('hashchange',()=>switchTab(location.hash.slice(1),true));
+(function(){ let t=location.hash.slice(1); if(t!=='pick'&&t!=='sim'){ try{t=localStorage.getItem('hbn-tab')||'sim';}catch(e){t='sim';} } switchTab(t); })();
+runSim();
+
+/* 啟動：若由本機 http 伺服器開啟（啟動取色工具.bat），自動讀取資料夾 */
+(async()=>{
+  if(location.protocol.startsWith('http')){
+    try{ setStatus('自動讀取資料夾…'); $('#btnReload').disabled=false; await processFiles(await loadFromHttpListing()); return; }
+    catch(e){ setStatus('無法自動列出資料夾，請按「選擇 / 載入 hbn 資料夾」。'); }
+  }else{
+    const h=await idb.get('dir').catch(()=>null);
+    setStatus(h?'請按「選擇 / 載入 hbn 資料夾」重新授權讀取（上次已記住資料夾）。':'請按「選擇 / 載入 hbn 資料夾」並選取 hbn 資料夾。');
+  }
+})();
+
+/* ========== BODA 嵌入橋接 API ========== */
+const _isBodaHost = (new URLSearchParams(location.search)).get('host') === 'boda';
+let _bodaLinked = true;
+let _settingBgFromParent = false;
+/* 主頁推來的底色跟目前一樣時不要重算：runSim 會清掉所有手動色（主標／副標／CTA），
+   但曝光資源同底色時不會重算，兩邊就分歧了。曝光資源第一次載入、匯入工單、還原暫存檔都會重推同一個底色。 */
+function _simBgHex() { return simState && simState.sg ? hex(simState.sg.bg).toUpperCase() : ''; }
+function _applyBgFromParent(h) {
+  const v = validHex(h);
+  if (!v || v === _simBgHex()) return;
+  _settingBgFromParent = true;
+  try { setSimBg(v); } finally { _settingBgFromParent = false; }
+}
+window._colorToolSetBg = _applyBgFromParent;
+/* 共用 CTA 底色：BODA 推來 #rrggbb＝手動覆寫 CTA 底色；''＝清除覆寫、回到建議色。 */
+let _settingCtaFromParent = false;
+let _pendingCtaFromParent;
+function _applyCtaFromParent(h) {
+  if (!simState) { _pendingCtaFromParent = h; return; }
+  const v = validHex(h || '');
+  _settingCtaFromParent = true;
+  try {
+    if (v) simState.ov.ctabg = hexToRgb(v); else delete simState.ov.ctabg;
+    renderSim();
+  } finally { _settingCtaFromParent = false; }
+}
+window._colorToolSetCtaBg = _applyCtaFromParent;
+/* 共用 CTA 字色：manual=true 的 #rrggbb＝手動覆寫 CTA 文字（顯示「手動」可還原）；
+   manual=false 的 #rrggbb＝曝光資源目前的自動字色（模擬畫布直接採用）；''＝清除。 */
+let _settingCtaTextFromParent = false;
+let _pendingCtaTextFromParent;
+function _applyCtaTextFromParent(h, manual) {
+  if (!simState) { _pendingCtaTextFromParent = [h, manual]; return; }
+  const v = validHex(h || '');
+  _settingCtaTextFromParent = true;
+  try {
+    if (v && manual) { simState.ov.ctatxt = hexToRgb(v); }
+    else { delete simState.ov.ctatxt; _linkedCtaTxt = v ? hexToRgb(v) : null; }
+    renderSim();
+  } finally { _settingCtaTextFromParent = false; }
+}
+window._colorToolSetCtaText = _applyCtaTextFromParent;
+/* 主標字色（曝光資源手動改色、暫存檔配色）：與建議色相同就回到自動，不同就記成手動覆寫（顯示「手動」可還原）。
+   主頁推來的不再回報，避免來回。 */
+let _settingMainFromParent = false;
+let _pendingMainFromParent;
+function _applyMainFromParent(h) {
+  const v = validHex(h || '');
+  if (!v) return;
+  if (!simState) { _pendingMainFromParent = v; return; }
+  _settingMainFromParent = true;
+  try {
+    if (hex(simState.sg.main).toUpperCase() === v) delete simState.ov.main;
+    else simState.ov.main = hexToRgb(v);
+    renderSim();
+  } finally { _settingMainFromParent = false; }
+}
+window._colorToolSetMainText = _applyMainFromParent;
+/* 副標字色（曝光資源手動改色、暫存檔配色）：剛好是某個副標候選色就選那個候選；
+   都不是就記成手動覆寫。主頁推來的不回報，避免來回。 */
+let _settingSubFromParent = false;
+let _pendingSubFromParent;
+function _applySubFromParent(h) {
+  const v = validHex(h || '');
+  if (!v) return;
+  if (!simState) { _pendingSubFromParent = v; return; }
+  _settingSubFromParent = true;
+  try {
+    const match = (simState.sg.options || []).find(o => hex(o.rgb).toUpperCase() === v);
+    if (match) { simState.subKey = match.key; delete simState.ov.sub; }
+    else simState.ov.sub = hexToRgb(v);
+    renderSim();
+  } finally { _settingSubFromParent = false; }
+}
+window._colorToolSetSubText = _applySubFromParent;
+/* 曝光資源有防吃色（文字和底色太接近、CR < 1.3）與禁色（副標／日期不可純黑白）規則，會自動換色。
+   工具這邊選的主標／副標被它換掉時，在卡片上標出曝光資源實際用色。 */
+const _exposureActual = { main: '', sub: '' };
+function _renderExposureNotes() {
+  const box = $('#simRoles');
+  if (!box || !simState || !simState.res) return;
+  [['主標', 'main'], ['副標', 'sub']].forEach(function(pair) {
+    const card = Array.from(box.querySelectorAll('.role')).find(r => (r.querySelector('.nm') || {}).textContent === pair[0]);
+    if (!card) return;
+    const old = card.querySelector('.exp-note');
+    if (old) old.remove();
+    const actual = _exposureActual[pair[1]];
+    if (!actual || actual === hex(simState.res[pair[1]]).toUpperCase()) return;
+    const note = document.createElement('div');
+    note.className = 'exp-note';
+    note.style.cssText = 'margin-top:4px;font-size:11px;line-height:1.4;color:#b45309;';
+    note.innerHTML = '曝光資源的防吃色／禁色規則改用 <code style="font-size:11px">' + actual + '</code>';
+    (card.querySelector('.cr') || card).appendChild(note);
+  });
+}
+window._colorToolSetExposureActual = function(map) {
+  map = map || {};
+  _exposureActual.main = validHex(map.main || '') || '';
+  _exposureActual.sub = validHex(map.sub || '') || '';
+  _renderExposureNotes();
+};
+window._colorToolSetExposureMain = function(h) { _exposureActual.main = validHex(h || '') || ''; _renderExposureNotes(); };
+window._colorToolGetCsvString = function() { if (!simState || !simState.res) return ''; return '﻿' + toCsv(buildSheet()); };
+window._colorToolGetResult = function() { return simState && simState.res ? simState.res : null; };
+window._colorToolIsLinked = function() { return _bodaLinked; };
+window._colorToolSetLinked = function(v) { _bodaLinked = !!v; _updateLinkUI(); };
+
+const _linkSvgLinked = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>';
+const _linkSvgUnlinked = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/><line x1="4" y1="4" x2="20" y2="20" stroke-width="2.5"/>';
+function _updateLinkUI() {
+  const btn = $('#simLink');
+  if (!btn) return;
+  const svg = btn.querySelector('svg');
+  if (svg) svg.innerHTML = _bodaLinked ? _linkSvgLinked : _linkSvgUnlinked;
+  btn.title = _bodaLinked ? '與曝光資源底色連動中（點擊解除）' : '已解除連動（點擊恢復連動）';
+  btn.style.background = _bodaLinked ? 'var(--card)' : 'var(--bg)';
+  btn.style.opacity = _bodaLinked ? '1' : '.55';
+}
+
+if (_isBodaHost) {
+  switchTab('sim', true);
+  const linkBtn = $('#simLink');
+  if (linkBtn) {
+    linkBtn.style.display = '';
+    linkBtn.onclick = function() {
+      _bodaLinked = !_bodaLinked;
+      _updateLinkUI();
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'wo-color-tool-link', linked: _bodaLinked }, '*');
+      }
+      if (_bodaLinked && window.parent !== window) {
+        window.parent.postMessage({ type: 'wo-color-tool-request-bg' }, '*');
+      }
+    };
+    _updateLinkUI();
+  }
+  window.addEventListener('message', function(e) {
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'wo-color-tool-set-bg') {
+      if (!_bodaLinked) return;
+      _applyBgFromParent(e.data.hex);
+    }
+    if (e.data.type === 'wo-color-tool-set-sub-text') {
+      if (!_bodaLinked) return;
+      _applySubFromParent(e.data.hex);
+    }
+    if (e.data.type === 'wo-color-tool-set-cta') {
+      if (!_bodaLinked) return;
+      _applyCtaFromParent(e.data.hex);
+    }
+    if (e.data.type === 'wo-color-tool-set-cta-text') {
+      if (!_bodaLinked) return;
+      _applyCtaTextFromParent(e.data.hex, !!e.data.manual);
+    }
+    if (e.data.type === 'wo-color-tool-set-main-text') {
+      if (!_bodaLinked) return;
+      _applyMainFromParent(e.data.hex);
+    }
+  });
+  /* CTA 底色的手動覆寫／還原 → 通知 BODA（匯入工單／曝光資源跟著走）。
+     BODA 推來的設定不回報；底色由 BODA 推來時 runSim 會清掉覆寫，也不回報（BODA 會再補推共用值）。 */
+  let _lastPostedCta = null;
+  let _lastPostedCtaText = null;
+  let _lastPostedMain = null;
+  let _lastPostedSub = null;
+  /* 「還原建議色」是使用者明確要回到建議色：通知 BODA 時帶 reset，主頁會解除暫存檔配色鎖，
+     不然鎖會把建議色擋回暫存檔的顏色。副標選項也一起回到建議的那個候選。 */
+  let _userResetPending = false;
+  /* BODA：只有使用者在工具裡真的動手（點、拖、輸入）之後 1.5 秒內的變化才回報主頁。
+     工具剛顯示／重畫時算出的狀態（例如 CTA「沒有手動」＝空值）不能送回去，
+     否則會把活動頁／曝光資源手動指定的 CTA、主標、副標洗回自動。 */
+  let _bodaUserActAt = 0;
+  ['pointerdown', 'input', 'change', 'keydown'].forEach(function (t) {
+    document.addEventListener(t, function (e) { if (e.isTrusted) _bodaUserActAt = Date.now(); }, true);
+  });
+  const _bodaUserActive = () => !_isBodaHost || (Date.now() - _bodaUserActAt) < 1500;
+  const _resetBtn = $('#simReset');
+  if (_resetBtn) {
+    const _origReset = _resetBtn.onclick;
+    _resetBtn.onclick = function(ev) {
+      _userResetPending = true;
+      try {
+        if (simState && simState.sg && simState.sg.pick) simState.subKey = simState.sg.pick.key;
+        return _origReset ? _origReset.call(this, ev) : undefined;
+      } finally { _userResetPending = false; }
+    };
+  }
+  const _origRenderSim = renderSim;
+  renderSim = function() {
+    _origRenderSim();
+    if (!simState || window.parent === window) return;
+    const fromParent = _settingMainFromParent || _settingSubFromParent || _settingBgFromParent;
+    /* 主標字色（建議色或手動覆寫）→ 通知 BODA，曝光資源的主標跟著換。
+       以前只在底色改變時通知，而且沒帶主標色，BODA 讀不到，曝光資源的主標就不會變。
+       主頁推來的主標／副標／底色不回報（底色由主頁推來時，主頁會自己讀工具算出的主標／副標）。 */
+    if (simState.res && simState.res.main) {
+      const mainHex = hex(simState.res.main);
+      const manualMain = !!simState.ov.main;
+      const mainKey = mainHex + (manualMain ? '|manual' : '');
+      if (mainKey !== _lastPostedMain) {
+        _lastPostedMain = mainKey;
+        /* BODA：自動建議色不送回主頁（主標／副標以活動頁、曝光資源為準），只送手動改色與「重設」 */
+        if (!fromParent && (!_isBodaHost || manualMain || _userResetPending || _bodaUserActive())) {
+          window.parent.postMessage({ type: 'wo-color-tool-main-text', mainText: mainHex, manual: manualMain, reset: _userResetPending, linked: _bodaLinked }, '*');
+        }
+      }
+    }
+    /* 副標字色（點選其他副標候選、手動覆寫、或換底色後的建議色）→ 通知 BODA，
+       曝光資源的副標（與跟著副標的日期）、匯入工單的促標底色／圓標底色跟著換。以前副標完全沒有同步。 */
+    if (simState.res && simState.res.sub) {
+      const subHex = hex(simState.res.sub);
+      const manualSub = !!simState.ov.sub || !!(simState.sg && simState.sg.pick && simState.subKey !== simState.sg.pick.key);
+      const subKey = subHex + (manualSub ? '|manual' : '');
+      if (subKey !== _lastPostedSub) {
+        _lastPostedSub = subKey;
+        if (!fromParent && (!_isBodaHost || manualSub || _userResetPending || _bodaUserActive())) {
+          window.parent.postMessage({ type: 'wo-color-tool-sub-text', subText: subHex, manual: manualSub, reset: _userResetPending, linked: _bodaLinked }, '*');
+        }
+      }
+    }
+    _renderExposureNotes();
+    const manual = !!simState.ov.ctabg;
+    const cta = manual ? hex(simState.ov.ctabg) : '';
+    if (cta !== _lastPostedCta) {
+      _lastPostedCta = cta;
+      if (!_settingCtaFromParent && !_settingBgFromParent && (manual || _bodaUserActive())) {
+        window.parent.postMessage({ type: 'wo-color-tool-cta', ctaBg: cta, manual: manual, linked: _bodaLinked }, '*');
+      }
+    }
+    /* CTA 文字色的手動覆寫／還原 → 同樣通知 BODA。 */
+    const manualText = !!simState.ov.ctatxt;
+    const ctaText = manualText ? hex(simState.ov.ctatxt) : '';
+    if (ctaText !== _lastPostedCtaText) {
+      _lastPostedCtaText = ctaText;
+      if (!_settingCtaTextFromParent && !_settingCtaFromParent && !_settingBgFromParent && (manualText || _bodaUserActive())) {
+        window.parent.postMessage({ type: 'wo-color-tool-cta-text', ctaText: ctaText, manual: manualText, linked: _bodaLinked }, '*');
+      }
+    }
+  };
+  let _lastPostedBg = '';
+  const _origRunSim = runSim;
+  runSim = function() {
+    _origRunSim();
+    if (_pendingCtaFromParent !== undefined) { const p = _pendingCtaFromParent; _pendingCtaFromParent = undefined; _applyCtaFromParent(p); }
+    if (_pendingCtaTextFromParent !== undefined) { const pt = _pendingCtaTextFromParent; _pendingCtaTextFromParent = undefined; _applyCtaTextFromParent(pt[0], pt[1]); }
+    if (_pendingMainFromParent !== undefined) { const pm = _pendingMainFromParent; _pendingMainFromParent = undefined; _applyMainFromParent(pm); }
+    if (_pendingSubFromParent !== undefined) { const ps = _pendingSubFromParent; _pendingSubFromParent = undefined; _applySubFromParent(ps); }
+    if (simState && simState.res && window.parent !== window && !_settingBgFromParent) {
+      const bg = hex(simState.res.bg);
+      if (bg !== _lastPostedBg) {
+        _lastPostedBg = bg;
+        window.parent.postMessage({ type: 'wo-color-tool-colors', bg: bg, linked: _bodaLinked }, '*');
+      }
+    }
+  };
+}
+
+/* ========== BODA 嵌入版的畫面調整（2026-11-14）==========
+   只在 ?host=boda（嵌在 BOD 工具裡）時生效；單獨開啟取色工具時完全不變。
+   1. 標題改「活動頁設定色票」，拿掉固定資料夾說明。
+   2. 底色不能改（由曝光資源／工單帶入），上方說明「已自動帶入先前色票，簡易確認即可」。
+   3. 手動換任何顏色（色塊、副標候選、重設手動修改）前先跳警示：會影響曝光資源與活動頁先前的設計。
+   4. 價格、選單參考不再重複顯示底色；選單改成三欄（未選擇／已選擇／下拉選單），每欄上面文字色、下面底色。
+   5. 色卡下方的說明小字、CR 值都拿掉。
+   6. 右側下方加「取色工具完成」（橘色實心），「輸出 CSV 檔」改橘框橘字。 */
+if (_isBodaHost) {
+  document.documentElement.classList.add('boda-embed');
+  const bodaCss = document.createElement('style');
+  bodaCss.textContent = [
+    'html.boda-embed header .path{display:none}',
+    'html.boda-embed #simRandom{display:none}',
+    'html.boda-embed #simBg{pointer-events:none;opacity:.85}',
+    'html.boda-embed #simBgHex{pointer-events:none;color:var(--muted)}',
+    'html.boda-embed .boda-autonote{margin:0 0 10px;padding:8px 10px;border-radius:8px;background:#fff4ef;color:#9a3412;font-size:12px;line-height:1.6}',
+    'html.boda-embed .role .cr{display:none}',
+    'html.boda-embed .role .cr:has(.exp-note){display:block}',
+    'html.boda-embed .role[data-key="bg"] .box{cursor:default}',
+    'html.boda-embed .role[data-key="bg"] .box::after{display:none}',
+    'html.boda-embed .role[data-key="bg"] .box input{display:none}',
+    /* 選單三欄：每欄上面文字、下面底色 */
+    /* 所有色卡同寬（上排、價格、選單都一樣） */
+    'html.boda-embed .roles{grid-template-columns:repeat(auto-fill,140px)}',
+    'html.boda-embed .role .top{flex-wrap:wrap;gap:2px 6px}',
+    /* 頁面標題選單：3 個大框（未選擇／已選擇／下拉選單），框內上面文字、下面底色 */
+    'html.boda-embed #rfMenuRoles{display:grid;grid-template-columns:repeat(3,auto);grid-template-rows:none;grid-auto-flow:row;gap:8px;justify-content:start}',
+    'html.boda-embed .boda-mgrp{border:1px solid var(--line,#dde3e1);border-radius:10px;padding:8px;background:rgba(0,0,0,.015)}',
+    'html.boda-embed .boda-mgrp-h{font-size:12px;font-weight:700;margin:0 0 6px;display:flex;align-items:center;gap:6px}',
+    'html.boda-embed .boda-mgrp-h .n{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#ee4d2d;color:#fff;font-size:11px}',
+    'html.boda-embed .boda-mgrp .roles{display:grid;grid-template-columns:108px;gap:6px;margin:0}',
+    'html.boda-embed .refs{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}',
+    'html.boda-embed .refs > .ref{min-width:0}',
+    'html.boda-embed #rfPriceRoles{grid-template-columns:repeat(2,140px)}',
+    'html.boda-embed .refs{grid-template-columns:auto auto;justify-content:start}',
+    /* 完成／下載按鈕：比照曝光資源 */
+    'html.boda-embed .boda-out-bar{display:flex;flex-direction:column;gap:8px}',
+    'html.boda-embed .ms-terms-line{display:flex;align-items:flex-start;gap:5px;margin:0;color:#7a8a86;font-size:10.5px;line-height:1.45}',
+    'html.boda-embed .ms-terms-line input{width:13px;height:13px;margin:1px 0 0;accent-color:#ee4d2d;flex:0 0 auto}',
+    'html.boda-embed .ms-terms-line label{cursor:pointer}',
+    'html.boda-embed .ms-terms-line a{color:#2563eb;text-decoration:underline;cursor:pointer}',
+    'html.boda-embed #bodaColorDone{width:100%;min-height:36px;background:#ee4d2d;border-color:#ee4d2d;color:#fff;font-weight:700}',
+    'html.boda-embed #bodaColorDone:hover{background:#d8401f;border-color:#d8401f}',
+    'html.boda-embed #simCsv{width:100%;min-height:36px;background:#fff;border:1px solid #ee4d2d;color:#ee4d2d;font-weight:700}',
+    'html.boda-embed #simCsv:hover{background:#fff3ef}',
+    'html.boda-embed #simReset{width:100%}',
+    /* 警示視窗 */
+    '#bodaWarn{position:fixed;inset:0;z-index:9999;background:rgba(15,23,22,.45);display:flex;align-items:center;justify-content:center;padding:16px}',
+    '#bodaWarn .p{width:400px;max-width:100%;background:#fff;color:#1f2328;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.25);padding:22px 22px 18px}',
+    '#bodaWarn h3{margin:0 0 8px;font-size:16px}',
+    '#bodaWarn p{margin:0;font-size:13px;line-height:1.7;color:#4b5563}',
+    '#bodaWarn .f{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}',
+    '#bodaWarn .ok{background:#ee4d2d;border-color:#ee4d2d;color:#fff}'
+  ].join('\n');
+  document.head.appendChild(bodaCss);
+
+  /* 1. 標題 */
+  const h1 = document.querySelector('header h1');
+  if (h1) h1.textContent = '活動頁設定色票';
+  document.title = '活動頁設定色票';
+
+  /* 2. 底色不可編輯＋說明 */
+  ['#simBg', '#simBgHex'].forEach(sel => { const el = $(sel); if (el) { el.readOnly = true; el.tabIndex = -1; el.title = '底色由曝光資源／工單帶入，這裡不能修改'; } });
+  const inputCard = $('#simBg') && $('#simBg').closest('.card');
+  if (inputCard && !inputCard.querySelector('.boda-autonote')) {
+    const note = document.createElement('div');
+    note.className = 'boda-autonote';
+    note.textContent = '已自動帶入先前色票，簡易確認即可。';
+    inputCard.insertBefore(note, inputCard.firstChild);
+  }
+
+  /* 3. 換色前警示 */
+  function bodaWarn(onYes) {
+    const old = document.getElementById('bodaWarn'); if (old) old.remove();
+    const w = document.createElement('div');
+    w.id = 'bodaWarn';
+    w.innerHTML = '<div class="p" role="dialog" aria-modal="true"><h3>確認要調整顏色嗎？</h3>' +
+      '<p>此調整會影響到曝光資源與活動頁先前的設計。</p>' +
+      '<div class="f"><button type="button" data-v="0">取消</button><button type="button" class="ok" data-v="1">確認調整</button></div></div>';
+    w.addEventListener('click', e => {
+      const b = e.target.closest('[data-v]');
+      if (!b) return;
+      w.remove();
+      if (b.getAttribute('data-v') === '1') onYes();
+    });
+    document.body.appendChild(w);
+    try { w.querySelector('.ok').focus(); } catch (e) {}
+  }
+  let _bodaWarnPass = false;   /* 按了「確認調整」後重新觸發同一個動作，這次放行 */
+  function guard(e, rerun) {
+    if (_bodaWarnPass) { _bodaWarnPass = false; return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    bodaWarn(() => { _bodaWarnPass = true; rerun(); });
+  }
+  document.addEventListener('click', function (e) {
+    const t = e.target;
+    /* 色塊選色器（底色那張已停用） */
+    const inp = t.closest && t.closest('.role .box input[type=color]');
+    if (inp) {
+      const card = inp.closest('.role');
+      if (card && card.dataset.key === 'bg') { e.preventDefault(); return; }
+      guard(e, () => { try { inp.showPicker ? inp.showPicker() : inp.click(); } catch (_) { inp.click(); } });
+      return;
+    }
+    /* 副標候選（點了已選中的那個不算換色） */
+    const opt = t.closest && t.closest('#simOpts .opt');
+    if (opt && !opt.classList.contains('sel')) { guard(e, () => opt.click()); return; }
+    /* 還原建議色（單一色卡的 ↺）與「重設手動修改」 */
+    const undo = t.closest && t.closest('.role .undo, #simReset');
+    if (undo) { guard(e, () => undo.click()); return; }
+  }, true);
+
+  /* 4.／5. 參考區：拿掉重複的底色、選單三欄、名稱改成未選擇／已選擇／下拉選單；色卡小字拿掉 */
+  const menuTitle = $('#rfMenu') && $('#rfMenu').closest('.ref') && $('#rfMenu').closest('.ref').querySelector('h3');
+  if (menuTitle) menuTitle.textContent = '頁面標題選單';
+  /* 5. 左邊價格參考改名 */
+  const priceTitle = $('#rfPrice') && $('#rfPrice').closest('.ref') && $('#rfPrice').closest('.ref').querySelector('h3');
+  if (priceTitle) priceTitle.textContent = '系統價格配色';
+  /* 4. 頁面標題選單：3 個大框（未選擇／已選擇／下拉選單），同一種按鈕的文字＋底色放同一框 */
+  const MENU_GROUPS = [
+    { n: 1, label: '類別（未選擇）', txt: 'btnNormalTxt', bg: 'btnNormal' },
+    { n: 2, label: '類別（已選擇）', txt: 'btnHoverTxt', bg: 'btnHover' },
+    { n: 3, label: '下拉選單', txt: 'btnActiveTxt', bg: 'btnActive' }
+  ];
+  function menuGroupBoxes() {
+    const host = $('#rfMenuRoles');
+    if (!host) return [];
+    if (host.dataset.bodaGroups !== '1') {
+      host.innerHTML = '';
+      host.dataset.bodaGroups = '1';
+      MENU_GROUPS.forEach(function (g) {
+        const box = document.createElement('div');
+        box.className = 'boda-mgrp';
+        box.innerHTML = '<div class="boda-mgrp-h"><span class="n">' + g.n + '</span><span></span></div><div class="roles"></div>';
+        box.querySelector('.boda-mgrp-h span:last-child').textContent = g.label;
+        host.appendChild(box);
+      });
+    }
+    return Array.prototype.slice.call(host.querySelectorAll('.boda-mgrp > .roles'));
+  }
+  renderRefs = function (r) {
+    $('#rfPrice').style.background = hex(r.priceBg);
+    $('#rfOld').style.color = hex(r.grey); $('#rfNew').style.color = hex(r.priceNew);
+    roleCards($('#rfPriceRoles'), [['grey', '原價灰', r.grey, r.priceBg, 3, ''], ['priceNew', '活動價', r.priceNew, r.priceBg, 3, '']]);
+    $('#rfMenu').style.background = hex(r.menuBg);
+    const m = $('#rfMenu');
+    for (const k of ['b1', 'b3']) { const e = m.querySelector('.' + k); e.style.background = hex(r.btnNormal); e.style.color = hex(r.btnNormalTxt); }
+    const b2 = m.querySelector('.b2'); b2.style.background = hex(r.btnHover); b2.style.color = hex(r.btnHoverTxt);
+    const b4 = m.querySelector('.b4'); b4.style.background = hex(r.btnActive); b4.style.color = hex(r.btnActiveTxt);
+    /* 3 個大框，每框上面文字、下面底色 */
+    const CARD = {
+      btnNormalTxt: ['btnNormalTxt', '文字', r.btnNormalTxt, r.btnNormal, 3, ''],
+      btnNormal: ['btnNormal', '底色', r.btnNormal, null, null, ''],
+      btnHoverTxt: ['btnHoverTxt', '文字', r.btnHoverTxt, r.btnHover, 3, ''],
+      btnHover: ['btnHover', '底色', r.btnHover, r.menuBg, 3, ''],
+      btnActiveTxt: ['btnActiveTxt', '文字', r.btnActiveTxt, r.btnActive, 3, ''],
+      btnActive: ['btnActive', '底色', r.btnActive, r.menuBg, 1.5, '']
+    };
+    menuGroupBoxes().forEach(function (rb, i) {
+      const g = MENU_GROUPS[i];
+      roleCards(rb, [CARD[g.txt], CARD[g.bg]]);
+    });
+  };
+  const _bodaFillRoleCard = fillRoleCard;
+  fillRoleCard = function (d, item) {
+    _bodaFillRoleCard(d, item);
+    const cr = d.querySelector('.cr'); if (cr) cr.innerHTML = '';
+    if (item[0] === 'warn') d.querySelector('.nm').textContent = '日期';   /* 「警語」在這裡改叫「日期」 */
+  };
+
+  /* 6. 完成／下載按鈕 */
+  const csvBtn = $('#simCsv');
+  if (csvBtn && !document.getElementById('bodaColorDone')) {
+    const bar = csvBtn.parentNode;
+    bar.classList.add('boda-out-bar');
+    const terms = document.createElement('div');
+    terms.className = 'ms-terms-line';
+    terms.innerHTML = '<input type="checkbox" aria-label="我已閱讀並接受蝦皮資產使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal">「蝦皮資產使用條款」</a></label>';
+    const termsCheck = terms.querySelector('input');
+    const termsLink = terms.querySelector('a');
+    const parentTermsAccepted = () => {
+      try { return !!(window.parent && window.parent !== window && typeof window.parent.msAssetTermsAccepted === 'function' ? window.parent.msAssetTermsAccepted() : true); }
+      catch (e) { return true; }
+    };
+    const parentTermsOpen = () => {
+      try { if (window.parent && typeof window.parent.msOpenAssetTerms === 'function') window.parent.msOpenAssetTerms(); }
+      catch (e) {}
+    };
+    const parentTermsSet = (value) => {
+      try { if (window.parent && typeof window.parent.msSetAssetTermsAccepted === 'function') window.parent.msSetAssetTermsAccepted(!!value); }
+      catch (e) {}
+    };
+    const syncTerms = () => { const ok = parentTermsAccepted(); termsCheck.checked = ok; csvBtn.disabled = !ok; };
+    termsCheck.addEventListener('click', (e) => { if (!parentTermsAccepted()) { e.preventDefault(); parentTermsOpen(); } });
+    termsCheck.addEventListener('change', () => { if (!termsCheck.checked) { parentTermsSet(false); syncTerms(); } });
+    termsLink.addEventListener('click', (e) => { e.preventDefault(); parentTermsOpen(); });
+    window.addEventListener('storage', syncTerms);
+    bar.insertBefore(terms, bar.firstChild);
+    syncTerms();
+    const done = document.createElement('button');
+    done.type = 'button';
+    done.id = 'bodaColorDone';
+    done.textContent = '取色工具完成';
+    done.title = '標記「取色工具」這一步已完成，並前往下一步';
+    done.onclick = function () {
+      let handled = false;
+      try {
+        const b = window.parent.document.querySelector('#step-actions [data-step-act="done"]');
+        if (b) { b.click(); handled = true; }
+      } catch (e) { /* 不同網域時改用訊息 */ }
+      if (!handled && window.parent !== window) window.parent.postMessage({ type: 'wo-color-tool-done' }, '*');
+    };
+    bar.insertBefore(done, bar.firstChild);
+    csvBtn.classList.remove('primary');
+  }
+  renderSim();
+}
+
+/* ========== BODA：主標／副標不再自己套規則（2026-11-15）==========
+   嵌在 BOD 工具裡（而且連動中）時，取色工具的主標、副標直接採用主頁推來的顏色
+   （＝活動頁／曝光資源目前實際用的顏色），不再依底色自己算一組再送回去。
+   以前打開取色工具，它會送回自己算的建議色，把曝光資源手動改的主標／副標洗掉。
+   - 主頁推來的顏色只對「推來當下的底色」有效；底色換了就回到規則建議色，由主頁重新推。
+   - 使用者在這裡手動改色、或點其他副標候選，仍照原本方式記成手動並通知主頁。
+   - 「重設手動修改」＝回到主頁推來的顏色。 */
+if (_isBodaHost) {
+  const _bodaBase = { main: null, mainBg: '', sub: null, subBg: '' };
+  const _bodaBgKey = sg => (sg && sg.bg) ? hex(sg.bg).toUpperCase() : '';
+  const _bodaOrigFinish = finish;
+  finish = function (sg, subRgb, ov) {
+    ov = ov || {};
+    if (!_bodaLinked || !sg) return _bodaOrigFinish(sg, subRgb, ov);
+    const bgKey = _bodaBgKey(sg);
+    const o = Object.assign({}, ov);
+    if (!o.main && _bodaBase.main && _bodaBase.mainBg === bgKey) o.main = _bodaBase.main;
+    const userPicked = !!(simState && simState.sg === sg && sg.pick && simState.subKey !== sg.pick.key);
+    if (!o.sub && !userPicked && _bodaBase.sub && _bodaBase.subBg === bgKey) subRgb = _bodaBase.sub;
+    return _bodaOrigFinish(sg, subRgb, o);
+  };
+  _applyMainFromParent = function (h) {
+    const v = validHex(h || '');
+    if (!v) return;
+    if (!simState) { _pendingMainFromParent = v; return; }
+    /* 這裡手動改的色，主頁會原樣推回來：保留成「手動」，基準色維持改之前的（重設時回到它） */
+    if (simState.ov.main && hex(simState.ov.main).toUpperCase() === v) return;
+    _settingMainFromParent = true;
+    try {
+      _bodaBase.main = hexToRgb(v);
+      _bodaBase.mainBg = _bodaBgKey(simState.sg);
+      delete simState.ov.main;
+      renderSim();
+    } finally { _settingMainFromParent = false; }
+  };
+  window._colorToolSetMainText = _applyMainFromParent;
+  _applySubFromParent = function (h) {
+    const v = validHex(h || '');
+    if (!v) return;
+    if (!simState) { _pendingSubFromParent = v; return; }
+    if (simState.ov.sub && hex(simState.ov.sub).toUpperCase() === v) return;
+    if (simState.sg && simState.sg.pick && simState.subKey !== simState.sg.pick.key) {
+      const picked = (simState.sg.options || []).find(o => o.key === simState.subKey);
+      if (picked && hex(picked.rgb).toUpperCase() === v) return;   /* 點選的副標候選被推回來 */
+    }
+    _settingSubFromParent = true;
+    try {
+      _bodaBase.sub = hexToRgb(v);
+      _bodaBase.subBg = _bodaBgKey(simState.sg);
+      delete simState.ov.sub;
+      if (simState.sg && simState.sg.pick) simState.subKey = simState.sg.pick.key;
+      renderSim();
+    } finally { _settingSubFromParent = false; }
+  };
+  window._colorToolSetSubText = _applySubFromParent;
+}
+
+/* ========== BODA：頁面標題選單配色（2026-11-15）==========
+   - 類別（已選擇）：跟活動頁「促標」實際用色（底色＋字色）；活動頁改了促標，這裡跟著換。
+     字色在促標底上看不清楚（< 3:1）時自動改深字／白字。
+   - 類別（未選擇）：維持原規則（底色略加深／加淺），可在這裡手動改，不影響前面頁面。
+   - 下拉選單：底色固定白色；字色用畫面主色——依序試主標 → 促標 → 副標，
+     第一個在白底上 ≥ 4.5:1 的就用；都不夠就把主標（主標是黑白灰時改用彩度最高的）同色相壓深到 4.5:1。
+   以上都只是預設，這裡手動改過的（ov）一律優先。 */
+if (_isBodaHost) {
+  const _bodaPromo = { bg: null, text: null };
+  const _bodaSameRgb = (a, b) => (!a && !b) || (!!a && !!b && hex(a).toUpperCase() === hex(b).toUpperCase());
+  window._colorToolSetPromo = function (bgHex, textHex) {
+    const b = validHex(bgHex || ''), t = validHex(textHex || '');
+    const nb = b ? hexToRgb(b) : null, nt = t ? hexToRgb(t) : null;
+    if (_bodaSameRgb(nb, _bodaPromo.bg) && _bodaSameRgb(nt, _bodaPromo.text)) return false;
+    _bodaPromo.bg = nb; _bodaPromo.text = nt;
+    if (simState) renderSim();
+    return true;
+  };
+  window._colorToolGetPromo = function () {
+    return { bg: _bodaPromo.bg ? hex(_bodaPromo.bg).toUpperCase() : '', text: _bodaPromo.text ? hex(_bodaPromo.text).toUpperCase() : '' };
+  };
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'wo-color-tool-set-promo') window._colorToolSetPromo(e.data.bg, e.data.text);
+  });
+  const _bodaReadableOn = function (surface) {
+    const dark = [18, 24, 39], white = [255, 255, 255];
+    return contrast(dark, surface) >= contrast(white, surface) ? dark : white;
+  };
+  const _bodaDropdownText = function (surface, main, promo, sub) {
+    const tries = [main, promo, sub].filter(Boolean);
+    for (const c of tries) if (contrast(c, surface) >= 4.5) return c;
+    /* 都不夠清楚：主標有顏色（不是黑／白／灰）就用主標同色相壓深到 4.5:1；
+       主標是白、黑、灰時改用彩度最高的那個，避免壓成一片灰。 */
+    const mh = main ? rgbToHsl(main) : null;
+    const base = (mh && mh[1] >= 15 && mh[2] > 8 && mh[2] < 92) ? main
+      : (tries.slice().sort((a, b) => rgbToHsl(b)[1] - rgbToHsl(a)[1])[0] || [0, 0, 0]);
+    const [h, s, l] = rgbToHsl(base);
+    const darker = contrast([0, 0, 0], surface) >= contrast([255, 255, 255], surface);
+    const fit = fitL(h, s, l, darker ? -1 : 1, surface, 4.5);
+    return fit.ok ? fit.rgb : (darker ? [0, 0, 0] : [255, 255, 255]);
+  };
+  const _bodaMenuFinish = finish;
+  finish = function (sg, subRgb, ov) {
+    ov = ov || {};
+    const out = _bodaMenuFinish(sg, subRgb, ov);
+    if (!out || !out.ref) return out;
+    const r = out.ref;
+    if (_bodaLinked && _bodaPromo.bg) {
+      if (!ov.btnHover) r.btnHover = _bodaPromo.bg;
+      if (!ov.btnHoverTxt) {
+        const t = _bodaPromo.text || [255, 255, 255];
+        r.btnHoverTxt = contrast(t, r.btnHover) >= 3 ? t : _bodaReadableOn(r.btnHover);
+      }
+    }
+    if (!ov.btnActive) r.btnActive = [255, 255, 255];
+    if (!ov.btnActiveTxt) r.btnActiveTxt = _bodaDropdownText(r.btnActive, out.main, (_bodaLinked && _bodaPromo.bg) || null, out.sub);
+    return out;
+  };
+  if (simState) renderSim();
+}
+</script>
+</body>
+</html>

@@ -100,7 +100,7 @@
     detail.innerHTML =
       "原因：" + (err && err.message ? err.message : "未知錯誤") + "<br />" +
       "依規範不能用系統預設字體頂替（會產出錯誤字體的圖），因此這裡不繪製也不開放匯出。<br />" +
-      "請確認網路可連到 jimmywu-commits.github.io 後重試。";
+      "請確認 fonts/woff2/ 資料夾裡的字體檔都在，再重新載入。";
     statusEl.appendChild(detail);
 
     var retry = document.createElement("button");
