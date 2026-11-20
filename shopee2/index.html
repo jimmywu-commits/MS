@@ -857,7 +857,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
             <span class="char-count-badge" id="badge-ICON獨立文案"></span><div class="color-dot" id="dot-iconTextMirror" title="ICON文案顏色（跟主標共用同一個顏色，改這裡主標也會一起變，改主標這裡也會跟著變）"></div>
           </div>
         </div>
-        <div class="s-field-inline" id="field-campaign-card">
+        <div class="s-field-inline" id="field-campaign-card" style="display:none" aria-hidden="true">
           <label>Campaign Card</label>
           <div class="s-field-row">
             <input type="text" id="txt-campaignCard" data-limit="5" placeholder="Campaign Card 文案（限 5 字）" value="文案可05字" oninput="broadcastText()">
@@ -1581,7 +1581,7 @@ function bnProductLayoutIsLinked(id) {
 }
 function bnProductLayoutSyncEligible(layout) {
   var name = String((layout && (layout.file || layout.name)) || '');
-  return !/首頁logo牆/i.test(name) && !/searchicon_product/i.test(name);
+  return !/首頁logo牆/i.test(name) && !/searchicon_product/i.test(name) && !/campaign[ _-]*card/i.test(name);
 }
 function bnRefreshProductLayoutLockUI() {
   document.querySelectorAll('.bn-layout-lock[data-layout-id]').forEach(function(btn){
@@ -1700,6 +1700,21 @@ document.addEventListener('keydown', function (event) {
   if (event.key === 'Escape') closeAdditionalSlots();
 });
 
+function bnHasCampaignCardLayout(layouts) {
+  if(Array.isArray(layouts)){
+    return layouts.some(function(layout){
+      return /campaign[ _-]*card/i.test(String((layout && (layout.file || layout.name)) || ''));
+    });
+  }
+  return !!document.querySelector('.preview-block-campaign-card');
+}
+function bnSetCampaignCardTextFieldVisibility(visible) {
+  var field = document.getElementById('field-campaign-card');
+  if(!field) return;
+  field.style.display = visible ? '' : 'none';
+  field.setAttribute('aria-hidden', visible ? 'false' : 'true');
+}
+
 function renderPreviews() {
   var _hashKw = parseHashKeywords(location.hash);
   var allLayouts = loadLayouts();
@@ -1713,12 +1728,13 @@ function renderPreviews() {
   if (typeof window._bnSortLayoutsForDisplay === 'function') {
     try { layouts = window._bnSortLayoutsForDisplay(layouts) || layouts; } catch (_) {}
   }
+  bnSetCampaignCardTextFieldVisibility(bnHasCampaignCardLayout(layouts));
   var area  = document.getElementById('preview-area');
   var empty = document.getElementById('preview-empty');
 
   area.querySelectorAll('.preview-block').forEach(function(el){ el.remove(); });
 
-  if (!layouts.length) { empty.style.display = 'block'; bnLazyReset(); bnHidePreviewLoading(); return; }
+  if (!layouts.length) { empty.style.display = 'block'; bnLazyReset(); bnHidePreviewLoading(); if(typeof bnRefreshLimitAlert === 'function') bnRefreshLimitAlert(); return; }
   empty.style.display = 'none';
   bnLazyReset();
 
@@ -1761,6 +1777,7 @@ function renderPreviews() {
   });
   bnRefreshProductLayoutLockUI();
   bnLazyStart(layouts);
+  if(typeof bnRefreshLimitAlert === 'function') bnRefreshLimitAlert();
 }
 
 /* ── 版位 iframe 延遲載入 ─────────────────────────────
@@ -1950,6 +1967,7 @@ function bnGetOverLimitFields(){
   BN_LIMIT_FIELDS.forEach(function(f){
     var inp=document.getElementById(f[0]);
     if(!inp) return;
+    if(inp.id === 'txt-campaignCard' && !bnHasCampaignCardLayout()) return;
     var lim=parseFloat(inp.dataset.limit||'');
     if(lim && bnIsFieldOver(inp)){
       out.push({ id:f[0], label:f[1], used:bnFieldUnits(inp), limit:lim, value:bnFieldValue(inp) });

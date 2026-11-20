@@ -231,6 +231,25 @@
   window.addEventListener('load', function(){ setTimeout(waitFontsAndInit, 600); });
   var inited = false;
 
+  function renderCampaignCardText(el, value) {
+    if(!el) return;
+    var text = String(value == null ? '' : value);
+    var fragment = document.createDocumentFragment();
+    var latin = /[A-Za-z0-9]+/g;
+    var match, cursor = 0;
+    while((match = latin.exec(text))){
+      if(match.index > cursor) fragment.appendChild(document.createTextNode(text.slice(cursor, match.index)));
+      var span = document.createElement('span');
+      span.className = 'campaign-card-latin';
+      span.textContent = match[0];
+      fragment.appendChild(span);
+      cursor = latin.lastIndex;
+    }
+    if(cursor < text.length) fragment.appendChild(document.createTextNode(text.slice(cursor)));
+    while(el.firstChild) el.removeChild(el.firstChild);
+    el.appendChild(fragment);
+  }
+
   function init() {
     if (inited) return;
     inited = true;
@@ -264,7 +283,7 @@
           var s1 = document.createElement('span'); s1.className = 'cta-text'; if(txt) s1.textContent = txt;
           var s2 = document.createElement('span'); s2.className = 'cta-arrow';
           el.appendChild(s1); el.appendChild(s2);
-        } else { if(txt) el.textContent = txt; }
+        } else { if(txt) { if(cls === 'CampaignCard文案') renderCampaignCardText(el, txt); else el.textContent = txt; } }
         canvas.appendChild(el);
       });
 
@@ -1136,6 +1155,7 @@
         document.querySelectorAll('.'+cls).forEach(function(el) {
           var ct = el.querySelector('.cta-text');
           if(ct) ct.textContent = d[cls];
+          else if(cls === 'CampaignCard文案') renderCampaignCardText(el, d[cls]);
           else if(!el.children.length) el.textContent = d[cls];
         });
         /* Search_Image：副標案型七字內 連動副標（雙向同步）*/
@@ -1181,6 +1201,7 @@
         /* 編輯中不更新，避免跟 contenteditable 衝突 */
         if(el.contentEditable === 'true') return;
         if(ct) ct.textContent = val;
+        else if(cls === 'CampaignCard文案') renderCampaignCardText(el, val);
         else if(!el.children.length) el.textContent = val;
       });
       setTimeout(function(){ try{ refreshOverflowAll(); }catch(_){} }, 0);
@@ -1389,6 +1410,7 @@
         var gap = 15;
         var zoneW = parseFloat(window.getComputedStyle(zone).width) || 490;
         var zoneH = parseFloat(window.getComputedStyle(zone).height) || 50;
+        var logoFitH = _bnCampaignCardTemplate ? Math.min(29, zoneH) : zoneH;
         var maxTotal = Math.min(490, zoneW);
         var imgs = [];
         /* 不要把 CSS 的 position:absolute 覆蓋成 relative。
@@ -1406,7 +1428,7 @@
         function relayout(){
           var widths = imgs.map(function(img){
             var ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1;
-            return Math.min(200, Math.max(1, Math.round(zoneH * ratio)));
+            return Math.min(_bnCampaignCardTemplate ? 182 : 200, Math.max(1, Math.round(logoFitH * ratio)));
           });
           var total = widths.reduce(function(a,b){ return a + b; }, 0) + gap * Math.max(0, widths.length - 1);
           var scale = total > maxTotal ? (maxTotal - gap * Math.max(0, widths.length - 1)) / Math.max(1, widths.reduce(function(a,b){ return a + b; }, 0)) : 1;
@@ -1422,8 +1444,8 @@
             img.style.transform = 'translateY(-50%)';
             img.style.width = widths[i] + 'px';
             img.style.height = 'auto';
-            img.style.maxWidth = '200px';
-            img.style.maxHeight = '100%';
+            img.style.maxWidth = (_bnCampaignCardTemplate ? 182 : 200) + 'px';
+            img.style.maxHeight = _bnCampaignCardTemplate ? (logoFitH + 'px') : '100%';
             img.style.objectFit = 'contain';
             img.style.objectPosition = alignMode === 'center' ? 'center center' : 'left center';
             img.style.pointerEvents = 'none';
@@ -2286,6 +2308,8 @@
     }
 
     if (e.data.type === 'bn-product-layout-apply') {
+      /* Campaign Card 商品獨立編輯，不接收一般版位傳來的連動位置。 */
+      if(_bnCampaignCardTemplate) return;
       /* 首頁LOGO牆不吃其他版位連動送來的位置（只有它自己手動調過的才算） */
       if(_bnHomepageLogoWallTemplate && !(e.data.layout && e.data.layout.wallManual)) return;
       var pzoneApply = getProductZone(); if(!pzoneApply) return;
@@ -2658,10 +2682,11 @@
           var bw = box.clientWidth, bh = box.clientHeight;
           var nw = img.naturalWidth, nh = img.naturalHeight;
           if(!bw || !bh || !nw || !nh) return;
-          var boxRatio = bw / bh, imgRatio = nw / nh;
+          var fitH = _bnCampaignCardTemplate && img.classList.contains('bn-logo-img') ? Math.min(29, bh) : bh;
+          var boxRatio = bw / fitH, imgRatio = nw / nh;
           var dispW, dispH;
           if(imgRatio > boxRatio){ dispW = bw; dispH = bw / imgRatio; }
-          else { dispH = bh; dispW = bh * imgRatio; }
+          else { dispH = fitH; dispW = fitH * imgRatio; }
           /* 比例已經吻合（差距在1px內），不用特別處理，減少不必要的 style 改動 */
           if(Math.abs(dispW - bw) < 1 && Math.abs(dispH - bh) < 1) return;
           _objectFitAdjustEls.push({
@@ -2678,7 +2703,9 @@
           img.style.top  = Math.round((bh - dispH) / 2) + 'px';
         });
       }
-      _bnFixObjectFitForCapture('.bn-logo-box img, .bn-prod-box img, .bn-char-box img, .logo範圍_左 img.bn-logo-img, .logo範圍_中 img.bn-logo-img, .logo範圍_右 img.bn-logo-img, .campaign-card-template .logo範圍 img.bn-logo-img');
+      var logoCaptureSelector = '.bn-logo-box img, .bn-prod-box img, .bn-char-box img, .logo範圍_左 img.bn-logo-img, .logo範圍_中 img.bn-logo-img, .logo範圍_右 img.bn-logo-img';
+      if(_bnCampaignCardTemplate) logoCaptureSelector += ',.logo範圍 img.bn-logo-img';
+      _bnFixObjectFitForCapture(logoCaptureSelector);
 
       /* 首頁LOGO牆／Campaign Card 膠囊截圖補償：html2canvas 1.4.1 會把圓角元素的外陰影
          （box-shadow rgba(0,0,0,.14)）誤畫在元素內部，白色膠囊疊上去就變成
@@ -2836,7 +2863,7 @@
     var layoutTop = syncArea.top;
     var layoutW = syncArea.width;
     var layoutH = syncArea.height;
-    var PAD = 6;
+    var PAD = _bnCampaignCardTemplate ? 0 : 6;
 
     /* 寬高比 */
     var ratios = boxes.map(function(b){ return Math.max(0.1, parseFloat(b.dataset.ratio)||0.75); });
@@ -2852,7 +2879,7 @@
     var ws2 = n>=3 ? wsMap[2] : 0;
 
     /* 主品最大高度：預設 88%，若版位有 .cta底 則不超過 CTA 頂部 */
-    var maxH0 = Math.floor(layoutH * 0.88);
+    var maxH0 = Math.floor(layoutH * (_bnCampaignCardTemplate ? 1 : 0.88));
     var ctaEl = document.querySelector('.cta底');
     if(ctaEl){
       var ctaTop    = parseFloat(window.getComputedStyle(ctaEl).top)   || 0;
@@ -2882,7 +2909,8 @@
     w0 = Math.round(w0); h0 = Math.round(h0);
 
     /* 底部 y 位置：優先使用 CTA 頂部上方，否則用 zone 底部 */
-    var zoneBottom = layoutTop + layoutH - 4;
+    var _productInset = _bnCampaignCardTemplate ? 0 : 4;
+    var zoneBottom = layoutTop + layoutH - _productInset;
     if(ctaEl){
       var ctaTop2   = parseFloat(window.getComputedStyle(ctaEl).top)  || 0;
       var pzoneTop2 = parseFloat(window.getComputedStyle(pzone).top)  || 0;
@@ -2892,7 +2920,7 @@
 
     /* 垂直置中：讓最高的商品（主品 h0）在商品範圍垂直置中
        配品底部跟主品底部對齊（維持底部齊） */
-    var zoneTop = layoutTop + 4; /* 上邊界留 4px */
+    var zoneTop = layoutTop + _productInset; /* 上邊界留 4px */
     var zoneH   = zoneBottom - zoneTop;
     /* 主品置中後的底部位置 */
     var centeredBot = zoneTop + Math.floor((zoneH + h0) / 2);
@@ -2993,14 +3021,14 @@
   }
 
   function isProductLayoutSyncExcluded(){
-    return !!(_bnHomepageLogoWallTemplate || _bnSearchIconProductTemplate);
+    return !!(_bnHomepageLogoWallTemplate || _bnSearchIconProductTemplate || _bnCampaignCardTemplate);
   }
 
   /* 商品連動用的有效範圍：
      - 一般版位：若 CTA 壓在商品區下方，扣除 CTA 上緣與 8px 安全距離。
      - Coin／HBN／活動總覽／SBA／AMS：再把有效商品群限制在約 1.55:1，
        置中保留左右空白，讓三品距離接近 FB Post；SBA_PC 也沿用同一套規則。
-     - 首頁 LOGO 牆／SearchICON_PRODUCT：完全不參與連動，維持原商品區。 */
+     - 首頁 LOGO 牆／SearchICON_PRODUCT／Campaign Card：完全不參與連動，各自使用原商品區。 */
   function getProductSyncArea(zone){
     var cs = zone ? window.getComputedStyle(zone) : null;
     var zw = (cs && parseFloat(cs.width)) || (zone && zone.offsetWidth) || 1;
@@ -4926,7 +4954,7 @@
     EDITABLE_CLASSES.forEach(function(cls){
       if(!CHAR_LIMITS[cls]) return;
       document.querySelectorAll('.'+cls).forEach(function(el){
-        if(el.children.length) return;
+        if(el.children.length && cls !== 'CampaignCard文案') return;
         if(markOverflow(el, cls)) el.__fmtOver = true;
       });
     });
@@ -4973,6 +5001,7 @@
       markOverflow(el, cls);
       /* AR：六字內 一旦在畫布內手動編輯過，標記獨立，之後副標變更不再覆蓋 */
       if(cls === '六字內') el.dataset.bnManualText = '1';
+      if(cls === 'CampaignCard文案') renderCampaignCardText(el, el.textContent.trim());
       _sendUpdate(el, cls);
     }
 

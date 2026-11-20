@@ -281,8 +281,8 @@
     function productLayoutSyncEligible(id){
       var layout = getLayoutById(id) || {};
       var name = String(layout.file || layout.name || '');
-      /* 這兩種版位的商品空間不加入跨版位商品位置連動。 */
-      return !/首頁logo牆/i.test(name) && !/searchicon_product/i.test(name);
+      /* 首頁 LOGO 牆、SearchICON_PRODUCT、Campaign Card 不加入跨版位商品位置連動。 */
+      return !/首頁logo牆/i.test(name) && !/searchicon_product/i.test(name) && !/campaign[ _-]*card/i.test(name);
     }
     function getPairedLayoutIds(sourceId){
       if(typeof window.loadLayouts !== 'function') return [];
@@ -347,7 +347,7 @@
       return null;
     }
     function syncProductLayoutToLinkedLayouts(product, sourceBnid, layout){
-      if(!product || !layout || !productLayoutIsLocked(sourceBnid)) return;
+      if(!product || !layout || !productLayoutSyncEligible(sourceBnid) || !productLayoutIsLocked(sourceBnid)) return;
       if(!product.layouts) product.layouts = {};
       var ids = getProductSyncLayoutIds();
       ids.forEach(function(tid){

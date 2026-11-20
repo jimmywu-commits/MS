@@ -8,38 +8,46 @@
 }
 .商品範圍 {
   position: absolute;
-  left: 14px; top: 16px;
-  width: 212px; height: 164px;
+  left: 38px; top: 28px;
+  width: 164px; height: 154px;
   background: transparent;
   opacity: 1;
   z-index: 5;
 }
 .logo範圍 {
   position: absolute;
-  left: 28px; top: 190px;
-  width: 184px; height: 50px;
+  left: 29px; top: 188px;
+  width: 182px; height: 62px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background: #ffffff !important;
-  border-radius: 26px;
+  border-radius: 31px;
   box-shadow: 0 2px 7px rgba(0,0,0,.16);
   z-index: 20;
 }
 .CampaignCard文案 {
   position: absolute;
-  left: 12px; top: 260px;
-  width: 216px; height: 48px;
-  color: #990000;
-  font-family: "ShopeeNotoSans (content)", sans-serif;
-  font-size: 31px;
-  font-weight: 700;
-  line-height: 1.2;
+  left: 12px; top: 242px;
+  width: 216px; height: 75px;
+  color: #990000 !important;
+  font-family: "NotoSansCJKtc-Medium", "Noto Sans TC", "ShopeeNotoSans (content)", sans-serif;
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 75px;
+  letter-spacing: -0.02em;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   z-index: 50;
+}
+.CampaignCard文案 .campaign-card-latin {
+  font-family: "ShopeeNotoSans (content)", sans-serif;
+  font-size: 38px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  vertical-align: baseline;
 }
 #canvas { background: #ffffff !important; }
 #底圖 { display: none !important; opacity: 0 !important; }
