@@ -2153,7 +2153,7 @@
           Object.keys(nextStates).forEach(function(id){
             var st = nextStates[id] || {};
             var prev = prevStates[id] || {};
-            /* __BN_IDB__ 是 localStorage 輕量備援的佔位符，不能當成 null 廣播，否則會洗掉畫布背景。 */
+            /* __BN_IDB__ 是 本機暫存 輕量備援的佔位符，不能當成 null 廣播，否則會洗掉畫布背景。 */
             var src = isNoImageBackgroundLayout(id, null) ? null
               : (st.src === '__BN_IDB__' ? (prev.src || window._bgDataUrl || null) : (st.src || null));
             if(src) hasRealSrc = true;

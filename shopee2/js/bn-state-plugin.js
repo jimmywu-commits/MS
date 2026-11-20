@@ -1,7 +1,7 @@
 /*!
  * BN State Plugin
  * 1. banwords：用 applyToElement（同 sba.html），含 toast + 手動選 xlsx fallback
- * 2. 本機暫存（localStorage）
+ * 2. 本機暫存（經 js/bn-store.js 的 BnStore）
  * 3. 下載暫存 / 上傳暫存按鈕
  *
  * 依賴：js/banwords-engine-hbn.js（自動載入）
@@ -29,60 +29,19 @@
 
 
 
-  /* IndexedDB：完整本機暫存。背景圖 dataURL 很容易超過 localStorage 容量，
-     因此完整 state 存 IndexedDB；localStorage 僅作為小型備援/舊版相容。 */
+  /* 大型暫存（瀏覽器資料庫）：完整本機暫存。背景圖 dataURL 很容易超過一般本機暫存的容量，
+     因此完整 state 存大型暫存；一般本機暫存僅作為小型備援/舊版相容。
+     一律經過 js/bn-store.js（BnStore），TP 版打包時會換成只放記憶體的版本。 */
   var IDB_DB = 'bn_editor_state_db';
   var IDB_STORE = 'states';
   var IDB_KEY = 'current';
+  var stateDb = global.BnStore.big(IDB_DB, IDB_STORE);
 
-  function openStateDb(){
-    return new Promise(function(resolve, reject){
-      if(!('indexedDB' in global)){ reject(new Error('IndexedDB not supported')); return; }
-      var req = indexedDB.open(IDB_DB, 1);
-      req.onupgradeneeded = function(){
-        var db = req.result;
-        if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
-      };
-      req.onsuccess = function(){ resolve(req.result); };
-      req.onerror = function(){ reject(req.error || new Error('IndexedDB open failed')); };
-    });
-  }
+  function idbSetState(state){ return stateDb.set(IDB_KEY, state); }
+  function idbGetState(){ return stateDb.get(IDB_KEY); }
+  function idbClearState(){ return stateDb.remove(IDB_KEY); }
 
-  function idbSetState(state){
-    return openStateDb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, 'readwrite');
-        tx.objectStore(IDB_STORE).put(state, IDB_KEY);
-        tx.oncomplete = function(){ db.close(); resolve(); };
-        tx.onerror = function(){ var err = tx.error; try{ db.close(); }catch(_){} reject(err || new Error('IndexedDB write failed')); };
-      });
-    });
-  }
-
-  function idbGetState(){
-    return openStateDb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, 'readonly');
-        var req = tx.objectStore(IDB_STORE).get(IDB_KEY);
-        req.onsuccess = function(){ resolve(req.result || null); };
-        req.onerror = function(){ reject(req.error || new Error('IndexedDB read failed')); };
-        tx.oncomplete = function(){ try{ db.close(); }catch(_){} };
-      });
-    });
-  }
-
-  function idbClearState(){
-    return openStateDb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, 'readwrite');
-        tx.objectStore(IDB_STORE).delete(IDB_KEY);
-        tx.oncomplete = function(){ db.close(); resolve(); };
-        tx.onerror = function(){ var err = tx.error; try{ db.close(); }catch(_){} reject(err || new Error('IndexedDB delete failed')); };
-      });
-    });
-  }
-
-  function stripHeavyStateForLocalStorage(state){
+  function stripHeavyStateForLightStore(state){
     var light = clone(state || {});
     light._heavyStripped = true;
     if(light.background && light.background.states){
@@ -100,7 +59,7 @@
     if(light.logos){ light.logos.forEach(function(l){ if(l && l.src) l.src='__BN_IDB__'; }); }
     if(light.character && light.character.src){ light.character.src='__BN_IDB__'; }
     if(light.character2 && light.character2.src){ light.character2.src='__BN_IDB__'; }
-    /* 代言人照／簽名檔：圖片（含旋轉前原圖）只存在 IndexedDB 完整版 */
+    /* 代言人照／簽名檔：圖片（含旋轉前原圖）只存在 大型暫存 完整版 */
     ['endorserPhoto','endorserSign'].forEach(function(key){
       var slot = light[key];
       if(!slot || !slot.src) return;
@@ -117,7 +76,7 @@
 
   function readLocalState(key){
     try{
-      var raw = localStorage.getItem(key);
+      var raw = BnStore.local.get(key);
       if(!raw) return null;
       var state = JSON.parse(raw);
       return state && state.version === 1 ? state : null;
@@ -1020,16 +979,16 @@
     try{ state = collectState(); }
     catch(e){ console.warn('[BNState] collectState 失敗', e); return; }
 
-    /* 完整資料（含背景圖、商品圖、logo dataURL）優先寫入 IndexedDB。 */
+    /* 完整資料（含背景圖、商品圖、logo dataURL）優先寫入 大型暫存。 */
     idbSetState(state).catch(function(e){
-      console.warn('[BNState] IndexedDB autoSave 失敗，改嘗試 localStorage 完整備援', e);
-      try{ localStorage.setItem(STORAGE_KEY + '_full', JSON.stringify(state)); }
-      catch(err){ console.warn('[BNState] localStorage full autoSave 也失敗，可能圖片太大', err); }
+      console.warn('[BNState] 大型暫存 autoSave 失敗，改嘗試 本機暫存 完整備援', e);
+      try{ BnStore.local.set(STORAGE_KEY + '_full', JSON.stringify(state)); }
+      catch(err){ console.warn('[BNState] 本機暫存 full autoSave 也失敗，可能圖片太大', err); }
     });
 
-    /* localStorage 只放輕量摘要供文字/工具列備援；帶 _heavyStripped，載入時不會拿它清掉背景/商品/logo。 */
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(stripHeavyStateForLocalStorage(state))); }
-    catch(e){ console.warn('[BNState] localStorage light autoSave 失敗',e); }
+    /* 本機暫存 只放輕量摘要供文字/工具列備援；帶 _heavyStripped，載入時不會拿它清掉背景/商品/logo。 */
+    try{ BnStore.local.set(STORAGE_KEY, JSON.stringify(stripHeavyStateForLightStore(state))); }
+    catch(e){ console.warn('[BNState] 本機暫存 light autoSave 失敗',e); }
   }
 
   function autoLoad(){
@@ -1037,8 +996,8 @@
     var localLight = readLocalState(STORAGE_KEY);
 
     idbGetState().then(function(idbState){
-      /* 不能盲目用 IndexedDB：若上一輪 IDB 寫入失敗或落後，會讀到更舊的商品位置。
-         這裡改成在 IDB / localStorage full 之間取 ts 最新的完整 state；
+      /* 不能盲目用 大型暫存：若上一輪 IDB 寫入失敗或落後，會讀到更舊的商品位置。
+         這裡改成在 IDB / 本機暫存 full 之間取 ts 最新的完整 state；
          只有沒有完整 state 時，才使用輕量備援，避免舊資料蓋掉新畫面。 */
       var full = getNewestState([idbState, localFull], true);
       if(full){
@@ -1052,7 +1011,7 @@
         console.log('[BNState] 輕量本機暫存載入完成，來源時間:', new Date(localLight.ts || Date.now()).toLocaleString());
       }
     }).catch(function(e){
-      console.warn('[BNState] IndexedDB autoLoad 失敗，改用 localStorage', e);
+      console.warn('[BNState] 大型暫存 autoLoad 失敗，改用 本機暫存', e);
       var full = getNewestState([localFull], true);
       if(full){ applyState(mergeLightIntoFull(full, localLight)); return; }
       if(localLight) applyState(localLight);
@@ -1118,7 +1077,7 @@
           console.warn('[BNState] download collectState 失敗', error);
           return;
         }
-        /* 下載 JSON 不做任何全域重建/還原/刷新，也不寫 localStorage。 */
+        /* 下載 JSON 不做任何全域重建/還原/刷新，也不寫 本機暫存。 */
         var blob = new Blob([JSON.stringify(snapshot,null,2)], {type:'application/json'});
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -1186,7 +1145,7 @@
       global._bnClearingState = true;
       clearTimeout(global._bnSaveTimer);
       try{
-        /* 1. 清除 localStorage + IndexedDB 完整暫存
+        /* 1. 清除 本機暫存 + 大型暫存 完整暫存
            ────────────────────────────────────────────────
            重要：'bn-layouts' 這個鍵值絕對不能清掉！它存的是「版位清單設定」
            （每個版位對應的 id / 檔名），不是使用者的編輯進度。
@@ -1211,41 +1170,41 @@
            若不清除，頁面 reload 後仍會把舊文案或舊背景色重新套回來。 */
         var preservedLayoutKey = 'bn-layouts';
         var preservedExternalKeys = {};
-        Object.keys(localStorage).forEach(function(k){
+        BnStore.local.keys().forEach(function(k){
           var isBnState = k.indexOf('bn') === 0 && k !== preservedLayoutKey && !preservedExternalKeys[k];
           var isSharedBnInput = k === 'wo_shared_exposure_text_v1' || k === 'wo_shared_canvas_bg_v1';
           if(isBnState || isSharedBnInput){
-            try{ localStorage.removeItem(k); }catch(_){ }
+            try{ BnStore.local.remove(k); }catch(_){ }
           }
         });
 
-        /* 版位掛標／蝦皮 LOGO 的網址探測只存在 sessionStorage，
+        /* 版位掛標／蝦皮 LOGO 的網址探測只存在 分頁暫存，
            不是編輯內容，但清除暫存時一併清掉，確保本分頁也是真正乾淨。 */
         try{
-          Object.keys(sessionStorage).forEach(function(k){
-            if(k.indexOf('bn') === 0) sessionStorage.removeItem(k);
+          BnStore.session.keys().forEach(function(k){
+            if(k.indexOf('bn') === 0) BnStore.session.remove(k);
           });
         }catch(_){ }
 
         /* 保留版位 id／檔名／尺寸／啟用狀態，僅清掉使用者勾選結果，
            讓畫面回到初次載入時的預設勾選規則。 */
         try{
-          var rawLayouts = localStorage.getItem(preservedLayoutKey);
+          var rawLayouts = BnStore.local.get(preservedLayoutKey);
           if(rawLayouts){
             var savedLayouts = JSON.parse(rawLayouts);
             if(Array.isArray(savedLayouts)){
               savedLayouts.forEach(function(layout){
                 if(layout && Object.prototype.hasOwnProperty.call(layout,'checked')) delete layout.checked;
               });
-              localStorage.setItem(preservedLayoutKey, JSON.stringify(savedLayouts));
+              BnStore.local.set(preservedLayoutKey, JSON.stringify(savedLayouts));
             }
           }
         }catch(_){ }
 
-        Promise.resolve(idbClearState()).catch(function(e){ console.warn('[BNState] IndexedDB clear 失敗', e); })
+        Promise.resolve(idbClearState()).catch(function(e){ console.warn('[BNState] 大型暫存 clear 失敗', e); })
           .then(function(){
             /* 一定要重新整理頁面才會真正回到預設值。
-               之前這裡只清掉 localStorage/IndexedDB（儲存層），
+               之前這裡只清掉 本機暫存/大型暫存（儲存層），
                沒有重置「目前頁面正在執行中」的商品/人物/Logo/各版位背景
                這些記憶體內的狀態——這些變數分散在好幾支不同的檔案裡，
                不重新整理頁面的話，即使儲存的資料清掉了，畫面上看到的

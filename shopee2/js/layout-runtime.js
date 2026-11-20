@@ -493,13 +493,23 @@
       });
       _bnTagWrap.style.display = visible ? 'block' : 'none';
     }
+    /* 掛標網址探測結果的快取：同源時借用父頁的 BnStore.session（整個分頁共用，
+       版位 iframe 重載也不用再探測一輪）；TP 上讀不到父頁，就只記在這個版位頁的記憶體。 */
+    var _bnTagProbeMemory = Object.create(null);
+    function _bnTagProbeCache(){
+      try { if(window.parent && window.parent !== window && window.parent.BnStore) return window.parent.BnStore.session; } catch(_) {}
+      return {
+        get: function(k){ return k in _bnTagProbeMemory ? _bnTagProbeMemory[k] : null; },
+        set: function(k, v){ _bnTagProbeMemory[k] = String(v); }
+      };
+    }
     function _bnLoadTagLayers(){
       var seq = ++_bnTagSeq;
       _bnEnsureTagLayers();
       ['red','white'].forEach(function(color){
         var cacheKey = _bnTagCacheKey(color);
         var cached = null;
-        try { cached = window.sessionStorage.getItem(cacheKey); } catch(_) {}
+        try { cached = _bnTagProbeCache().get(cacheKey); } catch(_) {}
         if(cached !== null){
           // 曾經探測過的結果（找到的網址，或空字串代表確認找不到），直接沿用，不用再打一輪請求。
           if(seq !== _bnTagSeq) return;
@@ -514,7 +524,7 @@
           return;
         }
         _bnFindFirstImage(_bnBuildTagCandidates(color), function(src){
-          try { window.sessionStorage.setItem(cacheKey, src || ''); } catch(_) {}
+          try { _bnTagProbeCache().set(cacheKey, src || ''); } catch(_) {}
           if(seq !== _bnTagSeq) return;
           _bnTagSrcs[color] = src || '';
           var img = _bnTagImgs[color];

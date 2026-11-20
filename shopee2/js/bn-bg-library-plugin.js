@@ -48,7 +48,7 @@
   var cards = [];
   var selected = null;
   var lastLibraryMode = null;
-  /* BODA 父頁剛切換等級時，子頁的 level plugin／localStorage 可能尚未同步。
+  /* BODA 父頁剛切換等級時，子頁的 level plugin／本機暫存 可能尚未同步。
      這個值以 wo-level／bn-level-change 收到的最新代碼為準，避免圖庫重繪時讀回舊等級。 */
   var latestBodaLevelId = '';
   /* 一般 B 等級只提供「類別」與圖庫圖片；A 與 B+ 皆可使用完整圖庫。
@@ -86,7 +86,7 @@
       if(!id && typeof window._bnGetCurrentLevelId === 'function') id = window._bnGetCurrentLevelId() || '';
     }catch(_){ }
     if(!id){
-      try{ id = localStorage.getItem('wo_level_v1') || ''; }catch(_){ }
+      try{ id = BnStore.local.get('wo_level_v1') || ''; }catch(_){ }
     }
     return String(id || '').trim();
   }

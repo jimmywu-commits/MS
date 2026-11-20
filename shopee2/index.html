@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+<!-- 所有本機暫存都經過 BnStore；上 TP 時打包腳本會換成 js/bn-store-tp.js（只放記憶體）。 -->
+<script src="js/bn-store.js"></script>
 <script>
 var BN_HOST_PARAMS = new URLSearchParams(location.search);
 var BN_HOST = (BN_HOST_PARAMS.get('host') || '').toLowerCase();
@@ -973,7 +975,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
 
 <script>
 /* ════════════════════════════════════════
-   資料層 — localStorage
+   資料層 — 本機暫存
 ════════════════════════════════════════ */
 /* 只升級「勾選結果」的格式，不會清除商品、人物、背景或文字暫存。 */
 var BN_LAYOUT_SELECTION_VERSION = '2026-10-20-2';
@@ -981,16 +983,16 @@ var BN_LAYOUT_SELECTION_VERSION_KEY = 'bn-layout-selection-version';
 var STORE_KEY = 'bn-layouts';
 
 function loadLayouts() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  try { return JSON.parse(BnStore.local.get(STORE_KEY)) || []; }
   catch(e) { return []; }
 }
 function saveLayouts(arr) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(arr));
+  BnStore.local.set(STORE_KEY, JSON.stringify(arr));
 }
 
 function migrateLayoutSelectionState() {
   try {
-    if (localStorage.getItem(BN_LAYOUT_SELECTION_VERSION_KEY) === BN_LAYOUT_SELECTION_VERSION) return;
+    if (BnStore.local.get(BN_LAYOUT_SELECTION_VERSION_KEY) === BN_LAYOUT_SELECTION_VERSION) return;
 
     /* 舊版曾把勾選結果與後台啟用狀態混在 bn-layouts 與本機暫存裡，
        造成一般模式沿用舊結果；正式前台不再使用後台啟用開關，
@@ -1001,7 +1003,7 @@ function migrateLayoutSelectionState() {
       if (layout) layout.enabled = true;
     });
     saveLayouts(layouts);
-    localStorage.setItem(BN_LAYOUT_SELECTION_VERSION_KEY, BN_LAYOUT_SELECTION_VERSION);
+    BnStore.local.set(BN_LAYOUT_SELECTION_VERSION_KEY, BN_LAYOUT_SELECTION_VERSION);
   } catch (_) {
     /* 無痕限制儲存時，仍可依預設值與 hash 正常顯示。 */
   }
@@ -1042,7 +1044,7 @@ function scanLayouts() {
     var oldLayouts = loadLayouts();
     var now = Date.now();
 
-    /* 依照 js/index.js 的 files 順序重建 layouts，避免 localStorage 舊排序卡住 */
+    /* 依照 js/index.js 的 files 順序重建 layouts，避免 本機暫存 舊排序卡住 */
     var layouts = [];
     var seen = {};
     var changed = 0;
@@ -1306,7 +1308,7 @@ function renderChecks() {
   /*
      版位的「啟用／停用」是後台顯示設定；但網址 hash 是外部入口指定的
      版位條件。舊版把 enabled 先套上，會讓一般瀏覽器裡曾被停用的版位
-     在 #ddcard、#hbn… 等入口完全消失；無痕模式因為沒有舊 localStorage
+     在 #ddcard、#hbn… 等入口完全消失；無痕模式因為沒有舊 本機暫存
      則看起來正常。先讀 hash，再決定是否套用 enabled。
   */
   var allLayouts = loadLayouts();
@@ -2519,7 +2521,7 @@ function bnNormalizeWorkorderOverviewText(raw) {
 }
 function bnReadStoredWorkorderOverviewText() {
   try {
-    var raw = localStorage.getItem(BODA_WORKORDER_OVERVIEW_TEXT_KEY);
+    var raw = BnStore.local.get(BODA_WORKORDER_OVERVIEW_TEXT_KEY);
     return raw ? bnNormalizeWorkorderOverviewText(JSON.parse(raw)) : null;
   } catch (_) { return null; }
 }
@@ -2539,7 +2541,7 @@ function bnStoreWorkorderOverviewText(raw) {
   } else if (payload.workOrderKey && payload.workOrderKey === _bnExposureWorkOrderKey && !_bnManualTextEdited) {
     _bnManualTextEditedAt = 0;
   }
-  try { localStorage.setItem(BODA_WORKORDER_OVERVIEW_TEXT_KEY, JSON.stringify(payload)); } catch (_) {}
+  try { BnStore.local.set(BODA_WORKORDER_OVERVIEW_TEXT_KEY, JSON.stringify(payload)); } catch (_) {}
   return payload;
 }
 function bnShouldApplyIncomingOverviewText(raw) {
@@ -2598,14 +2600,14 @@ window._bnApplyStoredWorkorderOverviewText = function (stateTs) {
   return payload ? bnApplyWorkorderOverviewText(payload, { onlyIfNewer: true, stateTs: stateTs || 0 }) : false;
 };
 
-/* 共用背景色 localStorage 與 postMessage 同步 */
+/* 共用背景色 本機暫存 與 postMessage 同步 */
 var BN_DEFAULT_CANVAS_BG = '#6bc0ec';
 var BODA_SHARED_CANVAS_BG_KEY = 'wo_shared_canvas_bg_v1';
 function isHexCanvasBg(v){ return /^#[0-9a-fA-F]{6}$/.test(v || ''); }
 function isNonDefaultCanvasBg(v){ return isHexCanvasBg(v) && String(v).toLowerCase() !== BN_DEFAULT_CANVAS_BG; }
 function readSharedCanvasBg(){
   try {
-    var v = localStorage.getItem(BODA_SHARED_CANVAS_BG_KEY);
+    var v = BnStore.local.get(BODA_SHARED_CANVAS_BG_KEY);
     return isHexCanvasBg(v) ? v : null;
   } catch(_) { return null; }
 }
@@ -2615,11 +2617,11 @@ function getAuthoritativeCanvasBg(){
 }
 function setAuthoritativeCanvasBg(v){
   if(!isHexCanvasBg(v)) return;
-  try { localStorage.setItem(BODA_SHARED_CANVAS_BG_KEY, v); } catch(_) {}
+  try { BnStore.local.set(BODA_SHARED_CANVAS_BG_KEY, v); } catch(_) {}
 }
 /* silent＝由 BODA／其他分頁同步過來的底色：套用過程中（含 applyAutoTextPalette →
    rememberCurrentColorState → setAuthoritativeCanvasBg）一律不回貼 wo-bg 給父頁，
-   否則父頁寫 localStorage → 這裡 storage 事件再回貼 → 父頁再寫…兩個值會無限互相洗掉。 */
+   否則父頁寫 本機暫存 → 這裡 storage 事件再回貼 → 父頁再寫…兩個值會無限互相洗掉。 */
 window._bnSharedBgSilentDepth = window._bnSharedBgSilentDepth || 0;
 function bnRunSilentSharedBg(fn){
   window._bnSharedBgSilentDepth++;
@@ -2638,7 +2640,7 @@ function applySharedCanvasBgNow(v, silent){
   if(colorState) colorState.canvasBg = v;
   if(window._bnLastUserColorState) window._bnLastUserColorState.canvasBg = v;
   if(window._bnFrozenColorData) window._bnFrozenColorData.canvasBg = v;
-  try { localStorage.setItem(BODA_SHARED_CANVAS_BG_KEY, v); } catch(_) {}
+  try { BnStore.local.set(BODA_SHARED_CANVAS_BG_KEY, v); } catch(_) {}
   if(changed && !silent && window.parent && window.parent !== window){
     try { window.parent.postMessage({ type:'wo-bg', color:v }, '*'); } catch(_) {}
   }
@@ -2655,18 +2657,18 @@ function applySharedCanvasBgNow(v, silent){
 }
 
 /* 共用 CTA 底色（與 BODA 匯入工單／背景色工具連動）：
-   localStorage 值 #rrggbb＝手動指定、''＝自動（品牌橘／副標色規則）。 */
+   本機暫存 值 #rrggbb＝手動指定、''＝自動（品牌橘／副標色規則）。 */
 var BODA_SHARED_CTA_BG_KEY = 'wo_shared_cta_bg_v1';
 function readSharedCtaBg(){
   try {
-    var v = localStorage.getItem(BODA_SHARED_CTA_BG_KEY);
+    var v = BnStore.local.get(BODA_SHARED_CTA_BG_KEY);
     if (v == null) return null;
     return isHexCanvasBg(v) ? String(v).toLowerCase() : '';
   } catch(_) { return null; }
 }
 function writeSharedCtaBg(v){
   var next = isHexCanvasBg(v) ? String(v).toLowerCase() : '';
-  try { localStorage.setItem(BODA_SHARED_CTA_BG_KEY, next); } catch(_) {}
+  try { BnStore.local.set(BODA_SHARED_CTA_BG_KEY, next); } catch(_) {}
   return next;
 }
 function postSharedCtaBgToParent(v){
@@ -2722,20 +2724,20 @@ function applySharedCtaBg(v, silent){
   try { document.dispatchEvent(new CustomEvent('bn-state-dirty')); } catch(_) {}
 }
 /* ── 共用 CTA 字色（匯入工單／背景色工具／曝光資源三處連動）──
-   localStorage 值 #rrggbb＝手動指定、''＝自動（白字；CTA 底偏淺時改深色字）。
+   本機暫存 值 #rrggbb＝手動指定、''＝自動（白字；CTA 底偏淺時改深色字）。
    自動色以這裡算出的 colorState.ctaText 為準，透過 broadcastColors 的
    wo-exposure-palette 送給 BODA。 */
 var BODA_SHARED_CTA_TEXT_KEY = 'wo_shared_cta_text_v1';
 function readSharedCtaText(){
   try {
-    var v = localStorage.getItem(BODA_SHARED_CTA_TEXT_KEY);
+    var v = BnStore.local.get(BODA_SHARED_CTA_TEXT_KEY);
     if (v == null) return null;
     return isHexCanvasBg(v) ? String(v).toLowerCase() : '';
   } catch(_) { return null; }
 }
 function writeSharedCtaText(v){
   var next = isHexCanvasBg(v) ? String(v).toLowerCase() : '';
-  try { localStorage.setItem(BODA_SHARED_CTA_TEXT_KEY, next); } catch(_) {}
+  try { BnStore.local.set(BODA_SHARED_CTA_TEXT_KEY, next); } catch(_) {}
   return next;
 }
 function postSharedCtaTextToParent(v){
@@ -3396,7 +3398,7 @@ function setAuthoritativeCanvasBg(v){
   if(colorState) colorState.canvasBg = v;
   if(window._bnLastUserColorState) window._bnLastUserColorState.canvasBg = v;
   if(window._bnFrozenColorData) window._bnFrozenColorData.canvasBg = v;
-  try { localStorage.setItem(BODA_SHARED_CANVAS_BG_KEY, v); } catch(_) {}
+  try { BnStore.local.set(BODA_SHARED_CANVAS_BG_KEY, v); } catch(_) {}
   if(!window._bnSharedBgSilentDepth && window.parent && window.parent !== window){
     try { window.parent.postMessage({ type:'wo-bg', color:v }, '*'); } catch(_) {}
   }
