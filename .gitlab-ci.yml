@@ -3,8 +3,19 @@ pages:
   script:
     - mkdir .public
     - cp -r * .public/ || true
-    # 網站用不到的檔案不發佈：備份檔、文件、Apps Script、樣式草稿
-    - rm -f .public/index.html.bak-* .public/*.docx .public/*.gs .public/*.md .public/_do.py .public/msbn-css-v13.txt .public/css-template.txt
+    # 只發布網站執行時會讀到的檔案（GitLab Pages 有大小上限）。以下都留在 repo，只是不放上網站。
+    - cd .public
+    # 開發工具、文件、PSD 工具包、警語 demo：網站不會讀
+    - rm -rf export tools docs shopee2/tools "shopee2/警語智慧偵測"
+    # 備份檔、Word 文件、Apps Script、樣式草稿、說明 md
+    - rm -f index.html.bak-* *.docx *.gs _do.py msbn-css-v13.txt css-template.txt
+    - find . -type f -name '*.md' -delete
+    # TTF 字體：所有頁面都先讀 WOFF2，TTF 只是備援，不發布
+    - find . -type f -name '*.ttf' -delete
+    # 使用手冊沒有用到的舊截圖
+    - for f in manual/img/*; do grep -qF "$(basename "$f")" manual/index.html || rm -f "$f"; done
+    - cd ..
+    - du -sh .public
     - mv .public public
   artifacts:
     paths:
