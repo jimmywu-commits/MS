@@ -16,8 +16,11 @@
      人物圖完全不顯示——不管人物圖數量或商品可見度規則怎麼變，都要蓋掉。
      統一在這裡（layout-runtime.js）判斷，不用各版位自己攔截商品/人物相關
      訊息，行為才會一致、也才不會漏掉哪個訊息類型沒攔到。 */
-  var _bnSingleProductOnlyTemplate = /searchicon_product/i.test(fname || '');
-  var _bnSingleLogoTemplate = /^(ar_logo|首頁logo牆)$/i.test(fname || '');
+  var _bnCampaignCardTemplate = /campaign_card/i.test(fname || '') ||
+    !!(document.body && document.body.classList.contains('campaign-card-template'));
+  var _bnCampaignCardLogoAsset = null;
+  var _bnSingleProductOnlyTemplate = /searchicon_product|campaign_card/i.test(fname || '');
+  var _bnSingleLogoTemplate = /^(ar_logo|首頁logo牆|campaign_card)$/i.test(fname || '');
   var _bnHomepageLogoWallTemplate = /^首頁logo牆$/i.test(fname || '');
   var _bnSearchIconLogoTemplate = /^searchicon_logo$/i.test(fname || '');
   var _bnSearchIconProductTemplate = /^searchicon_product$/i.test(fname || '');
@@ -31,7 +34,8 @@
      SearchICON_LOGO / PRODUCT / TEXT：圓底（.背景色）跟著父頁選取的背景色，
      但圓底之下的畫布（#canvas）固定白色，不跟著背景色跑。 */
   var _bnNoImageBackgroundTemplate = /^(searchicon_(logo|product|text|120)|首頁logo牆)$/i.test(fname || '');
-  var _bnFixedWhiteBackgroundTemplate = _bnHomepageLogoWallTemplate;
+  /* 首頁 LOGO 牆與 Campaign Card 都固定使用白色畫布底。 */
+  var _bnFixedWhiteBackgroundTemplate = _bnHomepageLogoWallTemplate || _bnCampaignCardTemplate;
   var _bnWhiteCanvasUnderCircleTemplate = /^searchicon_(logo|product|text)$/i.test(fname || '');
   var _bnCurrentCanvasBg = '';
   /* 代言人照＋簽名檔＋代言人小字只放在這些版位：ddcard、IG、HBN、LPBN、Coin_pageBN、
@@ -511,7 +515,7 @@
     }
     window._bnSetTagColor = _bnSetTagColor;
     window._bnApplyTag = function(){ if(!_bnSkipTag) _bnLoadTagLayers(); };
-    var _bnSkipTag = false;
+    var _bnSkipTag = _bnCampaignCardTemplate;
     if(/ddcard/i.test(fname)){
       try { _bnSkipTag = !/^#ddcard$/i.test(parent.location.hash.trim()); } catch(_){}
     }
@@ -1094,24 +1098,34 @@
     }
 
     if (e.data.type === 'bn-campaign-card-assets') {
-      if (!document.body || !document.body.classList.contains('campaign-card-template')) return;
+      if (!_bnCampaignCardTemplate || !document.body) return;
       var campaignAssets = e.data.assets || {};
-      var campaignProductImg = document.getElementById('campaign-card-product-override');
-      var campaignLogoImg = document.getElementById('campaign-card-logo-override');
-      function applyCampaignAsset(img, item, managedAttr) {
-        if (!img) return;
-        var src = item && item.src ? String(item.src) : '';
-        document.body.dataset[managedAttr] = '1';
-        if (src) {
-          img.src = src;
-          img.style.display = 'block';
-        } else {
-          img.removeAttribute('src');
-          img.style.display = 'none';
-        }
+      var campaignProduct = campaignAssets.product && campaignAssets.product.src ? campaignAssets.product : null;
+      document.body.dataset.campaignCardProductManaged = campaignProduct ? '1' : '0';
+      if (campaignProduct) {
+        var savedCampaignProductLayout = campaignProduct.layoutById && campaignProduct.layoutById[getCurrentBnId()];
+        window.postMessage({
+          type:'bn-product-add', id:'campaign-card-workorder-product', src:campaignProduct.src,
+          ratio:campaignProduct.ratio || 1, index:0, position:0, sizeScale:1,
+          layoutById:campaignProduct.layoutById || null, layout:campaignProduct.layout || null,
+          rotate:savedCampaignProductLayout && savedCampaignProductLayout.rotate !== undefined
+            ? savedCampaignProductLayout.rotate : (campaignProduct.rotate || 0)
+        }, '*');
+      } else {
+        window.postMessage({type:'bn-product-remove', id:'campaign-card-workorder-product'}, '*');
       }
-      applyCampaignAsset(campaignProductImg, campaignAssets.product, 'campaignCardProductManaged');
-      applyCampaignAsset(campaignLogoImg, campaignAssets.logo, 'campaignCardLogoManaged');
+
+      var hadCampaignLogo = !!_bnCampaignCardLogoAsset;
+      _bnCampaignCardLogoAsset = campaignAssets.logo && campaignAssets.logo.src ? campaignAssets.logo : null;
+      if (_bnCampaignCardLogoAsset) {
+        window.postMessage({
+          type:'bn-logos', logos:[_bnCampaignCardLogoAsset],
+          logoLayoutById:_bnCampaignCardLogoAsset.layoutById || campaignAssets.logoLayoutById || {}
+        }, '*');
+      } else if (hadCampaignLogo) {
+        var campaignLogoZone = document.querySelector('.logo範圍,.LOGO範圍');
+        if (campaignLogoZone) campaignLogoZone.querySelectorAll('img.bn-logo-img').forEach(function(img){ img.remove(); });
+      }
       return;
     }
 
@@ -1188,7 +1202,7 @@
       _bnLastSafeColors=Object.assign({},_bnLastSafeColors,c);
       if (c.canvasBg) {
         _bnCurrentCanvasBg = c.canvasBg;
-        /* 只有首頁 LOGO 牆固定白底；SearchICON 的圓底（.背景色）仍吃目前選取的背景色，
+        /* 首頁 LOGO 牆與 Campaign Card 固定白底；SearchICON 的圓底（.背景色）仍吃目前選取的背景色，
            圓底之下的 #canvas 已在上面鎖白，這裡不要再把顏色寫到 #canvas。 */
         var canvasBgForLayout = _bnFixedWhiteBackgroundTemplate ? '#fff' : c.canvasBg;
         /* 支援 .背景色 和 .bg 兩種 class 名稱 */
@@ -1254,6 +1268,7 @@
       if(c.canvasBg) refreshEndorserNoteColorSoon();
       function ac(cls,col){ if(!col)return; document.querySelectorAll('.'+cls).forEach(function(el){ if(!el.querySelector('.cta-text')) el.style.setProperty('color',col,'important'); }); }
       ac('主標',c.mainText); ac('副標',c.subText); ac('日期',c.dateText); ac('品牌名',c.brandText);
+      ac('CampaignCard文案','#990000');
       /* Search_Image：副標案型七字內 顏色跟著副標文字色連動 */
       document.querySelectorAll('.副標案型七字內').forEach(function(el){ if(c.subText) el.style.setProperty('color', c.subText, 'important'); });
       /* AR：六字內 顏色固定跟著副標文字色連動（僅文字內容獨立，顏色仍預設連動） */
@@ -1347,11 +1362,12 @@
       var logos = [];
       if (e.data.type === 'bn-logos') logos = e.data.logos || [];
       else if (e.data.dataUrl) logos = [{id:'single', src:e.data.dataUrl}];
+      if (_bnCampaignCardTemplate && _bnCampaignCardLogoAsset) logos = [_bnCampaignCardLogoAsset];
 
       if (!logos.length) {
         zone.style.opacity='';
-        zone.style.background = _bnSearchIconLogoTemplate ? '#fff' : '';
-        if(_bnSearchIconLogoTemplate) zone.style.setProperty('background-color','#fff','important');
+        zone.style.background = (_bnCampaignCardTemplate || _bnSearchIconLogoTemplate) ? '#fff' : '';
+        if(_bnCampaignCardTemplate || _bnSearchIconLogoTemplate) zone.style.setProperty('background','#fff','important');
         return;
       }
 
@@ -1361,10 +1377,10 @@
       if (_bnSingleLogoTemplate) logos = logos.slice(0, 1);
       /* ddcard橫：isMultiCenter → 多張，不限制；ddcard方（isIGSquare）→ 單張 */
 
-      /* 首頁LOGO牆的 logo範圍是白色圓角卡片（CSS 設計的一部分），不是上傳前的
+      /* 首頁LOGO牆與 Campaign Card 的 LOGO 範圍是白色圓角卡片，不是上傳前的
          提示色塊，所以放入 LOGO 後仍要維持白底，不能跟其他版位一樣被清成透明。 */
-      zone.style.background = (_bnSingleProductForLogoWallTemplate || _bnSearchIconLogoTemplate) ? '#fff' : 'transparent';
-      if(_bnSearchIconLogoTemplate) zone.style.setProperty('background-color','#fff','important');
+      zone.style.background = (_bnSingleProductForLogoWallTemplate || _bnSearchIconLogoTemplate || _bnCampaignCardTemplate) ? '#fff' : 'transparent';
+      if(_bnSearchIconLogoTemplate || _bnCampaignCardTemplate) zone.style.setProperty('background','#fff','important');
       zone.style.opacity    = '1';
       /* 不覆蓋 position，保持 CSS 的 absolute 定位 */
       zone.style.overflow   = 'hidden';
@@ -1530,7 +1546,8 @@
         var _logoWallPostLayout = function(img){
           try{
             window.parent.postMessage({
-              type:'bn-searchicon-logo-layout-update',
+              type:_bnCampaignCardTemplate && _bnCampaignCardLogoAsset
+                ? 'bn-campaign-card-logo-layout-update' : 'bn-searchicon-logo-layout-update',
               bnid:getCurrentBnId(),
               layout:{
                 left: parseFloat(img.style.left) || 0, top: parseFloat(img.style.top) || 0,
@@ -1542,7 +1559,10 @@
 
         /* 外層重送 LOGO 時帶回先前存的版面：還原位置與大小。寬度沿用、高度交給
            圖片比例，避免換成不同比例的新 LOGO 時被拉伸。 */
-        var _savedLogoLayout = e.data.logoLayoutById && e.data.logoLayoutById[getCurrentBnId()];
+        var _campaignSavedLogoLayout = _bnCampaignCardTemplate && _bnCampaignCardLogoAsset &&
+          _bnCampaignCardLogoAsset.layoutById && _bnCampaignCardLogoAsset.layoutById[getCurrentBnId()];
+        var _savedLogoLayout = _campaignSavedLogoLayout ||
+          (e.data.logoLayoutById && e.data.logoLayoutById[getCurrentBnId()]);
         var _logoImgNow = zone.querySelector('img.bn-logo-img');
         if(_savedLogoLayout && _logoImgNow && _savedLogoLayout.width > 0
            && isFinite(_savedLogoLayout.left) && isFinite(_savedLogoLayout.top)){
@@ -1612,6 +1632,8 @@
 
     /* 商品新增 */
     if (e.data.type === 'bn-product-add') {
+      if (_bnCampaignCardTemplate && document.body.dataset.campaignCardProductManaged === '1' &&
+          e.data.id !== 'campaign-card-workorder-product') return;
       var pzone = getProductZone(); if(!pzone) return;
       var oldBox = pzone.querySelector('.bn-prod-box[data-id="'+e.data.id+'"]');
       /* 下載以畫布當下的排版為準：既有商品不能刪掉後再走 layoutProducts，
@@ -1634,6 +1656,9 @@
       pzone.style.overflow = 'visible'; pzone.style.position = 'relative';
       var box = document.createElement('div');
       box.className = 'bn-prod-box'; box.dataset.id = e.data.id;
+      if (_bnCampaignCardTemplate && e.data.id === 'campaign-card-workorder-product') {
+        box.dataset.campaignCardProduct = '1';
+      }
       /* 若有 productRect（商品本身不含影子），用它計算框的比例；
          否則建立一個臨時的（與完整圖片相同，稍後 update-image 會更新） */
       var productRect = e.data.productRect;
@@ -1663,13 +1688,28 @@
       if(e.data.zOrder !== undefined && e.data.zOrder !== null){
         box.style.zIndex = String(Math.max(11, 200 - (parseInt(e.data.zOrder, 10) || 0)));
       }
-      var pimg = document.createElement('img'); pimg.src = e.data.src;
+      var pimg = document.createElement('img');
       pimg.style.cssText = 'width:100%;height:100%;object-fit:contain;pointer-events:none;display:block;';
+      box.dataset.rotate = String(Number(e.data.rotate) || 0);
       /* 載入後依框上的 productRect 把商品本體對齊框（影子露在框外）；
          之後換圖也走同一個 handler，不會拿到舊範圍。 */
-      pimg.onload = function(){ bnProductImgLoaded(pimg); };
+      pimg.onload = function(){
+        if (_bnCampaignCardTemplate && box.dataset.campaignCardProduct === '1') {
+          var savedRotate = parseFloat(box.dataset.rotate) || 0;
+          if (savedRotate) {
+            pimg.style.transformOrigin = '50% 50%';
+            pimg.style.transform = 'rotate(' + savedRotate + 'deg)';
+          }
+          if (!productRect && pimg.naturalWidth && pimg.naturalHeight) {
+            box.dataset.ratio = String(pimg.naturalWidth / pimg.naturalHeight);
+            box.dataset.imageRatio = box.dataset.ratio;
+            if (box.dataset.manualLayout !== '1') layoutProducts(pzone);
+          }
+        }
+        bnProductImgLoaded(pimg);
+      };
+      pimg.src = e.data.src;
       box.appendChild(pimg);
-      box.dataset.rotate = String(Number(e.data.rotate) || 0);
       /* 旋轉把手：框正上方一條短桿接一顆圓鈕，拖曳繞框中心旋轉（Canva／Figma 慣例）。
          角度不在這裡烘進圖片，只做即時 CSS 預覽；放開後把增量送回父頁，由父頁
          走 baseSrc → 旋轉 → 影子 的管線重算，再用 bn-product-update-image 換圖。 */
@@ -2606,6 +2646,9 @@
       function _bnFixObjectFitForCapture(selector){
         document.querySelectorAll(selector).forEach(function(img){
           if(!img || img.tagName !== 'IMG') return;
+          /* 已手動移動／縮放的 LOGO 有自己的等比例寬高；保留位置與大小，
+             不要在匯出時再按整個 logo 範圍重新置中。 */
+          if(img.classList.contains('bn-logo-img') && img.dataset.manualLayout === '1') return;
           /* 商品圖已用 productRect 以絕對 px 定位（影子露在框外），不是 contain 模式；
              這裡若再按 contain 重算，會把含影子的整張圖縮回框內，下載的商品就變小。
              只確保定位是最新的，然後跳過。 */
@@ -2635,9 +2678,9 @@
           img.style.top  = Math.round((bh - dispH) / 2) + 'px';
         });
       }
-      _bnFixObjectFitForCapture('.bn-logo-box img, .bn-prod-box img, .bn-char-box img, .logo範圍_左 img.bn-logo-img, .logo範圍_中 img.bn-logo-img, .logo範圍_右 img.bn-logo-img');
+      _bnFixObjectFitForCapture('.bn-logo-box img, .bn-prod-box img, .bn-char-box img, .logo範圍_左 img.bn-logo-img, .logo範圍_中 img.bn-logo-img, .logo範圍_右 img.bn-logo-img, .campaign-card-template .logo範圍 img.bn-logo-img');
 
-      /* 首頁LOGO牆截圖補償：html2canvas 1.4.1 會把圓角元素的外陰影
+      /* 首頁LOGO牆／Campaign Card 膠囊截圖補償：html2canvas 1.4.1 會把圓角元素的外陰影
          （box-shadow rgba(0,0,0,.14)）誤畫在元素內部，白色膠囊疊上去就變成
          #dbdbdb 灰底（實測：拿掉陰影即純白）。截圖時暫時移除陰影並鎖定白底。 */
       _logoWallCaptureEls = [];
@@ -2691,7 +2734,8 @@
       var width = br.width / scaleX;
       var height = br.height / scaleY;
       var data = {
-        type:'bn-product-layout-update',
+        type:box.dataset.campaignCardProduct === '1'
+          ? 'bn-campaign-card-product-layout-update' : 'bn-product-layout-update',
         bnid:getCurrentBnId(),
         id:box.dataset.id,
         snapshotOnly:!!(options && options.snapshotOnly),
@@ -2711,6 +2755,7 @@
           wallManual: !!(_bnHomepageLogoWallTemplate && box.dataset.wallManual === '1')
         }
       };
+      if(box.dataset.campaignCardProduct === '1') data.layout.rotate = parseFloat(box.dataset.rotate) || 0;
       window.parent && window.parent.postMessage(data, '*');
     }catch(_){ }
   }
@@ -3238,6 +3283,16 @@
         box.style.outline = '2px solid transparent';
         if(rotBadge) rotBadge.style.display = 'none';
         var img = box.querySelector('img');
+        if(box.dataset.campaignCardProduct === '1'){
+          var finalRotate = normDeg(rot.base + delta);
+          box.dataset.rotate = String(finalRotate);
+          if(img){
+            img.style.transformOrigin = '50% 50%';
+            img.style.transform = 'rotate(' + finalRotate + 'deg)';
+          }
+          postProductLayout(box);
+          return;
+        }
         if(Math.abs(delta) < 0.5){ if(img) img.style.transform = ''; return; }
         /* CSS 預覽先留著，等父頁重算完以 bn-product-update-image 換圖時一併清掉，畫面不會閃回 */
         try{
@@ -4740,11 +4795,11 @@
   }
 
   /* ── 畫布文字直接點擊編輯 ── */
-  var EDITABLE_CLASSES = ['主標','副標','副標案型七字內','日期','品牌名','ICON獨立文案','六字內'];
+  var EDITABLE_CLASSES = ['主標','副標','副標案型七字內','日期','品牌名','ICON獨立文案','CampaignCard文案','六字內'];
   var _dollarExemptSet = {};   /* {className: true} */
 
   /* ── 字數計算（中文1字，英數0.5字） ── */
-  var CHAR_LIMITS = { '品牌名':9, '主標':8, '副標':7, '日期':14, 'ICON獨立文案':2 };
+  var CHAR_LIMITS = { '品牌名':9, '主標':8, '副標':7, '日期':14, 'ICON獨立文案':2, 'CampaignCard文案':5 };
 
   function calcUnits(text){
     var units = 0;

@@ -19454,7 +19454,6 @@ function pushExposureOverviewAssets(payload, force) {
   };
   var endorserNames = storedEndorserFileNames(payload.endorserFiles);
   var endorserNote = String(payload.endorserNote == null ? '' : payload.endorserNote).trim();
-  if (!logoNames.length && !productNames.length && !endorserNames.length && !endorserNote && !campaignCardChanged) return false;
   var endorserAssets = exposureEndorserAssets(endorserNames);
   /* 2026-11-17 修正：曝光 LOGO 同步不能只看「檔名＋數量」。
      例如工單總覽寫「順發」、圖片資料夾後來才讀到順發.png，或暫存／舊狀態曾記過同名同數量時，
@@ -19476,6 +19475,7 @@ function pushExposureOverviewAssets(payload, force) {
   var productChanged = force || !oldSigParts || oldSigParts.product !== productSig;
   var endorserChanged = force || !oldSigParts || oldSigParts.endorser !== endorserSig;
   var campaignCardChanged = force || !oldSigParts || oldSigParts.campaignCard !== campaignCardSig;
+  if (!logoNames.length && !productNames.length && !endorserNames.length && !endorserNote && !campaignCardChanged) return false;
   if (!force && sentSig === _exposureOverviewAssetSentSig) return false;
   if (!_exposureFrameReadyForAssets) return false;   /* 曝光資源載入後會再呼叫一次 */
   rememberExposureAssetSig(sentSig);

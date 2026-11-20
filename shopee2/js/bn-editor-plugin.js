@@ -697,6 +697,29 @@
         markStateDirty();
         return;
       }
+      if(d.type === 'bn-campaign-card-logo-layout-update' && d.layout){
+        if(window._bnSuppressProductLayoutWrite || window._bnExporting) return;
+        var campaignLogoLayoutId = d.bnid ? String(d.bnid) : '';
+        var campaignLogoAsset = window._bnCampaignCardAssets && window._bnCampaignCardAssets.logo;
+        if(!campaignLogoLayoutId || !campaignLogoAsset) return;
+        if(!campaignLogoAsset.layoutById) campaignLogoAsset.layoutById = {};
+        campaignLogoAsset.layoutById[campaignLogoLayoutId] = JSON.parse(JSON.stringify(d.layout));
+        campaignLogoAsset.layout = JSON.parse(JSON.stringify(d.layout));
+        markStateDirty();
+        return;
+      }
+      if(d.type === 'bn-campaign-card-product-layout-update' && d.id && d.layout){
+        if(window._bnSuppressProductLayoutWrite || window._bnExporting) return;
+        var campaignProductAsset = window._bnCampaignCardAssets && window._bnCampaignCardAssets.product;
+        if(!campaignProductAsset) return;
+        var campaignProductLayoutId = d.bnid ? String(d.bnid) : 'default';
+        if(!campaignProductAsset.layoutById) campaignProductAsset.layoutById = {};
+        campaignProductAsset.layoutById[campaignProductLayoutId] = JSON.parse(JSON.stringify(d.layout));
+        if(isLayoutSnapshotUpdate(d)) return;
+        campaignProductAsset.layout = JSON.parse(JSON.stringify(d.layout));
+        markStateDirty();
+        return;
+      }
       if(d.type === 'bn-character-layout-update' && d.layout){
         /* 與商品版位更新共用同一個 listener，避免重複註冊造成的衝突。
            用訊息裡的 id 判斷這次更新是人物1還是人物2。 */
