@@ -820,29 +820,29 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
         <script>if(IS_BODA){var _ls=document.getElementById('lv-section');if(_ls)_ls.style.display='';}</script>
 
         <!-- 文字 + 顏色 inline -->
-        <div class="s-section" id="section-text">文字內容</div>
-        <div class="s-field-inline" id="field-brand">
+        <div class="s-section" id="section-text" style="display:none" aria-hidden="true">文字內容</div>
+        <div class="s-field-inline" id="field-brand" style="display:none" aria-hidden="true">
           <label>品牌名</label>
           <div class="s-field-row">
             <input type="text" id="txt-brand" data-limit="9" placeholder="品牌名稱" value="品牌名不放圖9字內" oninput="broadcastText()">
             <span class="char-count-badge" id="badge-品牌名"></span><div class="color-dot" id="dot-brandText" title="品牌名文字色"></div>
           </div>
         </div>
-        <div class="s-field-inline" id="field-main">
+        <div class="s-field-inline" id="field-main" style="display:none" aria-hidden="true">
           <label>主標</label>
           <div class="s-field-row">
             <input type="text" id="txt-main" data-limit="8" placeholder="主標文字" value="滿$200享9折" oninput="broadcastText()">
             <span class="char-count-badge" id="badge-主標"></span><div class="color-dot" id="dot-mainText" title="主標文字色"></div>
           </div>
         </div>
-        <div class="s-field-inline" id="field-sub">
+        <div class="s-field-inline" id="field-sub" style="display:none" aria-hidden="true">
           <label>副標</label>
           <div class="s-field-row">
             <input type="text" id="txt-sub" data-limit="7" placeholder="副標文字" value="副標$500起" oninput="broadcastText()">
             <span class="char-count-badge" id="badge-副標"></span><div class="color-dot" id="dot-subText" title="副標文字色"></div>
           </div>
         </div>
-        <div class="s-field-inline" id="field-date">
+        <div class="s-field-inline" id="field-date" style="display:none" aria-hidden="true">
           <label>日期</label>
           <div class="s-field-row">
             <input type="text" id="txt-date" data-limit="14" placeholder="日期文字" value="5/18 - 5/25 期間限定" oninput="broadcastText()">
@@ -850,7 +850,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
           </div>
         </div>
         <div id="bn-content-warning" role="status" aria-live="polite"></div>
-        <div class="s-field-inline" id="field-icon">
+        <div class="s-field-inline" id="field-icon" style="display:none" aria-hidden="true">
           <label>SearchICON文案</label>
           <div class="s-field-row">
             <input type="text" id="txt-icon" data-limit="2" placeholder="ICON文案" value="文案" oninput="broadcastText()">
@@ -1700,19 +1700,104 @@ document.addEventListener('keydown', function (event) {
   if (event.key === 'Escape') closeAdditionalSlots();
 });
 
-function bnHasCampaignCardLayout(layouts) {
-  if(Array.isArray(layouts)){
-    return layouts.some(function(layout){
-      return /campaign[ _-]*card/i.test(String((layout && (layout.file || layout.name)) || ''));
-    });
-  }
-  return !!document.querySelector('.preview-block-campaign-card');
+/* 文字欄位只在目前選取的版位確實有該文字圖層時顯示。
+   從 config.css 的 --layers 讀取圖層名稱，避免用版位檔名猜測。 */
+var BN_TEXT_LAYER_FIELDS = [
+  { id:'field-brand', layers:['品牌名'] },
+  { id:'field-main', layers:['主標'] },
+  { id:'field-sub', layers:['副標','副標案型七字內'] },
+  { id:'field-date', layers:['日期'] },
+  { id:'field-icon', layers:['ICON獨立文案'] },
+  { id:'field-campaign-card', layers:['CampaignCard文案'] },
+  { id:'ar-text-field', layers:['六字內'] }
+];
+var BN_LAYOUT_TEXT_LAYER_CACHE = Object.create(null);
+var bnTextFieldVisibilityRequest = 0;
+
+function bnParseLayoutTextLayers(cssText) {
+  var match = String(cssText || '').match(/--layers\s*:\s*(["'])([\s\S]*?)\1\s*;?/i);
+  if(!match) return null;
+  return match[2].split(',').map(function(layer){
+    return String(layer).split('|')[0].trim();
+  }).filter(Boolean);
 }
-function bnSetCampaignCardTextFieldVisibility(visible) {
-  var field = document.getElementById('field-campaign-card');
-  if(!field) return;
-  field.style.display = visible ? '' : 'none';
-  field.setAttribute('aria-hidden', visible ? 'false' : 'true');
+function bnLayoutTextCacheKey(layout) {
+  return String((layout && (layout.file || layout.name)) || '').trim();
+}
+function bnLoadLayoutTextLayers(layout) {
+  var file = bnLayoutTextCacheKey(layout);
+  if(!file) return Promise.resolve([]);
+  var cached = BN_LAYOUT_TEXT_LAYER_CACHE[file];
+  if(cached) return cached.promise;
+
+  var entry = { ready:false, layers:[], promise:null };
+  BN_LAYOUT_TEXT_LAYER_CACHE[file] = entry;
+  var baseName = 'html/' + file.replace(/\.html$/i, '');
+  var cssFiles = [baseName + '.config.css', baseName + '.css'];
+  entry.promise = cssFiles.reduce(function(chain, cssFile){
+    return chain.then(function(found){
+      if(found) return found;
+      return fetch(cssFile + '?bnlayers=' + Date.now()).then(function(response){
+        if(!response.ok) throw new Error('HTTP ' + response.status);
+        return response.text();
+      }).then(function(cssText){
+        var layers = bnParseLayoutTextLayers(cssText);
+        if(layers === null) throw new Error('Missing --layers');
+        return layers;
+      }).catch(function(){ return null; });
+    });
+  }, Promise.resolve(null)).then(function(layers){
+    entry.layers = Array.isArray(layers) ? layers : [];
+    entry.ready = true;
+    return entry.layers;
+  });
+  return entry.promise;
+}
+function bnApplyTextFieldVisibility(layers) {
+  var layerSet = Object.create(null);
+  (layers || []).forEach(function(layer){ layerSet[layer] = true; });
+  var anyVisible = false;
+  BN_TEXT_LAYER_FIELDS.forEach(function(def){
+    var visible = def.layers.some(function(layer){ return !!layerSet[layer]; });
+    var field = document.getElementById(def.id);
+    if(!field) return;
+    field.style.display = visible ? '' : 'none';
+    field.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    if(visible) anyVisible = true;
+  });
+  var section = document.getElementById('section-text');
+  if(section){
+    section.style.display = anyVisible ? '' : 'none';
+    section.setAttribute('aria-hidden', anyVisible ? 'false' : 'true');
+  }
+}
+function bnSetTextFieldVisibility(layouts) {
+  var requestId = ++bnTextFieldVisibilityRequest;
+  layouts = Array.isArray(layouts) ? layouts : [];
+  if(!layouts.length){ bnApplyTextFieldVisibility([]); return; }
+
+  var files = layouts.map(bnLayoutTextCacheKey);
+  var allReady = files.every(function(file){
+    return !!(file && BN_LAYOUT_TEXT_LAYER_CACHE[file] && BN_LAYOUT_TEXT_LAYER_CACHE[file].ready);
+  });
+  if(allReady){
+    var readyLayers = [];
+    files.forEach(function(file){
+      readyLayers = readyLayers.concat(BN_LAYOUT_TEXT_LAYER_CACHE[file].layers);
+    });
+    bnApplyTextFieldVisibility(readyLayers);
+    return;
+  }
+
+  /* 載入中先隱藏，避免短暫沿用上一組版位的文案欄位。 */
+  bnApplyTextFieldVisibility([]);
+  Promise.all(layouts.map(bnLoadLayoutTextLayers)).then(function(layerGroups){
+    if(requestId !== bnTextFieldVisibilityRequest) return;
+    var layers = [];
+    layerGroups.forEach(function(group){ layers = layers.concat(group || []); });
+    bnApplyTextFieldVisibility(layers);
+    if(typeof bnRefreshLimitAlert === 'function') bnRefreshLimitAlert();
+  });
 }
 
 function renderPreviews() {
@@ -1728,7 +1813,7 @@ function renderPreviews() {
   if (typeof window._bnSortLayoutsForDisplay === 'function') {
     try { layouts = window._bnSortLayoutsForDisplay(layouts) || layouts; } catch (_) {}
   }
-  bnSetCampaignCardTextFieldVisibility(bnHasCampaignCardLayout(layouts));
+  bnSetTextFieldVisibility(layouts);
   var area  = document.getElementById('preview-area');
   var empty = document.getElementById('preview-empty');
 
@@ -1967,7 +2052,8 @@ function bnGetOverLimitFields(){
   BN_LIMIT_FIELDS.forEach(function(f){
     var inp=document.getElementById(f[0]);
     if(!inp) return;
-    if(inp.id === 'txt-campaignCard' && !bnHasCampaignCardLayout()) return;
+    var textField = inp.closest ? inp.closest('.s-field-inline') : null;
+    if(textField && textField.style.display === 'none') return;
     var lim=parseFloat(inp.dataset.limit||'');
     if(lim && bnIsFieldOver(inp)){
       out.push({ id:f[0], label:f[1], used:bnFieldUnits(inp), limit:lim, value:bnFieldValue(inp) });
