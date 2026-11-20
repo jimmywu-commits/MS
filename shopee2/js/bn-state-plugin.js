@@ -34,9 +34,6 @@
   var IDB_DB = 'bn_editor_state_db';
   var IDB_STORE = 'states';
   var IDB_KEY = 'current';
-  var BANWORD_RULES_URL = 'banwords.rules.json?v=20261113-slim1';
-  var XLSX_PARSER_URL = 'js/vendor/xlsx-0.18.5.full.min.js?v=20261113-slim1';
-  var xlsxParserPromise = null;
 
   function openStateDb(){
     return new Promise(function(resolve, reject){
@@ -438,8 +435,10 @@
     }, 10);
   }
 
-  /* ── banwords.xlsx 載入（含 fallback 手動選取，同 sba.html） ── */
-  function ensureExcelPicker(){
+  /* ── 禁用詞規則載入（banwords.rules.json，由 banwords.xlsx 轉出） ──
+     TP 不收 xlsx、fetch 只能用寫死的網址，所以固定讀 banwords.rules.json。
+     這是自動改字的來源，讀不到時要明顯提示，否則文案規則會整個失效。 */
+  function ensureBanwordsPicker(){
     var wrap = document.getElementById('_bn_excelManualLoader');
     if(wrap) return wrap;
     wrap = document.createElement('div');
@@ -452,10 +451,10 @@
       'font-size:13px;line-height:1.5;max-width:320px;display:none;',
     ].join('');
     wrap.innerHTML=[
-      '<div style="font-weight:700;margin-bottom:6px;">讀取 banwords.xlsx 失敗</div>',
-      '<div style="margin-bottom:8px;">請手動選取同層的「banwords.xlsx」</div>',
-      '<button id="_bn_excelManualBtn" style="border:0;background:#fff;color:#111;padding:6px 10px;border-radius:8px;cursor:pointer;">手動選取 banwords.xlsx</button>',
-      '<input type="file" id="_bn_excelManualInput" accept=".xlsx" style="display:none">',
+      '<div style="font-weight:700;margin-bottom:6px;">讀取 banwords.rules.json 失敗</div>',
+      '<div style="margin-bottom:8px;">禁用詞與自動改字目前沒有作用。請手動選取「banwords.rules.json」</div>',
+      '<button id="_bn_excelManualBtn" style="border:0;background:#fff;color:#111;padding:6px 10px;border-radius:8px;cursor:pointer;">手動選取 banwords.rules.json</button>',
+      '<input type="file" id="_bn_excelManualInput" accept=".json,application/json" style="display:none">',
     ].join('');
     document.body.appendChild(wrap);
 
@@ -465,9 +464,11 @@
     wrap.querySelector('#_bn_excelManualInput').addEventListener('change', function(e){
       var file = e.target.files && e.target.files[0];
       if(!file) return;
-      ensureXLSXParser().then(function(){ return file.arrayBuffer(); }).then(function(buf){
-        var rules = global.banwordEngine.loadRulesFromExcelArrayBuffer(buf);
-        showToast('已手動載入 banwords.xlsx（'+( Array.isArray(rules)?rules.length:0 )+'條）','ok',2200);
+      file.text().then(function(text){
+        var parsed = JSON.parse(text);
+        if(!Array.isArray(parsed)) throw new Error('banwords.rules.json 格式錯誤');
+        var rules = global.banwordEngine.setRules(parsed);
+        showToast('已手動載入 banwords.rules.json（'+( Array.isArray(rules)?rules.length:0 )+'條）','ok',2200);
         wrap.style.display = 'none';
         bridgeInputs();
       }).catch(function(err){
@@ -477,25 +478,9 @@
     return wrap;
   }
 
-  function ensureXLSXParser(){
-    if(global.XLSX && global.XLSX.read) return Promise.resolve(global.XLSX);
-    if(xlsxParserPromise) return xlsxParserPromise;
-    xlsxParserPromise = new Promise(function(resolve, reject){
-      var script = document.createElement('script');
-      script.src = XLSX_PARSER_URL;
-      script.onload = function(){
-        if(global.XLSX && global.XLSX.read) resolve(global.XLSX);
-        else { xlsxParserPromise = null; reject(new Error('SheetJS parser failed to initialize')); }
-      };
-      script.onerror = function(){ xlsxParserPromise = null; reject(new Error('無法載入本機試算表解析器')); };
-      document.head.appendChild(script);
-    });
-    return xlsxParserPromise;
-  }
-
   function loadBanwordsRules(){
     if(!global.banwordEngine) return;
-    fetch(BANWORD_RULES_URL, {cache:'default'})
+    fetch('banwords.rules.json', {cache:'no-cache'})
     .then(function(r){
       if(!r.ok) throw new Error('HTTP '+r.status);
       return r.json();
@@ -508,7 +493,8 @@
     })
     .catch(function(err){
       console.warn('[BNState] banwords.rules.json 載入失敗', err);
-      ensureExcelPicker().style.display = 'block';
+      ensureBanwordsPicker().style.display = 'block';
+      showToast('禁用詞規則無法載入：'+err.message,'err',5000);
       bridgeInputs();
     });
   }

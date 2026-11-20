@@ -5379,17 +5379,25 @@
       return bnCaptureWait(ready,8000,bnCaptureError('FONT_TIMEOUT','字型仍在載入，請稍後重試；未變更目前作品。','fonts'),context);
     }).then(bnCapturePaintTick);
   }
+  /* 截圖引擎：html-to-image 1.11.11。
+     TP 擋 html2canvas（會報 Blocked a frame with origin "null"），且函式庫不能放進包內，
+     所以從 cdnjs 載入，版本寫死並附 integrity（取自 api.cdnjs.com 的 sri）。 */
+  var BN_HTML_TO_IMAGE_SRC='https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js';
+  var BN_HTML_TO_IMAGE_SRI='sha512-7tWCgq9tTYS/QkGVyKrtLpqAoMV9XIUxoou+sPUypsaZx56cYR/qio84fPK9EvJJtKvJEwt7vkn6je5UVzGevw==';
   function bnLoadCaptureRenderer(context){
-    if(window.html2canvas)return Promise.resolve();
+    if(window.htmlToImage)return Promise.resolve();
     if(_bnCaptureRendererPromise)return _bnCaptureRendererPromise;
     bnCaptureProgress(context,'renderer','正在載入截圖引擎…');
     _bnCaptureRendererPromise=new Promise(function(resolve,reject){
       var script=document.createElement('script'),done=false;
-      var timer=setTimeout(function(){finish(bnCaptureError('RENDERER_TIMEOUT','截圖引擎載入逾時；請確認 js/vendor/html2canvas.min.js 已一起更新。','renderer'));},8000);
+      var timer=setTimeout(function(){finish(bnCaptureError('RENDERER_TIMEOUT','截圖引擎載入逾時，請確認網路後重試。','renderer'));},15000);
       function finish(error){if(done)return;done=true;clearTimeout(timer);script.onload=script.onerror=null;if(error){script.remove();_bnCaptureRendererPromise=null;reject(error);}else resolve();}
-      script.onload=function(){window.html2canvas?finish():finish(bnCaptureError('RENDERER_MISSING','截圖引擎未正確載入。','renderer'));};
-      script.onerror=function(){finish(bnCaptureError('RENDERER_LOAD','截圖引擎載入失敗；請確認 js/vendor/html2canvas.min.js 已一起更新。','renderer'));};
-      script.src=new URL('vendor/html2canvas.min.js',_bnRuntimeScriptBase).href;
+      script.onload=function(){window.htmlToImage?finish():finish(bnCaptureError('RENDERER_MISSING','截圖引擎未正確載入。','renderer'));};
+      script.onerror=function(){finish(bnCaptureError('RENDERER_LOAD','截圖引擎載入失敗，請確認網路後重試。','renderer'));};
+      script.integrity=BN_HTML_TO_IMAGE_SRI;
+      script.crossOrigin='anonymous';
+      script.referrerPolicy='no-referrer';
+      script.src=BN_HTML_TO_IMAGE_SRC;
       document.head.appendChild(script);
     });
     return _bnCaptureRendererPromise;
@@ -5437,38 +5445,9 @@
     var BG_SET={'背景色':1,'bg':1,'底色':1,'上保護':1,'下保護':1,'左側保護':1,'右側保護':1,'上方保護':1,'下方保護':1,'文案保護':1,'漸層左':1,'漸層右':1,'漸層上':1,'漸層下':1};
     var scale=cv.getBoundingClientRect().width/Math.max(1,cv.offsetWidth)||1;
     function isBg(el){if(el.id==='底圖')return true;for(var key in BG_SET)if(el.classList&&el.classList.contains(key))return true;return false;}
-    function remap(value){
-      return String(value||'').replace(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)/g,function(all,a,b,c){
-        var src=(a!==undefined?a:b!==undefined?b:c).trim(),mapped=context.assets[bnCaptureAbs(src)];return mapped?'url("'+mapped.replace(/"/g,'%22')+'")':all;
-      });
-    }
-    /* html2canvas 1.4.1 cannot parse calc() background-position. Resolve the
-       browser's center-based background math to px in the clone only. */
-    function backgroundPixels(el,css,bg){
-      var urls=bnCaptureCSSUrls(bg);
-      if(urls.length!==1||!/^url\(/i.test(bg))return;
-      var size=context.assetSizes[bnCaptureAbs(urls[0])];if(!size||!size.w||!size.h)return;
-      var bw=el.clientWidth||parseFloat(css.width),bh=el.clientHeight||parseFloat(css.height);
-      if(!bw||!bh)return;
-      var spec=css.backgroundSize.trim(),parts=spec.split(/\s+/),iw,ih,k;
-      function length(value,span){if(!value||value==='auto')return null;return /%$/.test(value)?parseFloat(value)*span/100:parseFloat(value);}
-      if(spec==='cover'||spec==='contain'){k=(spec==='cover'?Math.max:Math.min)(bw/size.w,bh/size.h);iw=size.w*k;ih=size.h*k;}
-      else{iw=length(parts[0],bw);ih=length(parts[1]||'auto',bh);if(iw===null&&ih===null){iw=size.w;ih=size.h;}else if(iw===null)iw=ih*size.w/size.h;else if(ih===null)ih=iw*size.h/size.w;}
-      if(!isFinite(iw)||!isFinite(ih)||iw<=0||ih<=0)return;
-      var position=css.backgroundPosition.match(/calc\([^)]*\)|[^\s]+/g)||['50%','50%'];
-      function offset(value,free){
-        if(value==='center')return free/2;if(value==='right'||value==='bottom')return free;if(value==='left'||value==='top')return 0;
-        var total=0,re=/([+-]?\s*\d+(?:\.\d+)?)(%|px)/g,m,matched=false;
-        while((m=re.exec(value))){matched=true;var n=parseFloat(m[1].replace(/\s/g,''));total+=m[2]==='%'?free*n/100:n;}
-        return matched?total:parseFloat(value)||0;
-      }
-      el.style.setProperty('background-size',iw+'px '+ih+'px','important');
-      el.style.setProperty('background-position',offset(position[0],bw-iw)+'px '+offset(position[1]||'50%',bh-ih)+'px','important');
-    }
-    /* 下載鋸齒：html2canvas 預設用低品質縮圖（大商品圖、去背邊、旋轉的圖會有鋸齒，畫面上卻很平滑）。
-       改成 2 倍超取樣＋高品質縮放，再縮回原尺寸；畫布太大時退回 1 倍避免記憶體不足。 */
+    /* 下載鋸齒：用 2 倍超取樣＋高品質縮放，再縮回原尺寸；畫布太大時退回 1 倍避免記憶體不足。 */
     var captureScale=(W*H<=4000000)?2:1;
-    /* 截圖期間新建的 2D 畫布一律用高品質縮放（html2canvas 自己的畫布不會設定），結束後還原。 */
+    /* 截圖期間新建的 2D 畫布一律用高品質縮放（截圖引擎自己的畫布不會設定），結束後還原。 */
     function bnWithHighQualitySmoothing(run){
       var proto=HTMLCanvasElement.prototype,orig=proto.getContext;
       proto.getContext=function(type){
@@ -5481,36 +5460,55 @@
       try{p=Promise.resolve(run());}catch(e){restore();return Promise.reject(e);}
       return p.then(function(v){restore();return v;},function(e){restore();throw e;});
     }
-    function options(layer){return {
-      scale:captureScale,width:W,height:H,windowWidth:Math.max(W,window.innerWidth),windowHeight:Math.max(H,window.innerHeight),
-      scrollX:0,scrollY:0,useCORS:true,allowTaint:false,imageTimeout:8000,logging:false,
-      backgroundColor:layer==='foreground'?null:(_bnFixedWhiteBackgroundTemplate||_bnWhiteCanvasUnderCircleTemplate?'#ffffff':null),
-      onclone:function(doc){
-        if(context.done)throw bnCaptureError('CANCELLED','截圖已結束。','render');
-        var clone=doc.getElementById('canvas');if(!clone)throw bnCaptureError('NO_CANVAS','找不到截圖畫布。','render');
-        clone.style.setProperty('transform','none','important');clone.style.setProperty('transform-origin','0 0','important');
-        clone.style.setProperty('width',W+'px','important');clone.style.setProperty('height',H+'px','important');
-        var overlay=doc.getElementById('_bn_bg_overlay');if(overlay)overlay.style.display='none';
-        clone.querySelectorAll('[data-corner],[data-rotate-handle],[data-rotate-badge],.bn-content-warning-tip').forEach(function(el){el.style.display='none';});
-        [clone].concat(Array.prototype.slice.call(clone.querySelectorAll('*'))).forEach(function(el){
-          if(el.tagName==='IMG'){
-            var mapped=context.assets[bnCaptureAbs(el.currentSrc||el.src)]||context.assets[bnCaptureAbs(el.src)];
-            if(mapped){el.removeAttribute('srcset');el.removeAttribute('sizes');el.removeAttribute('crossorigin');el.src=mapped;}
-          }
-          var css=doc.defaultView.getComputedStyle(el),bg=css.backgroundImage,newBg=remap(bg);
-          backgroundPixels(el,css,bg);
-          if(bg!==newBg)el.style.setProperty('background-image',newBg,'important');
-        });
-        if(layer!=='main'){
-          Array.prototype.forEach.call(clone.children,function(el){if(layer==='background'?!isBg(el):isBg(el))el.style.visibility='hidden';});
-          if(layer==='foreground')clone.style.setProperty('background','transparent','important');
+    /* 原本 html2canvas 的 onclone 做的事，改用 html-to-image 的參數：
+       - style：只套在複製出來的畫布根節點，拿掉預覽縮放、固定成設計尺寸
+       - filter：藏掉縮放點、旋轉把手、提醒框、背景遮罩；分層下載時藏掉另一層
+       html-to-image 由瀏覽器自己畫（SVG foreignObject），calc() 背景位置、object-fit
+       都能正確處理，不再需要 html2canvas 時代的背景像素換算與圖片網址替換。 */
+    var HIDE_SELECTOR='[data-corner],[data-rotate-handle],[data-rotate-badge],.bn-content-warning-tip,#_bn_bg_overlay';
+    function captureFilter(layer){
+      return function(node){
+        if(node.nodeType!==1)return true;
+        if(node.matches&&node.matches(HIDE_SELECTOR))return false;
+        /* 沒設 src 的 <img>（例如還沒放底圖的 #底圖）會被 html-to-image 當成目前頁面去抓，
+           整張截圖失敗；看不到的節點本來就不會畫出來，一起略過。 */
+        if(node.tagName==='IMG'&&!node.getAttribute('src'))return false;
+        if(window.getComputedStyle(node).display==='none')return false;
+        if(layer!=='main'&&node.parentElement===cv){
+          return layer==='background'?isBg(node):!isBg(node);
         }
-      }
-    };}
+        return true;
+      };
+    }
+    function options(layer){
+      var opts={
+        width:W,height:H,canvasWidth:W,canvasHeight:H,pixelRatio:captureScale,
+        cacheBust:false,includeQueryParams:true,
+        backgroundColor:layer==='foreground'?undefined:(_bnFixedWhiteBackgroundTemplate||_bnWhiteCanvasUnderCircleTemplate?'#ffffff':undefined),
+        style:{transform:'none',transformOrigin:'0 0',width:W+'px',height:H+'px',margin:'0',left:'0',top:'0'},
+        filter:captureFilter(layer)
+      };
+      if(layer==='foreground')opts.style.background='transparent';
+      /* 字型只內嵌一次：各層共用同一份 fontEmbedCSS，背景層沒有文字就不嵌字型，避免 15 秒逾時。 */
+      if(layer==='background')opts.skipFonts=true;
+      else if(context.fontEmbedCSS)opts.fontEmbedCSS=context.fontEmbedCSS;
+      return opts;
+    }
+    function fontCSS(){
+      if(context.fontEmbedCSS!==undefined)return Promise.resolve();
+      /* 版位的 @font-face 同時列 WOFF2 與 TTF 備援，html-to-image 會兩種都內嵌（約 105 MB）。
+         瀏覽器一定用 WOFF2，所以把 TTF 從內嵌 CSS 拿掉：輸出一樣，截圖時間約減半。 */
+      return window.htmlToImage.getFontEmbedCSS(cv).then(function(css){
+        context.fontEmbedCSS=String(css||'').replace(/,\s*url\(\s*["']?data:[^)]*\)\s*format\(\s*["']?truetype["']?\s*\)/gi,'');
+      },function(){context.fontEmbedCSS='';});
+    }
     function renderLayer(layer){
       if(context.done)return Promise.reject(bnCaptureError('CANCELLED','截圖已結束。','render'));
       bnCaptureProgress(context,'render-'+layer,layer==='main'?'正在截圖…':layer==='background'?'正在整理背景層…':'正在整理商品與文字層…');
-      var job=Promise.resolve().then(function(){return bnWithHighQualitySmoothing(function(){return window.html2canvas(cv,options(layer));});});
+      var job=(layer==='background'?Promise.resolve():fontCSS()).then(function(){
+        if(context.done)throw bnCaptureError('CANCELLED','截圖已結束。','render');
+        return bnWithHighQualitySmoothing(function(){return window.htmlToImage.toCanvas(cv,options(layer));});
+      });
       return bnCaptureWait(job,layer==='main'?15000:7000,bnCaptureError('RENDER_TIMEOUT','截圖引擎處理逾時，請稍後再試。','render-'+layer),context).then(function(rendered){
         if(context.done)throw bnCaptureError('CANCELLED','截圖已結束。','render');
         var out=document.createElement('canvas');out.width=W;out.height=H;

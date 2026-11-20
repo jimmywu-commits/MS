@@ -39,7 +39,7 @@ html, body { height: 100%; background: var(--bg0); color: var(--text);
   padding: 0 16px; height: 44px; flex-shrink: 0;
 }
 /* 正式入口不提供後台頁簽；排版清單由 js/index.js 自動載入。 */
-#tab-bar .tab[onclick*="switchTab('admin')"],
+#tab-bar .tab[data-bn-tab="admin"],
 #admin { display: none !important; }
 .tab {
   padding: 8px 18px; border-radius: var(--radius) var(--radius) 0 0;
@@ -397,7 +397,7 @@ background:#161b22;color:#e6edf3;border:1px solid #30363d;
 cursor:pointer;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.35);
 }
 #manual-btn{right:18px;bottom:18px;}
-#feedback-btn{right:18px;top:54px;}
+#feedback-btn{right:18px;top:54px;text-decoration:none;box-sizing:border-box;}
 #manual-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
 z-index:100002;align-items:center;justify-content:center;padding:24px;}
 #manual-modal.show{display:flex;}
@@ -739,8 +739,8 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
 
   <!-- Tab Bar -->
   <div id="tab-bar">
-    <div class="tab" onclick="switchTab('admin')">⚙️ 後台</div>
-    <div class="tab active" onclick="switchTab('frontend')">🖥️ 前台預覽</div>
+    <div class="tab" data-bn-tab="admin">⚙️ 後台</div>
+    <div class="tab active" data-bn-tab="frontend">🖥️ 前台預覽</div>
     <div id="tab-title"><script>document.write(IS_BODA?'曝光資源 ・ ':'');</script><span id="bn-wn-open" title="查看版本更新紀錄">版本更新說明</span></div>
   </div>
 
@@ -758,7 +758,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
         每次新增或刪除排版 HTML 後，更新該檔案即可。
       </p>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn btn-primary" onclick="scanLayouts()">🔄 重新掃描</button>
+        <button class="btn btn-primary" id="bn-btn-scan-layouts">🔄 重新掃描</button>
         <span id="scan-status" style="font-size:11px;color:var(--text3)"></span>
       </div>
       <div style="margin-top:14px">
@@ -782,9 +782,9 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
         底圖放在同層 <code>bn測底圖/</code> 資料夾。
       </p>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-        <button class="btn" onclick="scanBgFiles()">🔄 掃描底圖資料夾</button>
+        <button class="btn" id="bn-btn-scan-bg">🔄 掃描底圖資料夾</button>
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="bg-all-check" onchange="toggleAllBgCheckers(this.checked)">
+          <input type="checkbox" id="bg-all-check">
           全部顯示
         </label>
       </div>
@@ -824,28 +824,28 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
         <div class="s-field-inline" id="field-brand" style="display:none" aria-hidden="true">
           <label>品牌名</label>
           <div class="s-field-row">
-            <input type="text" id="txt-brand" data-limit="9" placeholder="品牌名稱" value="品牌名不放圖9字內" oninput="broadcastText()">
+            <input type="text" id="txt-brand" data-limit="9" placeholder="品牌名稱" value="品牌名不放圖9字內">
             <span class="char-count-badge" id="badge-品牌名"></span><div class="color-dot" id="dot-brandText" title="品牌名文字色"></div>
           </div>
         </div>
         <div class="s-field-inline" id="field-main" style="display:none" aria-hidden="true">
           <label>主標</label>
           <div class="s-field-row">
-            <input type="text" id="txt-main" data-limit="8" placeholder="主標文字" value="滿$200享9折" oninput="broadcastText()">
+            <input type="text" id="txt-main" data-limit="8" placeholder="主標文字" value="滿$200享9折">
             <span class="char-count-badge" id="badge-主標"></span><div class="color-dot" id="dot-mainText" title="主標文字色"></div>
           </div>
         </div>
         <div class="s-field-inline" id="field-sub" style="display:none" aria-hidden="true">
           <label>副標</label>
           <div class="s-field-row">
-            <input type="text" id="txt-sub" data-limit="7" placeholder="副標文字" value="副標$500起" oninput="broadcastText()">
+            <input type="text" id="txt-sub" data-limit="7" placeholder="副標文字" value="副標$500起">
             <span class="char-count-badge" id="badge-副標"></span><div class="color-dot" id="dot-subText" title="副標文字色"></div>
           </div>
         </div>
         <div class="s-field-inline" id="field-date" style="display:none" aria-hidden="true">
           <label>日期</label>
           <div class="s-field-row">
-            <input type="text" id="txt-date" data-limit="14" placeholder="日期文字" value="5/18 - 5/25 期間限定" oninput="broadcastText()">
+            <input type="text" id="txt-date" data-limit="14" placeholder="日期文字" value="5/18 - 5/25 期間限定">
             <span class="char-count-badge" id="badge-日期"></span><div class="color-dot" id="dot-dateText" title="日期文字色"></div>
           </div>
         </div>
@@ -853,21 +853,21 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
         <div class="s-field-inline" id="field-icon" style="display:none" aria-hidden="true">
           <label>SearchICON文案</label>
           <div class="s-field-row">
-            <input type="text" id="txt-icon" data-limit="2" placeholder="ICON文案" value="文案" oninput="broadcastText()">
+            <input type="text" id="txt-icon" data-limit="2" placeholder="ICON文案" value="文案">
             <span class="char-count-badge" id="badge-ICON獨立文案"></span><div class="color-dot" id="dot-iconTextMirror" title="ICON文案顏色（跟主標共用同一個顏色，改這裡主標也會一起變，改主標這裡也會跟著變）"></div>
           </div>
         </div>
         <div class="s-field-inline" id="field-campaign-card" style="display:none" aria-hidden="true">
           <label>Campaign Card</label>
           <div class="s-field-row">
-            <input type="text" id="txt-campaignCard" data-limit="5" placeholder="Campaign Card 文案（限 5 字）" value="文案可05字" oninput="broadcastText()">
+            <input type="text" id="txt-campaignCard" data-limit="5" placeholder="Campaign Card 文案（限 5 字）" value="文案可05字">
             <span class="char-count-badge" id="badge-CampaignCard文案"></span>
           </div>
         </div>
         <div class="s-field-inline" id="ar-text-field" style="display:none">
           <label>AR文案（六字內）</label>
           <div class="s-field-row">
-            <textarea id="txt-ar" data-limit="6" rows="1" placeholder="AR文案（最多六個字內）" oninput="bnArTextInput()">最多六個字內</textarea>
+            <textarea id="txt-ar" data-limit="6" rows="1" placeholder="AR文案（最多六個字內）">最多六個字內</textarea>
             <span class="char-count-badge" id="badge-六字內"></span><div class="color-dot" id="dot-arTextMirror" title="AR文案顏色跟副標連動"></div>
           </div>
         </div>
@@ -897,9 +897,9 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
         <div class="s-section" style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;padding-right:10px">
           <span>排版選擇</span>
           <span style="display:flex;gap:4px">
-            <button onclick="checkAll(true)"  style="font-size:9px;padding:1px 5px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:pointer;text-transform:none;letter-spacing:0">全選</button>
-            <button onclick="checkAll(false)" style="font-size:9px;padding:1px 5px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:pointer;text-transform:none;letter-spacing:0">全消</button>
-            <button id="bn-additional-layouts" onclick="toggleAdditionalSlots()" disabled aria-disabled="true" style="font-size:9px;padding:1px 5px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:not-allowed;text-transform:none;letter-spacing:0">＋追加版位</button>
+            <button data-bn-check-all="1"  style="font-size:9px;padding:1px 5px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:pointer;text-transform:none;letter-spacing:0">全選</button>
+            <button data-bn-check-all="0" style="font-size:9px;padding:1px 5px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:pointer;text-transform:none;letter-spacing:0">全消</button>
+            <button id="bn-additional-layouts" disabled aria-disabled="true" style="font-size:9px;padding:1px 5px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--text2);cursor:not-allowed;text-transform:none;letter-spacing:0">＋追加版位</button>
           </span>
         </div>
         <div id="layout-checks">
@@ -924,13 +924,13 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
   <div class="bn-additional-card">
     <div class="bn-additional-head">
       <strong id="bn-additional-title">追加版位</strong>
-      <button type="button" class="bn-additional-close" onclick="closeAdditionalSlots()" aria-label="關閉">×</button>
+      <button type="button" class="bn-additional-close" data-bn-additional-close="1" aria-label="關閉">×</button>
     </div>
     <div class="bn-additional-note">只選版位名稱；同一版位的方／橫 LOGO 由編輯器依 LOGO 尺寸自動判斷，不需要在這裡分開選。</div>
     <div id="bn-additional-options"></div>
     <div class="bn-additional-foot">
-      <button type="button" onclick="closeAdditionalSlots()">取消</button>
-      <button type="button" class="primary" onclick="applyAdditionalSlots()">追加選取版位</button>
+      <button type="button" data-bn-additional-close="1">取消</button>
+      <button type="button" class="primary" id="bn-additional-apply">追加選取版位</button>
     </div>
   </div>
 </div>
@@ -944,7 +944,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
     <div class="bn-loading-bar"><div id="bn-loading-progress"></div></div>
     <div id="bn-loading-count">0 / 0</div>
     <div id="bn-loading-note">這台電腦載入字體較久，若長時間停住請確認字體檔案路徑是否正確。</div>
-    <button id="bn-loading-close" onclick="bnHidePreviewLoading(true)">先關閉等待畫面</button>
+    <button id="bn-loading-close">先關閉等待畫面</button>
   </div>
 </div>
 
@@ -965,7 +965,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
     <span id="cp-hex-label">色碼</span>
     <input id="cp-hex-input" maxlength="7" placeholder="#ffffff">
     <input type="color" id="cp-native">
-    <button id="cp-eyedrop" title="吸取螢幕顏色" style="background:none;border:1px solid #2e3347;border-radius:5px;color:#8b9dbf;cursor:pointer;padding:2px 6px;font-size:13px;flex-shrink:0" onclick="openEyeDropper()">💉</button>
+    <button id="cp-eyedrop" title="吸取螢幕顏色" style="background:none;border:1px solid #2e3347;border-radius:5px;color:#8b9dbf;cursor:pointer;padding:2px 6px;font-size:13px;flex-shrink:0">💉</button>
   </div>
   <div id="cp-swatches"></div>
   <div id="cp-swatch-groups" style="margin-top:8px;border-top:1px solid #2e3347;padding-top:8px"></div>
@@ -1078,7 +1078,7 @@ function scanLayouts() {
 
     /* 對還沒有尺寸的排版，建隱藏 iframe 靜默探測 */
     loadLayouts().forEach(function(l) {
-      if (!l.w || !l.h) probSize(l.id);
+      if (!l.w || !l.h || BN_FIXED_LAYOUT_SIZES[l.file]) probSize(l.id);
     });
 
     var msg = '共 ' + layouts.length + ' 個排版';
@@ -1107,112 +1107,100 @@ function scanLayouts() {
   status.textContent = '掃描中…';
 }
 
-/* 靜默探測排版尺寸：載入同名 CSS，從 <style> 解析 :root --canvas-w/h */
+/* 版位畫布尺寸（寬, 高），與 html/*.config.css 的 --canvas-w / --canvas-h 一致。
+   TP 的 fetch 只能用寫死的網址，而且在 TP 讀不到版位 CSS 內容，所以 SBA 三個版位直接寫死。 */
+var BN_FIXED_LAYOUT_SIZES = {
+  'SBA_APP方LOGO.html': [1200, 400],
+  'SBA_APP橫LOGO.html': [1200, 400],
+  'SBA_PC.html': [992, 165]
+};
+
+/* 讀版位 CSS 的 :root 自訂屬性（--canvas-w、--layers…），不用 fetch。
+   用 media="not all" 的 <link> 載入，不會套用到編輯器畫面，載入後從 CSSOM 讀值。
+   讀不到時回傳 null。 */
+var BN_LAYOUT_CSS_VARS = {};
+function bnReadLayoutCssVars(cssFile) {
+  if (BN_LAYOUT_CSS_VARS[cssFile]) return BN_LAYOUT_CSS_VARS[cssFile];
+  var job = new Promise(function(resolve) {
+    var lnk = document.createElement('link'), done = false;
+    var timer = setTimeout(function() { finish(null); }, 8000);
+    function finish(vars) {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      lnk.onload = lnk.onerror = null; lnk.remove();
+      if (!vars) delete BN_LAYOUT_CSS_VARS[cssFile];
+      resolve(vars);
+    }
+    lnk.rel = 'stylesheet';
+    lnk.media = 'not all';
+    lnk.onload = function() {
+      var vars = {};
+      try {
+        var rules = lnk.sheet ? lnk.sheet.cssRules : [];
+        for (var i = 0; i < rules.length; i++) {
+          var r = rules[i];
+          if (!r.style || !/(^|,)\s*:root\s*(,|$)/.test(r.selectorText || '')) continue;
+          for (var j = 0; j < r.style.length; j++) {
+            var name = r.style[j];
+            if (name.indexOf('--') === 0) vars[name] = r.style.getPropertyValue(name).trim();
+          }
+        }
+      } catch (_) { vars = null; }
+      finish(vars);
+    };
+    lnk.onerror = function() { finish(null); };
+    lnk.href = cssFile + '?t=' + Date.now();
+    document.head.appendChild(lnk);
+  });
+  BN_LAYOUT_CSS_VARS[cssFile] = job;
+  return job;
+}
+function bnLayoutCssFiles(file) {
+  var baseName = 'html/' + String(file || '').replace(/\.html$/i, '');
+  return [baseName + '.config.css', baseName + '.css'];
+}
+/* 依序讀 .config.css → .css，回傳第一個 pick(vars) 有值的結果（都沒有就是 null）。 */
+function bnFindLayoutCssValue(file, pick) {
+  return bnLayoutCssFiles(file).reduce(function(chain, cssFile) {
+    return chain.then(function(found) {
+      if (found) return found;
+      return bnReadLayoutCssVars(cssFile).then(function(vars) { return vars ? pick(vars) : null; });
+    });
+  }, Promise.resolve(null));
+}
+
+/* 靜默探測排版尺寸：讀同名 CSS 的 :root --canvas-w/h */
+var bnProbSizePending = {};
 function probSize(id) {
   var layouts = loadLayouts();
   var l = layouts.find(function(x){ return x.id === id; });
-  if (!l || (l.w && l.h)) return;
-  if (document.getElementById('probcss-' + id)) return;
-
-  /* 排版檔名去掉 .html，依序嘗試 .config.css → .css */
-  var baseName = 'html/' + l.file.replace(/\.html$/i, '');
-  var cssFiles = [baseName + '.config.css', baseName + '.css'];
-
-  function tryNextCss(idx) {
-    if (idx >= cssFiles.length) {
-      /* 全部 fetch 失敗 → 改用 <link> 注入讀 computed style */
-      probSizeViaLink(id, cssFiles[0]);
-      return;
-    }
-    var cssFile = cssFiles[idx];
-    fetch(cssFile + '?t=' + Date.now())
-      .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.text();
-      })
-      .then(function(text) {
-        var w = parseCSSVar(text, '--canvas-w');
-        var h = parseCSSVar(text, '--canvas-h');
-        if (w && h) {
-          var ls = loadLayouts();
-          var item = ls.find(function(x){ return x.id === id; });
-          if (item) {
-            item.w = w; item.h = h;
-            saveLayouts(ls);
-            renderAdmin();
-            renderChecks();
-            /* 尺寸探測是 36 個非同步 CSS 請求；這裡不能每完成一個就重建整個
-               預覽清單，否則所有 iframe 會被反覆移除／重開，低配電腦會卡在 Loading。
-               真正的 iframe 載入後會由 bn-iframe-ready 更新 viewport。 */
-          }
-        } else {
-          /* 這個 CSS 沒有 --canvas-w/h，試下一個 */
-          tryNextCss(idx + 1);
-        }
-      })
-      .catch(function() {
-        tryNextCss(idx + 1);
-      });
-  }
-  tryNextCss(0);
-}
-
-/* fetch 失敗時的備用方案：注入 <link>，建臨時元素讀 computed style */
-function probSizeViaLink(id, cssFile) {
-  var layouts = loadLayouts();
-  var l = layouts.find(function(x){ return x.id === id; });
   if (!l) return;
+  var fixed = BN_FIXED_LAYOUT_SIZES[l.file];
+  /* 寫死尺寸的版位，若本機暫存的是舊尺寸也要改回正確值。 */
+  if (fixed ? (l.w === fixed[0] && l.h === fixed[1]) : (l.w && l.h)) return;
+  if (bnProbSizePending[id]) return;
+  bnProbSizePending[id] = true;
 
-  var linkId = 'probcss-' + id;
-  if (document.getElementById(linkId)) return;
-
-  /* 建一個帶 data-prob 的 <div>，對它套用 :root 的 CSS 變數 */
-  var probeEl = document.createElement('div');
-  probeEl.id = linkId;
-  probeEl.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;';
-  document.body.appendChild(probeEl);
-
-  var lnk = document.createElement('link');
-  lnk.rel  = 'stylesheet';
-  lnk.href = cssFile + '?t=' + Date.now();
-  lnk.onload = function () {
-    requestAnimationFrame(function () {
-      var cs = getComputedStyle(document.documentElement);
-      var w  = parseFloat(cs.getPropertyValue('--canvas-w')) || 0;
-      var h  = parseFloat(cs.getPropertyValue('--canvas-h')) || 0;
-      /* 讀完後移除，避免污染 BN編輯器 自己的樣式 */
-      lnk.remove();
-      probeEl.remove();
-      if (w && h) {
-        var ls = loadLayouts();
-        var item = ls.find(function(x){ return x.id === id; });
-        if (item) {
-          item.w = w; item.h = h;
-          saveLayouts(ls);
-          renderAdmin();
-          renderChecks();
-        }
-      }
-    });
-  };
-  document.head.appendChild(lnk);
-
-  setTimeout(function () {
-    var el = document.getElementById(linkId);
-    if (el) el.remove();
-    lnk.remove();
-  }, 5000);
-}
-
-/* 從 CSS 文字解析 :root 內的自訂屬性值 */
-function parseCSSVar(cssText, varName) {
-  /* 先在 :root { ... } 區塊內找 */
-  var rootMatch = cssText.match(/:root\s*\{([^}]*)\}/);
-  var block = rootMatch ? rootMatch[1] : cssText;
-  var re = new RegExp(varName + '\s*:\s*([^;]+)');
-  var m  = block.match(re);
-  if (!m) return 0;
-  return parseFloat(m[1].trim()) || 0;
+  function store(size) {
+    delete bnProbSizePending[id];
+    if (!size) return;
+    var ls = loadLayouts();
+    var item = ls.find(function(x){ return x.id === id; });
+    if (item) {
+      item.w = size[0]; item.h = size[1];
+      saveLayouts(ls);
+      renderAdmin();
+      renderChecks();
+      /* 尺寸探測是 36 個非同步 CSS 請求；這裡不能每完成一個就重建整個
+         預覽清單，否則所有 iframe 會被反覆移除／重開，低配電腦會卡在 Loading。
+         真正的 iframe 載入後會由 bn-iframe-ready 更新 viewport。 */
+    }
+  }
+  if (fixed) { Promise.resolve(fixed).then(store); return; }
+  bnFindLayoutCssValue(l.file, function(vars) {
+    var w = parseFloat(vars['--canvas-w']) || 0, h = parseFloat(vars['--canvas-h']) || 0;
+    return (w && h) ? [w, h] : null;
+  }).then(store, function() { store(null); });
 }
 
 function toggleEnabled(id) {
@@ -1232,12 +1220,15 @@ function renderAdmin() {
   }
   list.innerHTML = layouts.map(function(l) {
     return '<div class="layout-row' + (l.enabled ? ' enabled' : '') + '" id="lr-' + l.id + '">' +
-      '<div class="toggle-active" onclick="toggleEnabled(' + l.id + ')" title="啟用/停用"></div>' +
+      '<div class="toggle-active" data-layout-id="' + l.id + '" title="啟用/停用"></div>' +
       '<div class="name">' + esc(l.name) + '</div>' +
       '<div class="file">html/' + esc(l.file) + '</div>' +
       '<div class="size-tag">' + (l.w ? l.w + ' × ' + l.h : '—') + '</div>' +
     '</div>';
   }).join('');
+  list.querySelectorAll('.toggle-active[data-layout-id]').forEach(function(el) {
+    el.addEventListener('click', function() { toggleEnabled(Number(el.dataset.layoutId)); });
+  });
 }
 
 /* ════════════════════════════════════════
@@ -1350,11 +1341,14 @@ function renderChecks() {
     if(fileKey) checkedByFile[fileKey] = isChecked;
     return '<label class="layout-check-item"' + (forceChecked ? ' title="網址指定的版位，固定顯示"' : '') + '>' +
       '<input type="checkbox" ' + (isChecked ? 'checked' : '') + (forceChecked ? ' disabled' : '') +
-        ' onchange="onCheck(' + l.id + ', this.checked)">' +
+        ' data-layout-id="' + l.id + '">' +
       '<span class="lc-name">' + esc(l.name) + '</span>' +
       '<span class="lc-size">' + (l.w ? l.w + '×' + l.h : '') + '</span>' +
     '</label>';
   }).join('');
+  wrap.querySelectorAll('input[type="checkbox"][data-layout-id]').forEach(function(el) {
+    el.addEventListener('change', function() { onCheck(Number(el.dataset.layoutId), el.checked); });
+  });
     refreshAdditionalSlotsButton();
 }
 
@@ -1712,6 +1706,13 @@ var BN_TEXT_LAYER_FIELDS = [
   { id:'ar-text-field', layers:['六字內'] }
 ];
 var BN_LAYOUT_TEXT_LAYER_CACHE = Object.create(null);
+/* 與 html/SBA_*.config.css 的 --layers 一致（只取圖層名稱）。 */
+var BN_SBA_TEXT_LAYERS = ['bg','文案保護','商品範圍','logo範圍','cta底','逛逛去','cta三角標','主標','日期','副標','漸層左','漸層右','漸層上','漸層下'];
+var BN_FIXED_LAYOUT_TEXT_LAYERS = {
+  'SBA_APP方LOGO.html': BN_SBA_TEXT_LAYERS,
+  'SBA_APP橫LOGO.html': BN_SBA_TEXT_LAYERS,
+  'SBA_PC.html': BN_SBA_TEXT_LAYERS
+};
 var bnTextFieldVisibilityRequest = 0;
 
 function bnParseLayoutTextLayers(cssText) {
@@ -1732,21 +1733,13 @@ function bnLoadLayoutTextLayers(layout) {
 
   var entry = { ready:false, layers:[], promise:null };
   BN_LAYOUT_TEXT_LAYER_CACHE[file] = entry;
-  var baseName = 'html/' + file.replace(/\.html$/i, '');
-  var cssFiles = [baseName + '.config.css', baseName + '.css'];
-  entry.promise = cssFiles.reduce(function(chain, cssFile){
-    return chain.then(function(found){
-      if(found) return found;
-      return fetch(cssFile + '?bnlayers=' + Date.now()).then(function(response){
-        if(!response.ok) throw new Error('HTTP ' + response.status);
-        return response.text();
-      }).then(function(cssText){
-        var layers = bnParseLayoutTextLayers(cssText);
-        if(layers === null) throw new Error('Missing --layers');
-        return layers;
-      }).catch(function(){ return null; });
-    });
-  }, Promise.resolve(null)).then(function(layers){
+  /* SBA 三個版位的 --layers 寫死（TP 不能 fetch 組字串網址，也讀不到版位 CSS 內容）；
+     其他版位用 bnFindLayoutCssValue 從 CSSOM 讀 --layers。 */
+  var fixed = BN_FIXED_LAYOUT_TEXT_LAYERS[file];
+  var job = fixed ? Promise.resolve(fixed.slice()) : bnFindLayoutCssValue(file, function(vars){
+    return vars['--layers'] ? bnParseLayoutTextLayers('--layers:' + vars['--layers'] + ';') : null;
+  });
+  entry.promise = job.catch(function(){ return null; }).then(function(layers){
     entry.layers = Array.isArray(layers) ? layers : [];
     entry.ready = true;
     return entry.layers;
@@ -1844,7 +1837,7 @@ function renderPreviews() {
           /* 每次重建 iframe 都帶時間戳，避免一般瀏覽器沿用舊版排版 HTML。 */
           ' data-bn-src="html/' + l.file + '?bnid=' + l.id + '&t=' + Date.now() + '"' +
           ' style="border:none;display:block;transform-origin:top left;visibility:hidden"' +
-          ' onload="onIframeLoad(' + l.id + ')">' +
+          '>' +
         '</iframe>' +
       '</div>';
 
@@ -1858,6 +1851,7 @@ function renderPreviews() {
       block.querySelector('.preview-block-head').appendChild(lockButton);
     }
 
+    block.querySelector('#iframe-' + l.id).addEventListener('load', function() { onIframeLoad(l.id); });
     area.appendChild(block);
   });
   bnRefreshProductLayoutLockUI();
@@ -4047,7 +4041,8 @@ function scanBgFiles(){
   list.innerHTML = '<div style="color:var(--text3);font-size:12px">掃描中...</div>';
 
   /* 嘗試讀取 bn測底圖/index.json（格式：["hbn.jpg","scbn.png",...]）*/
-  fetch('bn測底圖/index.json?t=' + Date.now())
+  /* TP 的 fetch 只能用寫死的網址（不能加 ?t=），改用 cache:'no-store' 避免舊清單。 */
+  fetch('bn測底圖/index.json', {cache:'no-store'})
     .then(function(r){ return r.json(); })
     .then(function(files){
       if(!Array.isArray(files) || !files.length){
@@ -4223,7 +4218,8 @@ window.loadCheckedByFile  = function(){
   var _t = Date.now();
   /* 陰影編輯器與 Logo 去白邊已由 bn-editor-plugin 在首次使用時載入，
      首頁不必先下載。其餘外掛仍照原順序啟動。 */
-  var plugins = ['js/bn-editor-plugin.js','js/bn-state-plugin.js','js/bn-workorder-upload-plugin.js','js/bn-bg-library-plugin.js','js/bn-whatsnew-plugin.js'];
+  /* js/vendor/browser-loader.js：JSZip、SheetJS、Cropper 一律從 cdnjs 載入（TP 不允許函式庫放進包內）。 */
+  var plugins = ['js/vendor/browser-loader.js','js/bn-editor-plugin.js','js/bn-state-plugin.js','js/bn-workorder-upload-plugin.js','js/bn-bg-library-plugin.js','js/bn-whatsnew-plugin.js'];
   plugins.forEach(function(src){
     var s = document.createElement('script');
     s.src = src + '?t=' + _t;
@@ -4371,8 +4367,8 @@ window.addEventListener('message',function(e){
 });
 </script>
 
-<div id="feedback-btn">📝 填寫反饋</div>
-<button id="shopee-tour-launch" class="shopee-tour-launch" type="button" title="開始 SHOPEE 使用教學" aria-haspopup="dialog" aria-controls="shopee-tour-root">使用教學</button>
+<a id="feedback-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSfVK0PlrMGPRyZ6pExKWlZKjlzXzCm_M2x9C9OfikHZXu-Qxg/viewform?usp=header" target="_blank" rel="noopener">📝 填寫反饋</a>
+<!-- 新手導覽（shopee-tour.js）在 TP 版不放：它會 fetch 組字串網址、覆寫開新視窗的函式。 -->
 <div id="manual-btn">📖 使用說明書</div>
 <div id="manual-modal" role="dialog" aria-modal="true" aria-label="JBP 編輯器使用說明書">
   <div id="manual-box">
@@ -4391,11 +4387,9 @@ document.addEventListener("DOMContentLoaded",function(){
  document.addEventListener("keydown",function(e){
    if(e.key==="Escape"&&m.classList.contains("show"))closeManual();
  });
- /* 使用反饋表：直接開 Google 表單（BODA 模式若在後台另填連結，
-    help-settings.js 會在 capture 階段攔截並改開該連結）。 */
- document.getElementById("feedback-btn").onclick=function(){
-   window.open("https://docs.google.com/forms/d/e/1FAIpQLSfVK0PlrMGPRyZ6pExKWlZKjlzXzCm_M2x9C9OfikHZXu-Qxg/viewform?usp=header","_blank","noopener");
- };
+ /* 使用反饋表：#feedback-btn 本身就是 <a target="_blank"> 連到 Google 表單
+    （TP 不允許用程式開新視窗）。BODA 模式若在後台另填連結，
+    help-settings.js 會在 capture 階段攔截並改開該連結。 */
 });
 </script>
 
@@ -4566,8 +4560,39 @@ window.addEventListener('storage', function (e) {
 </script>
 
 <!-- SHOPEE_TOUR_SCRIPT_BEGIN -->
-<script id="shopee-tour-script" data-version="20261029-7" src="js/shopee-tour.js?v=20261029-7" defer></script>
 <!-- SHOPEE_TOUR_SCRIPT_END -->
+<script>
+/* TP 不允許 HTML 行內事件屬性（onclick 等），統一在這裡綁定。
+   一律在點擊當下才找全域函式，外掛（如 boda-level-plugin）覆寫後仍會呼叫到新版。 */
+(function() {
+  function on(el, type, fn) { if (el) el.addEventListener(type, fn); }
+  function byId(id) { return document.getElementById(id); }
+  function bind() {
+    document.querySelectorAll('[data-bn-tab]').forEach(function(el) {
+      on(el, 'click', function() { switchTab(el.dataset.bnTab); });
+    });
+    on(byId('bn-btn-scan-layouts'), 'click', function() { scanLayouts(); });
+    on(byId('bn-btn-scan-bg'), 'click', function() { scanBgFiles(); });
+    on(byId('bg-all-check'), 'change', function(e) { toggleAllBgCheckers(e.target.checked); });
+    ['txt-brand', 'txt-main', 'txt-sub', 'txt-date', 'txt-icon', 'txt-campaignCard'].forEach(function(id) {
+      on(byId(id), 'input', function() { broadcastText(); });
+    });
+    on(byId('txt-ar'), 'input', function() { bnArTextInput(); });
+    document.querySelectorAll('[data-bn-check-all]').forEach(function(el) {
+      on(el, 'click', function() { checkAll(el.dataset.bnCheckAll === '1'); });
+    });
+    on(byId('bn-additional-layouts'), 'click', function() { toggleAdditionalSlots(); });
+    document.querySelectorAll('[data-bn-additional-close]').forEach(function(el) {
+      on(el, 'click', function() { closeAdditionalSlots(); });
+    });
+    on(byId('bn-additional-apply'), 'click', function() { applyAdditionalSlots(); });
+    on(byId('bn-loading-close'), 'click', function() { bnHidePreviewLoading(true); });
+    on(byId('cp-eyedrop'), 'click', function() { openEyeDropper(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
+</script>
 </body>
 
 </html>

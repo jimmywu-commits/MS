@@ -111,7 +111,8 @@
   }
 
   function load(){
-    return fetch(SRC + '?t=' + Date.now(), {cache:'no-store'}).then(function(r){
+    /* TP 的 fetch 只能用寫死的網址，不能用變數或加 ?t=（與 SRC 相同）。 */
+    return fetch('js/changelog.json', {cache:'no-store'}).then(function(r){
       if(!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function(data){

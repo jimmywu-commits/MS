@@ -4424,16 +4424,14 @@
         return String(name||'layout').trim().replace(/[\/\\:*?"<>|]/g,'_') || 'layout';
       }
 
+      /* JSZip 改由 js/vendor/browser-loader.js 從 cdnjs 載入（版本寫死、附 integrity），
+         TP 不允許把函式庫放進包內。 */
       function loadJSZip(cb){
         if(window.JSZip){cb();return;}
-        var script=document.createElement('script'),settled=false;
-        var timer=setTimeout(function(){finish(new Error('JSZip 載入逾時，請確認 js/vendor/jszip.min.js 已一起更新'));},8000);
-        function finish(err){if(settled)return;settled=true;clearTimeout(timer);script.onload=script.onerror=null;if(err)script.remove();cb(err);}
-        script.dataset.bnJszip='1';
-        script.src=new URL('vendor/jszip.min.js',_bnEditorScriptBase).href;
-        script.onload=function(){finish(window.JSZip?null:new Error('JSZip 未正確載入'));};
-        script.onerror=function(){finish(new Error('請確認 js/vendor/jszip.min.js 已一起更新'));};
-        document.head.appendChild(script);
+        if(!window.BodaVendor){cb(new Error('函式庫載入元件未載入，請確認 js/vendor/browser-loader.js 已一起更新'));return;}
+        window.BodaVendor.ensure('jszip').then(function(){
+          cb(window.JSZip?null:new Error('JSZip 未正確載入'));
+        },function(err){cb(err);});
       }
 
       function dataUrlToBase64(dataUrl){
