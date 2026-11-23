@@ -3,11 +3,11 @@
 
   let currentRules = [];
 
-  /* banwords.xlsx 裡把中文數字強制換成阿拉伯數字的規則（一→1 … 十→10、兩→2）。
+  /* banwords.rules.json 裡把中文數字強制換成阿拉伯數字的規則（一→1 … 十→10、兩→2）。
      右鍵豁免（numeralExempt）時要跳過的就是這一類規則，其餘一般禁用語不受影響。
 
      判斷方式不寫死清單，而是「單一中文數字字元 + 規則是自動改成純數字」，
-     這樣以後在 xlsx 加「兩、零、百、千、萬」等新的數字列，右鍵豁免會自動跟著
+     這樣以後在規則檔加「兩、零、百、千、萬」等新的數字規則，右鍵豁免會自動跟著
      生效，不用再回來改這支程式。 */
   const CN_NUMERAL_CHARS = '一二三四五六七八九十零兩參百千萬壹貳參肆伍陸柒捌玖拾';
   function isChineseNumeralRule(rule){
@@ -559,8 +559,8 @@
   }
 
   /*
-   * 蝦幣金額必須先於 banwords.xlsx 規則保護。
-   * Excel 內有「\$\d+\s*蝦幣 -> 蝦幣」等規則；若直接執行，
+   * 蝦幣金額必須先於 banwords.rules.json 規則保護。
+   * 規則檔內有「\$\d+\s*蝦幣 -> 蝦幣」等規則；若直接執行，
    * `$2000蝦幣` 會整段被替換成「蝦幣」，連 2000 都消失。
    * 這裡只針對「蝦幣＋數字」或「數字＋蝦幣」完整片段建立暫存 token，
    * 正規化為不含 $ 的千分位格式，再讓其他禁用語繼續處理。
@@ -601,7 +601,7 @@
   }
 
   /*
-   * 全域「永遠保留」清單：不論 Excel 規則的排除欄怎麼設定，
+   * 全域「永遠保留」清單：不論規則的排除欄（exclude）怎麼設定，
    * 這裡列出的詞一律會在所有禁用語規則套用前被保護起來，
    * 處理完畢後再還原，確保像「百搭」這種詞不會被「百」這類
    * 單字禁用語誤傷。可用 banwordEngine.setAlwaysAllowedTerms()
@@ -650,7 +650,7 @@
       changed = true;
     }
 
-    /* 先保護蝦幣金額，避免 Excel 的正規式替換把數字整段吃掉。 */
+    /* 先保護蝦幣金額，避免規則的正規式替換把數字整段吃掉。 */
     const shopeeCoinProtected = protectShopeeCoinAmounts(out);
     out = shopeeCoinProtected.text;
 
@@ -661,7 +661,7 @@
     getRules().forEach(function(rule){
       if (!rule.keyword) return;
       if (options && options.numeralExempt && isChineseNumeralRule(rule)) return;
-      /* 品牌名不限特殊符號：banwords.xlsx 裡純符號的規則（! ? . " =+ ~）不套用，
+      /* 品牌名不限特殊符號：banwords.rules.json 裡純符號的規則（! ? . " =+ ~）不套用，
          含文字的一般禁用語照常檢查。 */
       if (role === '品牌名' && !/[\p{Script=Han}\p{L}\p{N}]/u.test(String(rule.keyword))) return;
 

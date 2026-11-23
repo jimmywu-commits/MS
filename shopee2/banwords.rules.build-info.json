@@ -1,9 +1,0 @@
-{
-  "source": "banwords.xlsx",
-  "sourceSha256": "06f7acaf25283f352631ee077308f51d5b9b53d9b88f684ecd3c2a7905a9f96f",
-  "parser": "SheetJS 0.18.5",
-  "converter": "js/banwords-engine-hbn.js",
-  "rules": 68,
-  "outputBytes": 10342,
-  "outputSha256": "2c596c4ee8a0dc705ff6d415c696e03eff975845e592f3c5660200ad9f5dd9b8"
-}

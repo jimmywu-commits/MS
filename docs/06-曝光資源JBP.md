@@ -128,7 +128,7 @@ JBP 也會處理 JSON export/import、清除全部狀態與自動 save/load。�
 
 - 工單 parser 會動態嘗試 `jsdelivr` 的 SheetJS，再以 cdnjs 作 fallback。
 - JBP 主頁可從同層的 `BOD A曝光資源版位詳情表.xlsx` 做等級/版位過濾。
-- 禁用語規則來源為 `banwords.xlsx` 的指定工作表；直接雙擊 HTML 時 fetch 可能被瀏覽器擋下，系統提供手動選取 fallback。
+- 禁用語規則來源為 `shopee2/banwords.rules.json`（直接編輯，格式見 `shopee2/banwords-說明.md`）；直接雙擊 HTML 時 fetch 可能被瀏覽器擋下，系統提供手動選取 JSON 的 fallback。
 - 文字 input/contenteditable 的轉換與提示由 `banwords-engine-hbn.js` 和 state/plugin bridge 共同完成。
 
 ## 9. 回饋

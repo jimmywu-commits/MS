@@ -5104,7 +5104,7 @@
     if(list.length) el.dataset.dollarExempt = JSON.stringify(list);
     else el.removeAttribute('data-dollar-exempt');
   }
-  /* 中文數字（一～十）豁免：banwords.xlsx 有「一→1」…「十→10」這幾條
+  /* 中文數字（一～十）豁免：banwords.rules.json 有「一→1」…「十→10」這幾條
      自動改字規則，勾了豁免就跟著 $／千分位一起跳過。旗標存在元素上，
      每次 _sendUpdate 都會帶給父層，否則下一次編輯又會被改回阿拉伯數字。 */
   /* 阿拉伯數字 ⇄ 中文數字：逐字對應 0～9。

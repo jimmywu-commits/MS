@@ -1,6 +1,6 @@
 /*!
  * BN State Plugin
- * 1. banwords：用 applyToElement（同 sba.html），含 toast + 手動選 xlsx fallback
+ * 1. banwords：用 applyToElement（同 sba.html），含 toast + 手動選 banwords.rules.json fallback
  * 2. 本機暫存（經 js/bn-store.js 的 BnStore）
  * 3. 下載暫存 / 上傳暫存按鈕
  *
@@ -394,7 +394,7 @@
     }, 10);
   }
 
-  /* ── 禁用詞規則載入（banwords.rules.json，由 banwords.xlsx 轉出） ──
+  /* ── 禁用詞規則載入（banwords.rules.json 是正本，直接編輯它；格式見 banwords-說明.md） ──
      TP 不收 xlsx、fetch 只能用寫死的網址，所以固定讀 banwords.rules.json。
      這是自動改字的來源，讀不到時要明顯提示，否則文案規則會整個失效。 */
   function ensureBanwordsPicker(){
