@@ -66,7 +66,11 @@
 
     /* ── 影片區 ─────────────────────────────────── */
     .stage { position: relative; overflow: hidden; border-radius: 12px; background: #000;
-      border: 1px solid #2b2f2d; box-shadow: 0 16px 48px rgba(0,0,0,.4); aspect-ratio: 1944 / 1080; }
+      border: 1px solid #2b2f2d; box-shadow: 0 16px 48px rgba(0,0,0,.4); aspect-ratio: var(--video-ratio, 1916 / 908); }
+    /* 沒有字幕檔／章節檔時，相關介面整組隱藏 */
+    .no-subs #btnCc, .no-subs #btnSize, .no-subs .sub-layer, .no-subs .kbd-cc, .no-subs #noteMsg { display: none; }
+    .no-guide .stepper, .no-guide .chapter { display: none; }
+    #noteMsg.err { display: inline; color: #ff8a7a; }
     .stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
     .stage.hide-cursor { cursor: none; }
 
@@ -191,7 +195,7 @@
     </div>
     <p class="note" id="note">
       <span id="noteMsg">字幕檔：<a href="MS_tutorial.zh-TW.srt" download>MS_tutorial.zh-TW.srt</a></span>
-      <span><kbd>空白鍵</kbd> 播放／暫停　<kbd>←</kbd><kbd>→</kbd> 前後 5 秒　<kbd>C</kbd> 字幕　<kbd>F</kbd> 全螢幕</span>
+      <span><kbd>空白鍵</kbd> 播放／暫停　<kbd>←</kbd><kbd>→</kbd> 前後 5 秒　<span class="kbd-cc"><kbd>C</kbd> 字幕　</span><kbd>F</kbd> 全螢幕</span>
     </p>
   </main>
 <script>
@@ -205,7 +209,7 @@
   var stage = document.getElementById('stage');
   var video = document.getElementById('tutorial');
   var noteMsg = document.getElementById('noteMsg');
-  function fail(msg) { noteMsg.textContent = msg; }
+  function fail(msg) { noteMsg.textContent = msg; noteMsg.classList.add('err'); }
 
   /* ════════════════ 影片載入（沿用原本 MSE 分段播放） ════════════════ */
   var AHEAD_PLAYING = 60, AHEAD_IDLE = 12, KEEP_BEHIND = 30, CHUNK_BYTES = 6 * 1024 * 1024;
@@ -394,10 +398,12 @@
     out.sort(function (x, y) { return x.start - y.start; });
     return out;
   }
+  /* 字幕檔可有可無：沒有（或是空的）就把字幕相關按鈕整組藏起來 */
+  player.classList.add('no-subs');
   fetch(SRT_URL, { cache: 'no-cache' })
-    .then(function (r) { if (!r.ok) throw new Error('找不到字幕檔'); return r.text(); })
-    .then(function (t) { cues = parseSrt(t); })
-    .catch(function (e) { fail('字幕載入失敗：' + e.message); });
+    .then(function (r) { return r.ok ? r.text() : ''; })
+    .then(function (t) { cues = parseSrt(t); if (cues.length) player.classList.remove('no-subs'); })
+    .catch(function () {});
 
   function cueAt(t) {
     var lo = 0, hi = cues.length - 1;
@@ -497,10 +503,16 @@
     return p ? { x: p[0], y: p[1], w: p[2], h: p[3] } : null;
   }
 
+  /* 章節／游標資料也可有可無：沒有就不顯示階段列與章節列 */
+  player.classList.add('no-guide');
   fetch(GUIDE_URL, { cache: 'no-cache' })
-    .then(function (r) { if (!r.ok) throw new Error('找不到 ' + GUIDE_URL); return r.json(); })
-    .then(function (g) { guide = g; buildStepper(); buildTicks(); updateStages(video.currentTime || 0); })
-    .catch(function (e) { fail('章節資料載入失敗：' + e.message); });
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (g) {
+      if (!g || !g.chapters || !g.chapters.length) return;
+      guide = g; player.classList.remove('no-guide');
+      buildStepper(); buildTicks(); updateStages(video.currentTime || 0);
+    })
+    .catch(function () {});
 
   /* ════════════════ 字幕排版與避開游標 ════════════════ */
   var subLayer = document.getElementById('subLayer');
@@ -509,8 +521,15 @@
   var dbgCursor = document.getElementById('dbgCursor');
   var dbgZone = document.getElementById('dbgZone');
   var controls = document.getElementById('controls');
-  var VW = 1944, VH = 1080;
+  /* 影片尺寸以實際讀到的為準（換影片不用改程式） */
+  var VW = 1916, VH = 908;
   var rect = { x: 0, y: 0, w: 0, h: 0 };
+  video.addEventListener('loadedmetadata', function () {
+    if (!video.videoWidth || !video.videoHeight) return;
+    VW = video.videoWidth; VH = video.videoHeight;
+    player.style.setProperty('--video-ratio', VW + ' / ' + VH);
+    layoutLayer();
+  });
 
   function layoutLayer() {
     var w = stage.clientWidth, h = stage.clientHeight;
@@ -707,8 +726,22 @@
     else if (k === 'd') player.classList.toggle('debug');
   });
 
-  function save() { try { localStorage.setItem('ms-tutorial-sub', JSON.stringify({ cc: ccOn, size: sizeIdx })); } catch (e) {} }
-  try { var pref = JSON.parse(localStorage.getItem('ms-tutorial-sub') || 'null'); if (pref) { ccOn = pref.cc !== false; setSize(pref.size == null ? 1 : pref.size); btnCc.classList.toggle('off', !ccOn); } } catch (e) {}
+  /* 記住字幕開關與字級：TP 上用 tpArtifact.kv（TP 不允許瀏覽器儲存空間），其他環境就只記在這次瀏覽 */
+  var PREF_KEY = 'ms-tutorial-sub';
+  function prefStore() { return window.tpArtifact && window.tpArtifact.kv ? window.tpArtifact.kv : null; }
+  function save() {
+    var kv = prefStore();
+    if (kv) Promise.resolve(kv.set(PREF_KEY, JSON.stringify({ cc: ccOn, size: sizeIdx }))).catch(function () {});
+  }
+  function loadPref() {
+    var kv = prefStore();
+    if (!kv) return;
+    Promise.resolve(kv.get(PREF_KEY)).then(function (raw) {
+      var pref = raw ? JSON.parse(raw) : null;
+      if (pref) { ccOn = pref.cc !== false; setSize(pref.size == null ? 1 : pref.size); btnCc.classList.toggle('off', !ccOn); }
+    }).catch(function () {});
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadPref); else loadPref();
 
   function tick(now) {
     var d = duration(), t = video.currentTime;

@@ -6,8 +6,10 @@ appended one after another into a single MediaSource SourceBuffer (gapless),
 and the manifest lists every fragment's byte offset/time so the player can
 fetch any point with an HTTP Range request.
 
-Usage (教學影片更新時)：python -I tools/split-tutorial-video.py <新影片.mp4> mov MS_tutorial 3
-不需要 ffmpeg；每段要小於 100MB，超過就把最後的 3 改成 4（mov/index.html 會依 MS_tutorial.json 自動接起來）。
+Usage (教學影片更新時)：python -I tools/split-tutorial-video.py <新影片.mp4> mov MS_tutorial 5
+不需要 ffmpeg；每段要小於 20 MiB（TP 單檔上限，也符合 GitHub／GitLab 的 100MB），
+超過就把最後的 5 調大（mov/index.html 會依 MS_tutorial.json 自動接起來，段數不限）。
+換影片前先刪掉 mov 裡舊的 MS_tutorial_part*.mp4，避免段數變少時留下多的舊檔。
 """
 import json, os, struct, sys
 
