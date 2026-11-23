@@ -930,7 +930,7 @@ html.boda-hosted #shopee-tour-launch{display:none!important;}
       <strong id="bn-additional-title">追加版位</strong>
       <button type="button" class="bn-additional-close" data-bn-additional-close="1" aria-label="關閉">×</button>
     </div>
-    <div class="bn-additional-note">只選版位名稱；同一版位的方／橫 LOGO 由編輯器依 LOGO 尺寸自動判斷，不需要在這裡分開選。</div>
+    <div class="bn-additional-note">列出所有已載入版位，未勾選的可在此找回。同一家族的方／橫 LOGO 由尺寸自動判斷，不需分開選。</div>
     <div id="bn-additional-options"></div>
     <div class="bn-additional-foot">
       <button type="button" data-bn-additional-close="1">取消</button>
@@ -1631,14 +1631,15 @@ function additionalLayoutFamilyLabel(key, members) {
 function getAdditionalLayoutFamilies() {
   var groups = {};
   loadLayouts().forEach(function (layout) {
-    if (!layout || layout.enabled === false) return;
+    if (!layout) return;
     var key = additionalLayoutFamilyKey(layout);
     if (!groups[key]) groups[key] = { key: key, label: additionalLayoutFamilyLabel(key, [layout]), members: [] };
     groups[key].members.push(layout);
   });
-  return Object.keys(groups).map(function (key) { return groups[key]; }).filter(function (group) {
-    /* 已經有一個成員被選取，就代表這個版位已在目前清單，不再列為追加候選。 */
-    return !group.members.some(function (layout) { return getLayoutCheckedValue(layout); });
+  return Object.keys(groups).map(function (key) { return groups[key]; }).map(function (group) {
+    group.checkedCount = group.members.filter(function (layout) { return getLayoutCheckedValue(layout); }).length;
+    /* 保留所有已載入版位家族，讓取消勾選後消失的畫布版位一定能從追加視窗找回。 */
+    return group;
   }).sort(function (a, b) { return a.label.localeCompare(b.label, 'zh-Hant'); });
 }
 function refreshAdditionalSlotsButton() {
@@ -1648,7 +1649,7 @@ function refreshAdditionalSlotsButton() {
   button.disabled = count === 0;
   button.setAttribute('aria-disabled', count === 0 ? 'true' : 'false');
   button.style.cursor = count === 0 ? 'not-allowed' : 'pointer';
-  button.title = count ? '追加目前尚未顯示的版位' : '目前沒有可追加的版位';
+  button.title = count ? '追加或找回已載入的版位' : '目前沒有可追加的版位';
 }
 function toggleAdditionalSlots() {
   var modal = document.getElementById('bn-additional-modal');
@@ -1657,7 +1658,12 @@ function toggleAdditionalSlots() {
   var groups = getAdditionalLayoutFamilies();
   if (!groups.length) { refreshAdditionalSlotsButton(); return; }
   options.innerHTML = groups.map(function (group, index) {
-    var detail = group.members.length > 1 ? '方／橫自動判斷' : '單一版位';
+    var missingCount = group.members.length - group.checkedCount;
+    var detail = missingCount === 0
+      ? '目前已全勾選'
+      : (group.checkedCount > 0
+        ? '可補回未勾選版位'
+        : (group.members.length > 1 ? '方／橫自動判斷' : '單一版位'));
     return '<label class="bn-additional-option">' +
       '<input type="checkbox" data-additional-family="' + esc(group.key) + '" id="bn-additional-' + index + '">' +
       '<span>' + esc(group.label) + '</span><small>' + esc(detail) + '</small></label>';

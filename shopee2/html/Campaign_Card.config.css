@@ -2,11 +2,11 @@
 :root {
   --canvas-w: 240px;
   --canvas-h: 327px;
-  --canvas-bg: #ffffff;
+  --canvas-bg: #D0011B;
   --bg-img: ;
   --layers: "bg|,商品範圍|,logo範圍|,CampaignCard文案|文案可05字";
 }
 * { transform-origin: 0 0; }
-.bg { background: #ffffff !important; }
+.bg { background: #D0011B !important; }
 .商品範圍 { background: transparent !important; }
 #底圖 { display: none !important; opacity: 0 !important; }
