@@ -4344,10 +4344,11 @@ window.addEventListener('message',function(e){
 <a id="feedback-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSfVK0PlrMGPRyZ6pExKWlZKjlzXzCm_M2x9C9OfikHZXu-Qxg/viewform?usp=header" target="_blank" rel="noopener">📝 填寫反饋</a>
 <!-- 新手導覽（shopee-tour.js）在 TP 版不放：它會 fetch 組字串網址、覆寫開新視窗的函式。 -->
 <div id="manual-btn">📖 使用說明書</div>
-<div id="manual-modal" role="dialog" aria-modal="true" aria-label="JBP 編輯器使用說明書">
+<div id="manual-modal" role="dialog" aria-modal="true" aria-label="使用手冊">
   <div id="manual-box">
-    <button id="manual-close" type="button" aria-label="關閉使用說明書">×</button>
-    <iframe id="manual-pdf" src="JBP編輯器使用說明書.pdf#view=FitH" title="JBP 編輯器使用說明書"></iframe>
+    <button id="manual-close" type="button" aria-label="關閉使用手冊">×</button>
+    <!-- 舊的 PDF 說明書已由 MS 的 HTML 使用手冊取代（TP 不收 pdf）；打開時才載入，直接跳到「曝光資源」那一章。 -->
+    <iframe id="manual-pdf" data-src="../manual/index.html#cat-ex" title="使用手冊"></iframe>
   </div>
 </div>
 
@@ -4355,7 +4356,11 @@ window.addEventListener('message',function(e){
 document.addEventListener("DOMContentLoaded",function(){
  const m=document.getElementById("manual-modal");
  const closeManual=function(){m.classList.remove("show");};
- document.getElementById("manual-btn").onclick=function(){m.classList.add("show");};
+ document.getElementById("manual-btn").onclick=function(){
+   var f=document.getElementById("manual-pdf");
+   if(f&&!f.getAttribute("src")&&f.dataset.src)f.setAttribute("src",f.dataset.src);
+   m.classList.add("show");
+ };
  document.getElementById("manual-close").onclick=closeManual;
  m.onclick=function(e){if(e.target===m)closeManual();};
  document.addEventListener("keydown",function(e){

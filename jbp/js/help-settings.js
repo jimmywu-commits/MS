@@ -5,11 +5,9 @@
   var DEFAULTS={feedbackUrl:'',manualUrl:''};
   var shared=Object.assign({},DEFAULTS);
   var preview=null;
-  var script=document.currentScript;
-  var configUrl='config.json';
-  try{
-    if(script&&script.src) configUrl=new URL('../../config.json',script.src).href;
-  }catch(_){ }
+  /* 只在曝光資源（shopee2/index.html，BODA 模式）載入；TP 規則 fetch 要寫死網址，
+     所以用相對於該頁的 '../config.json'＝MS 根目錄 config.json。 */
+  var configUrl='../config.json'; /* 只給後台顯示用 */
 
   function clean(source){
     source=source&&typeof source==='object'?source:{};
@@ -28,7 +26,14 @@
     return get();
   }
   function resetPreview(){preview=null;notify();return get();}
-  function open(url){if(url) window.open(url,'_blank','noopener');}
+  /* TP 規則：不用程式開新視窗，改用 <a target="_blank"> 讓瀏覽器開新分頁。 */
+  function open(url){
+    if(!url) return;
+    var a=document.createElement('a');
+    a.href=url;a.target='_blank';a.rel='noopener';
+    a.style.display='none';
+    document.body.appendChild(a);a.click();a.remove();
+  }
   function bindFloatingButtons(){
     var feedback=document.getElementById('feedback-btn');
     var manual=document.getElementById('manual-btn');
@@ -51,7 +56,7 @@
   }
   function loadConfig(){
     if(typeof fetch!=='function') return Promise.resolve(get());
-    return fetch(configUrl,{cache:'no-store'}).then(function(response){
+    return fetch('../config.json',{cache:'no-store'}).then(function(response){
       if(!response.ok) throw new Error('config.json 讀取失敗');
       return response.json();
     }).then(function(config){
@@ -62,7 +67,7 @@
   }
   function buildConfig(partial){
     var next=Object.assign({},get(),clean(partial));
-    return fetch(configUrl,{cache:'no-store'}).then(function(response){
+    return fetch('../config.json',{cache:'no-store'}).then(function(response){
       if(!response.ok) throw new Error('config.json 讀取失敗');
       return response.json();
     }).catch(function(){return {};}).then(function(config){

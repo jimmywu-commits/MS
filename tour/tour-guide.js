@@ -71,9 +71,10 @@
   }
   function extend(a, b){ for(var k in b) if(Object.prototype.hasOwnProperty.call(b, k)) a[k] = b[k]; return a; }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
-  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-  function lsSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
-  function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+  /* 暫存一律經過 BnStore（shopee2/js/bn-store.js，主頁先載入）；TP 規則不允許直接寫瀏覽器暫存 API。 */
+  function lsGet(k){ try{ return window.BnStore.local.get(k); }catch(e){ return null; } }
+  function lsSet(k, v){ try{ window.BnStore.local.set(k, v); }catch(e){} }
+  function lsDel(k){ try{ window.BnStore.local.remove(k); }catch(e){} }
   function reducedMotion(){ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
 
   /* ══════════════════ 樣式（只注入一次；顏色都用 CSS 變數，可以從外面改） ══════════════════ */
@@ -163,7 +164,7 @@
   function create(userOpts){
     var opts = extend({
       steps: [],
-      storageKey: null,          // 記錄「看過了」的 localStorage key；null = 不記錄、不自動跑
+      storageKey: null,          // 記錄「看過了」的本機暫存 key；null = 不記錄、不自動跑
       autoStart: true,           // 沒看過就自動開始
       startDelay: 300,           // 自動開始前等多久（ms），讓頁面先畫好
       forceParam: 'tour',        // 網址有 ?tour 就強制再跑一次；設 null 關掉

@@ -6,14 +6,14 @@
     python tools/build-tp-sba.py --bg-per-category 3   # 每個底圖分類放 3 張（預設 2）
     python tools/build-tp-sba.py --no-fonts            # 不放字型（改用系統字型）
     python tools/build-tp-sba.py --no-slim             # 不精簡程式（保留註解與縮排，方便除錯）
-    python tools/build-tp-sba.py --manual-url https://…/JBP編輯器使用說明書.pdf
+    python tools/build-tp-sba.py --manual-url https://…/manual/index.html
 發佈：python tools/publish-tp-sba.py（見該檔說明）
 
 做的事：
   1. 只複製 SBA 三個版位（SBA_APP方LOGO、SBA_APP橫LOGO、SBA_PC）需要的檔案。
   2. js/bn-store.js 換成 js/bn-store-tp.js（只放記憶體，包內不會出現瀏覽器儲存 API）。
   3. js/index.js 只列 SBA 三個版位；bgimg/index.json 只留選到的橫式底圖。
-  4. 使用說明書 PDF 不放（TP 不收 pdf）：給 --manual-url 就改成開新分頁連過去，否則隱藏按鈕。
+  4. 使用手冊（MS 的 manual/index.html）不放：給 --manual-url 就改成開新分頁連過去，否則隱藏按鈕。
   5. 精簡文字檔：拿掉整行的註解與行首縮排（TP 單次發佈請求上限 1 MiB），精簡後用 node 檢查語法。
   6. 依 TP 發佈規則檢查整包，有問題就列出來並以錯誤碼 1 結束。
 
@@ -214,13 +214,14 @@ def patch_index_html(out, manual_url):
     path = out / 'index.html'
     text = path.read_text(encoding='utf-8')
     nl = '\r\n' if '\r\n' in text else '\n'
-    # 使用說明書 PDF：TP 不收 pdf，iframe 不預先載入
-    pdf_src = 'src="JBP編輯器使用說明書.pdf#view=FitH"'
-    if pdf_src not in text:
-        raise SystemExit('index.html 找不到使用說明書 iframe，請更新 build-tp-sba.py')
-    text = text.replace(pdf_src, 'src="about:blank"')
-    open_line = 'document.getElementById("manual-btn").onclick=function(){m.classList.add("show");};'
-    if open_line not in text:
+    # 使用手冊（MS 的 manual/index.html）不在 SBA 包裡：iframe 不載入
+    manual_src = 'data-src="../manual/index.html#cat-ex"'
+    if manual_src not in text:
+        raise SystemExit('index.html 找不到使用手冊 iframe，請更新 build-tp-sba.py')
+    text = text.replace(manual_src, 'data-src=""')
+    m_open = re.search(r' document\.getElementById\("manual-btn"\)\.onclick=function\(\)\{[\s\S]*?\n \};', text)
+    open_line = m_open.group(0) if m_open else None
+    if open_line is None:
         raise SystemExit('index.html 找不到使用說明書按鈕的程式，請更新 build-tp-sba.py')
     if manual_url:
         safe = manual_url.replace('&', '&amp;').replace('"', '&quot;')

@@ -26194,7 +26194,7 @@ function currentImportColorTicketValues() {
   };
 
   /* 嘗試從「背景色工具」iframe 讀取最新的按鈕顏色狀態。
-     背景色工具中 simState 與 res 都是 script-level 變數，需要用 eval() 存取。 */
+     背景色工具中 simState 與 res 都是 script-level 變數，需要用 iframe 視窗的 eval 方法存取。 */
   try {
     var colorFrame = document.getElementById('color-frame');
     var ctWin = colorFrame && colorFrame.contentWindow;
@@ -31786,8 +31786,8 @@ ensureBlocksLoaded(function () {
 <script id="boda-help-script">
 (function(){
   var feedbackUrl='https://docs.google.com/forms/d/e/1FAIpQLSdUnE4CC48TqjM__ucjOOC-b-D8tgCijuNBRQENf2pBaysCsQ/viewform?usp=dialog';
-  var manualUrl = 'shopee2/JBP編輯器使用說明書.pdf#view=FitH';
   var guideUrl='manual/index.html';
+  var manualUrl = guideUrl; /* 舊的 PDF 說明書已由 HTML 使用手冊取代（TP 不收 pdf） */
   var videoUrl='mov/index.html'; /* 教學影片頁：由影片選單開啟獨立播放頁 */
   var feedbackButton=document.getElementById('boda-help-feedback'),manualButton=document.getElementById('boda-help-manual');
   var guideButton=document.getElementById('boda-help-guide'),videoButton=document.getElementById('boda-help-video');
@@ -31937,8 +31937,10 @@ ensureBlocksLoaded(function () {
 </script>
 <!-- 獨立操作導覽：只展示介面與動畫，不修改工單或觸發上傳／下載。 -->
 <!-- 2026-11-16：舊導覽（boda-tour-script v1.11）停用，改用新手導覽 tour/（引擎 tour-guide.js＋步驟 tour.js；示範資料 tour/demo-data.js 只在導覽時載入） -->
-<script src="tour/tour-guide.js?v=1.0.0"></script>
-<script src="tour/tour.js?v=20261116x"></script>
+<!-- 導覽的暫存經過 BnStore（TP 規則：不直接用瀏覽器暫存 API） -->
+<script src="shopee2/js/bn-store.js"></script>
+<script src="tour/tour-guide.js?v=20261123-bnstore"></script>
+<script src="tour/tour.js?v=20261123-bnstore"></script>
 <script>
 /* ══ MSBN 商品區「背景填色」══
    商品區沒被圖片蓋到的空白處，填上從圖片邊緣取的顏色（漸層，跟著邊緣一路變化）。

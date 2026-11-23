@@ -52,7 +52,7 @@
   .hbn-plugin-modal.crop-locked [data-act="applyCrop"]{border-color:#fb923c !important;background:rgba(249,115,22,.18) !important;color:#fed7aa !important;box-shadow:0 0 0 2px rgba(249,115,22,.45),0 0 18px rgba(249,115,22,.35);}
   .hbn-plugin-crop-help{display:none;margin-left:4px;color:#fed7aa;background:rgba(249,115,22,.14);border:1px solid rgba(249,115,22,.45);border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700;}
   .hbn-plugin-modal.crop-locked .hbn-plugin-crop-help{display:inline-flex;}
-  .hbn-plugin-link-btn{border:0;background:#fff;color:#111827;padding:6px 10px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-right:auto;}
+  .hbn-plugin-link-btn{border:0;background:#fff;color:#111827;padding:6px 10px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-right:auto;text-decoration:none;display:inline-block;}
   .hbn-plugin-nudge{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:100080;background:rgba(0,0,0,.55);}
   .hbn-plugin-nudge.show{display:flex;}
   .hbn-plugin-nudge-box{position:relative;width:300px;height:200px;background:#0000;border-radius:10px;overflow:hidden;box-shadow:none;}
@@ -100,7 +100,7 @@
         <div class="hbn-plugin-brush" data-role="brushPreview"></div>
       </div>
       <div class="hbn-plugin-status">
-        <button data-act="photoroom" class="hbn-plugin-link-btn">最強去背工具連結</button>
+        <a data-act="photoroom" class="hbn-plugin-link-btn" href="https://www.photoroom.com/tools/background-remover" target="_blank" rel="noopener">最強去背工具連結</a>
         <span data-role="status">Ready</span>
         <span>
           <button data-act="cancel" class="danger">取消</button>
@@ -111,7 +111,7 @@
     <div class="hbn-plugin-nudge" data-role="pluginNudge" aria-hidden="true">
       <div class="hbn-plugin-nudge-box">
         <button class="hbn-plugin-nudge-close" data-act="pluginNudgeClose" aria-label="關閉">✖</button>
-        <img data-act="pluginNudgeImage" src="程式檔案/跳出.png" alt="跳出提示">
+        <a href="https://www.photoroom.com/tools/background-remover" target="_blank" rel="noopener"><img data-act="pluginNudgeImage" src="程式檔案/跳出.png" alt="跳出提示"></a>
       </div>
     </div>`;
 
@@ -722,9 +722,7 @@
       uncutSrc = ''; cutSrc = undefined; openToken++;
     }
 
-    function openPhotoRoomLink(){
-      window.open('https://www.photoroom.com/tools/background-remover','_blank');
-    }
+    /* PhotoRoom 去背改成 <a target="_blank">（TP 不允許用程式開新視窗），點擊由瀏覽器直接開新分頁。 */
 
     function showCancelNudge(){
       const nudge = $('[data-role="pluginNudge"]');
@@ -818,8 +816,6 @@
       }
       if(act === 'toggleCutout') toggleCutout();
       if(act === 'reset') resetToOriginal();
-      if(act === 'photoroom') openPhotoRoomLink();
-      if(act === 'pluginNudgeImage') openPhotoRoomLink();
       if(act === 'pluginNudgeClose') hideCancelNudgeAndClose();
       if(act === 'cancel') showCancelNudge();
       if(act === 'apply') applyToTarget();

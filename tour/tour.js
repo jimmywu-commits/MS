@@ -85,7 +85,7 @@
   var RESUME_KEY = 'boda_tour_resume_after_reset';
   var needReset = false;
   function resetThenResume(){
-    try{ sessionStorage.setItem(RESUME_KEY, '1'); }catch(e){}
+    try{ window.BnStore.session.set(RESUME_KEY, '1'); }catch(e){}
     var btn = document.getElementById('boda-reset-all');
     if(btn) btn.click();
     /* 確認框出現就按「確定」；之後頁面會自己重新整理 */
@@ -96,7 +96,7 @@
      沒匯入示範資料（例如有自己的內容、開場按「先不用」）就什麼都不動。 */
   var demoTouched = false;
   function resetAfterTour(){
-    try{ sessionStorage.removeItem(RESUME_KEY); sessionStorage.removeItem(SECTION_KEY); }catch(e){}
+    try{ window.BnStore.session.remove(RESUME_KEY); window.BnStore.session.remove(SECTION_KEY); }catch(e){}
     /* 網址拿掉 ?tour，重新整理後才不會又開始導覽 */
     try{ history.replaceState(null, '', location.pathname + '#upload'); }catch(e){}
     /* 自動按的確認框不顯示出來 */
@@ -1122,18 +1122,18 @@
       ? bodaChoiceDialog({ title: '要看「' + SECTIONS[key].label + '」的導覽嗎？',
           body: '示範會先清除目前網頁上的內容，再匯入示範工單。\n要保留的話，請先下載暫存檔。',
           okText: '清除並開始', cancelText: '先不用' })
-      : Promise.resolve(confirm('示範會先清除目前網頁上的內容，確定要開始嗎？'));
+      : Promise.resolve(false);   /* 主頁一定有 bodaChoiceDialog；沒有就不清除內容（TP 不允許原生確認框） */
     return go.then(function(ok){
-      if(!ok){ try{ sessionStorage.removeItem(SECTION_KEY); }catch(e){} return; }
-      try{ sessionStorage.setItem(SECTION_KEY, key); }catch(e){}
+      if(!ok){ try{ window.BnStore.session.remove(SECTION_KEY); }catch(e){} return; }
+      try{ window.BnStore.session.set(SECTION_KEY, key); }catch(e){}
       var btn = document.getElementById('boda-reset-all');
       if(btn) btn.click();
       H.waitFor(function(){ autoConfirm(); return false; }, 15000);
     });
   }
   function startSection(key){
-    if(!SECTIONS[key]){ try{ sessionStorage.removeItem(SECTION_KEY); }catch(e){} return tour.start(0); }
-    try{ sessionStorage.setItem(SECTION_KEY, key); }catch(e){}
+    if(!SECTIONS[key]){ try{ window.BnStore.session.remove(SECTION_KEY); }catch(e){} return tour.start(0); }
+    try{ window.BnStore.session.set(SECTION_KEY, key); }catch(e){}
     if(hasExistingWork()) return askResetForSection(key);
     return tour.start(sectionIndex(key));
   }
@@ -1210,7 +1210,7 @@
   function jumpToSection(key){
     if(key === 'upload'){ tour.go(1); return; }
     if(needReset){
-      try{ sessionStorage.setItem(SECTION_KEY, key); }catch(e){}
+      try{ window.BnStore.session.set(SECTION_KEY, key); }catch(e){}
       resetThenResume();
       return;
     }
@@ -1983,8 +1983,8 @@
       document.documentElement.classList.add('boda-tour-on');
       startView = currentView();
       var resumed = false, section = '';
-      try{ resumed = sessionStorage.getItem(RESUME_KEY) === '1'; sessionStorage.removeItem(RESUME_KEY); }catch(e){}
-      try{ section = sessionStorage.getItem(SECTION_KEY) || ''; sessionStorage.removeItem(SECTION_KEY); }catch(e){}
+      try{ resumed = window.BnStore.session.get(RESUME_KEY) === '1'; window.BnStore.session.remove(RESUME_KEY); }catch(e){}
+      try{ section = window.BnStore.session.get(SECTION_KEY) || ''; window.BnStore.session.remove(SECTION_KEY); }catch(e){}
       /* 只看某一段：先在背後匯入示範工單與圖片，再從那一段開始 */
       if(section && SECTIONS[section]){
         needReset = false; demoMode = true;
@@ -2062,9 +2062,9 @@
   var forced = /[?&]tour(=|&|$)/.test(location.search);
   var urlSection = (location.search.match(/[?&]tour=(exposure|import|color|bottom)\b/) || [])[1] || '';
   var resume = false, pendingSection = '';
-  try{ resume = sessionStorage.getItem(RESUME_KEY) === '1'; }catch(e){}
-  try{ pendingSection = sessionStorage.getItem(SECTION_KEY) || ''; }catch(e){}
-  if(urlSection && !pendingSection){ pendingSection = urlSection; try{ sessionStorage.setItem(SECTION_KEY, urlSection); }catch(e){} }
+  try{ resume = window.BnStore.session.get(RESUME_KEY) === '1'; }catch(e){}
+  try{ pendingSection = window.BnStore.session.get(SECTION_KEY) || ''; }catch(e){}
+  if(urlSection && !pendingSection){ pendingSection = urlSection; try{ window.BnStore.session.set(SECTION_KEY, urlSection); }catch(e){} }
   if(pendingSection || resume || forced || !tour.hasSeen()){
     H.waitFor(function(){ return !appBusy() && H.$('#upload-level'); }, 60000).then(function(ok){
       if(!ok) return;

@@ -2,7 +2,7 @@
    等級 × 版位詳情表外掛（boda-level-plugin.js）
    ──────────────────────────────────────────────────────────────
    1. 在左側「文字內容」上面顯示目前等級；曝光資源端僅供查看、不可下拉，
-      等級由主工具／工單透過 localStorage 與 postMessage 單向同步進來。
+      等級由主工具／工單透過本機暫存（BnStore）與 postMessage 單向同步進來。
    2. 「排版選擇」依照 MS與BN曝光版位 Google Sheet D 欄名稱、K:Y 勾選矩陣過濾；
       V 預設勾選、- 不顯示、「有資源才做」由「＋追加版位」顯示且預設不勾選。
    3. 曝光人物圖片只允許在商品／人物區內移動，不可拖進文字區或畫布外。
@@ -172,21 +172,21 @@
   }
 
   /* 工單總覽列出的曝光資源版位（BODA 匯入工單時送來）：{ importId, slots: { 類別: [工單名稱…] } }。
-     存在 localStorage（bn 開頭，「清除本機暫存」會一起清），重新整理後清單照樣在。 */
+     存在本機暫存（BnStore，bn 開頭，「清除本機暫存」會一起清），重新整理後清單照樣在。 */
   var WORKORDER_PLACEMENT_KEY = 'bn-workorder-placement-v1';
   var workorderPlacement = readWorkorderPlacement();
   var workorderAppliedIds = {}; /* { 版位 id: 工單勾的值 }：這次開頁後由工單勾選過的版位，晚到的暫存還原不可蓋回舊勾選 */
   function readWorkorderPlacement() {
     try {
-      var saved = JSON.parse(localStorage.getItem(WORKORDER_PLACEMENT_KEY) || 'null');
+      var saved = JSON.parse(window.BnStore.local.get(WORKORDER_PLACEMENT_KEY) || 'null');
       return saved && saved.slots && typeof saved.slots === 'object' ? saved : null;
     } catch (e) { return null; }
   }
   function writeWorkorderPlacement(value) {
     workorderPlacement = value;
     try {
-      if (value) localStorage.setItem(WORKORDER_PLACEMENT_KEY, JSON.stringify(value));
-      else localStorage.removeItem(WORKORDER_PLACEMENT_KEY);
+      if (value) window.BnStore.local.set(WORKORDER_PLACEMENT_KEY, JSON.stringify(value));
+      else window.BnStore.local.remove(WORKORDER_PLACEMENT_KEY);
     } catch (e) {}
   }
   function clearWorkorderPlacement() { writeWorkorderPlacement(null); }
@@ -225,7 +225,7 @@
   }
   function readLevel() {
     var v = null;
-    try { v = localStorage.getItem(LEVEL_KEY); } catch (e) {}
+    try { v = window.BnStore.local.get(LEVEL_KEY); } catch (e) {}
     return normalizeLevelId(v);
   }
   function levelOf(id) {
@@ -282,7 +282,7 @@
     }
     if (id) currentLevelId = id;
     else currentLevelId = readLevel();
-    try { localStorage.setItem(LEVEL_KEY, currentLevelId); } catch (e) {}
+    try { window.BnStore.local.set(LEVEL_KEY, currentLevelId); } catch (e) {}
     var sel = document.getElementById('lv-select');
     if (sel && sel.value !== currentLevelId) sel.value = currentLevelId;
     paintLevelDisplay();
@@ -812,12 +812,17 @@
       var on = userTouched[r.layout.id] ? !!checked[r.layout.id] : (hasRestored ? !!restoredChecked[r.layout.id] : !!r.def);
       return head +
         '<label class="layout-check-item">' +
-          '<input type="checkbox" ' + (on ? 'checked' : '') +
-            ' onchange="onCheck(' + r.layout.id + ', this.checked)">' +
+          '<input type="checkbox" data-layout-id="' + r.layout.id + '" ' + (on ? 'checked' : '') + '>' +
           '<span class="lc-name">' + esc(r.layout.name) + '</span>' +
           '<span class="lc-size">' + (r.layout.w ? r.layout.w + '×' + r.layout.h : '') + '</span>' +
         '</label>';
     }).join('');
+    /* TP 規則：不用行內 onchange，改在這裡綁定；呼叫當下的 window.onCheck（同原本行內寫法）。 */
+    wrap.querySelectorAll('input[data-layout-id]').forEach(function (el) {
+      el.addEventListener('change', function () {
+        if (typeof window.onCheck === 'function') window.onCheck(Number(el.dataset.layoutId), el.checked);
+      });
+    });
   }
 
   /* 手動勾選後，晚到的暫存還原也要以使用者最後的選擇為準。 */
@@ -1105,7 +1110,7 @@
      這裡把顏色提升成曝光資源左欄的全域設定。套色只更新商品影像內容，
      不 remove/add 商品，因此既有位置、大小、裁切、旋轉與前後順序都保留。
 
-     空值＝依背景自動；HEX＝固定色。固定色存在同源 localStorage，父層 BODA
+     空值＝依背景自動；HEX＝固定色。固定色存在同源本機暫存（BnStore），父層 BODA
      的背景同步會尊重它，不會在下一次換底時又把手動色蓋掉。 */
   var BODA_GLOBAL_SHADOW_COLOR_KEY = 'bn_global_product_shadow_color_v1';
   var bodaGlobalShadowBusy = false;
@@ -1116,14 +1121,14 @@
     return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : '';
   }
   function readBodaShadowColorOverride() {
-    try { return normalizeBodaShadowColor(localStorage.getItem(BODA_GLOBAL_SHADOW_COLOR_KEY)); }
+    try { return normalizeBodaShadowColor(window.BnStore.local.get(BODA_GLOBAL_SHADOW_COLOR_KEY)); }
     catch (e) { return ''; }
   }
   function writeBodaShadowColorOverride(value) {
     var color = normalizeBodaShadowColor(value);
     try {
-      if (color) localStorage.setItem(BODA_GLOBAL_SHADOW_COLOR_KEY, color);
-      else localStorage.removeItem(BODA_GLOBAL_SHADOW_COLOR_KEY);
+      if (color) window.BnStore.local.set(BODA_GLOBAL_SHADOW_COLOR_KEY, color);
+      else window.BnStore.local.remove(BODA_GLOBAL_SHADOW_COLOR_KEY);
     } catch (e) {}
     return color;
   }
