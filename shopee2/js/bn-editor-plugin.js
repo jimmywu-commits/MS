@@ -212,8 +212,121 @@
     function autoTrim(img){var max=1200,sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));var w=Math.max(1,Math.round(img.naturalWidth*sc)),h=Math.max(1,Math.round(img.naturalHeight*sc));var c=document.createElement('canvas');c.width=w;c.height=h;var ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);var id=ctx.getImageData(0,0,w,h),d=id.data,bg=sampleCorner(d,w,h);var x0=w,y0=h,x1=-1,y1=-1;for(var y=0;y<h;y++)for(var x=0;x<w;x++){var i=(y*w+x)*4,a=d[i+3];if(a>18&&(a<245||Math.abs(d[i]-bg.r)+Math.abs(d[i+1]-bg.g)+Math.abs(d[i+2]-bg.b)>46)&&!(d[i]>246&&d[i+1]>246&&d[i+2]>246)){if(x<x0)x0=x;if(y<y0)y0=y;if(x>x1)x1=x;if(y>y1)y1=y;}}if(x1<0)return{src:img.src,ratio:img.naturalWidth/img.naturalHeight};var pad=Math.round(Math.max(w,h)*.015);x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(w-1,x1+pad);y1=Math.min(h-1,y1+pad);var tw=x1-x0+1,th=y1-y0+1;var o=document.createElement('canvas');o.width=tw;o.height=th;o.getContext('2d').drawImage(c,x0,y0,tw,th,0,0,tw,th);return{src:o.toDataURL('image/png'),ratio:tw/th};}
 
     /* ── 廣播 ── */
-    function broadcast(msg){document.querySelectorAll('.preview-block iframe').forEach(function(f){try{f.contentWindow.postMessage(msg,'*');}catch(e){}});}
-    function broadcastTo(id,msg){var f=document.getElementById('iframe-'+id);if(f)try{f.contentWindow.postMessage(msg,'*');}catch(e){}}
+    var _bnNoShadowVariantCache = new WeakMap();
+    var _bnNoShadowFrameQueue = new WeakMap();
+    function isNoShadowTemplateFrame(frame){
+      var source = String(frame && (frame.getAttribute('src') || frame.src) || '');
+      try{ source += ' ' + decodeURIComponent(source); }catch(_){}
+      var block = frame && frame.closest ? frame.closest('.preview-block') : null;
+      var title = block && block.querySelector('.pname') ? block.querySelector('.pname').textContent : '';
+      return /campaign_card|首頁logo牆/i.test(source + ' ' + title);
+    }
+    function findProductForAsset(msg){
+      var products = window._bnProducts || [];
+      for(var i=0;i<products.length;i++){
+        if(String(products[i].id) === String(msg && msg.id)) return products[i];
+      }
+      return null;
+    }
+    function buildNoShadowVariant(product, msg){
+      var meta = product && product.meta || {};
+      var baseSrc = (product && (product.baseSrc || meta.baseSrc)) || (msg && msg.baseSrc) || '';
+      if(!baseSrc) return Promise.resolve(null);
+      var rotate = Number(meta.rotate !== undefined ? meta.rotate : (msg && msg.rotate)) || 0;
+      rotate = ((rotate % 360) + 360) % 360;
+      if(rotate > 180) rotate -= 360;
+      rotate = Math.round(rotate * 10) / 10;
+      function compose(){
+        if(!window._bnGroundShadow) throw new Error('商品影子引擎尚未載入');
+        var draft = {
+          src:baseSrc, baseSrc:baseSrc,
+          ratio:Number(product && product.ratio) || Number(msg && msg.ratio) || 1,
+          meta:{rotate:rotate, baseSrc:baseSrc}
+        };
+        return window._bnGroundShadow.applyToProduct(draft, {enabled:false}).then(function(){
+          return {src:draft.src, ratio:draft.ratio, productRect:draft.meta && draft.meta.productRect,
+            rotate:rotate, baseSrc:baseSrc};
+        });
+      }
+      var cache = product && _bnNoShadowVariantCache.get(product);
+      if(cache && cache.baseSrc === baseSrc && cache.rotate === rotate) return cache.promise;
+      var job = Promise.resolve(window._bnGroundShadow ? null :
+        loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body')).then(compose);
+      if(product){
+        var entry = {baseSrc:baseSrc, rotate:rotate, promise:job};
+        _bnNoShadowVariantCache.set(product, entry);
+        job = job.catch(function(error){
+          if(_bnNoShadowVariantCache.get(product) === entry) _bnNoShadowVariantCache.delete(product);
+          throw error;
+        });
+        entry.promise = job;
+      }
+      return job;
+    }
+    function postFrameMessage(frame, msg){
+      try{
+        if(!frame || !frame.contentWindow) return false;
+        frame.contentWindow.postMessage(msg, '*');
+        return true;
+      }catch(_){ return false; }
+    }
+    function enqueueNoShadowFrameMessage(frame, task){
+      var previous = _bnNoShadowFrameQueue.get(frame) || Promise.resolve();
+      var next = previous.catch(function(){}).then(task);
+      _bnNoShadowFrameQueue.set(frame, next);
+      next.then(function(){
+        if(_bnNoShadowFrameQueue.get(frame) === next) _bnNoShadowFrameQueue.delete(frame);
+      }, function(){
+        if(_bnNoShadowFrameQueue.get(frame) === next) _bnNoShadowFrameQueue.delete(frame);
+      });
+      return next;
+    }
+    function waitForNoShadowFrameMessages(frame){
+      return _bnNoShadowFrameQueue.get(frame) || Promise.resolve();
+    }
+    function sendFrameMessage(frame, msg){
+      if(!frame || !frame.contentWindow) return Promise.resolve(false);
+      var noShadowFrame = isNoShadowTemplateFrame(frame);
+      var productAssetMessage = msg && (msg.type === 'bn-product-add' || msg.type === 'bn-product-update-image');
+      var orderedMessage = msg && (msg.type === 'bn-product-remove' || msg.type === 'bn-product-zorder');
+      if(!noShadowFrame || (!productAssetMessage && !orderedMessage)){
+        postFrameMessage(frame, msg);
+        return Promise.resolve(true);
+      }
+      if(orderedMessage){
+        return enqueueNoShadowFrameMessage(frame, function(){ postFrameMessage(frame, msg); return true; });
+      }
+      return enqueueNoShadowFrameMessage(frame, function(){
+        var product = findProductForAsset(msg);
+        return buildNoShadowVariant(product, msg).then(function(asset){
+          if(!asset){ postFrameMessage(frame, msg); return false; }
+          var outgoing = Object.assign({}, msg, {
+            src:asset.src, ratio:asset.ratio, productRect:asset.productRect,
+            rotate:asset.rotate, rotationBaked:true, baseSrc:asset.baseSrc
+          });
+          postFrameMessage(frame, outgoing);
+          if(msg.type === 'bn-product-add' && msg.preserveExistingLayout === true){
+            postFrameMessage(frame, {
+              type:'bn-product-update-image', id:outgoing.id, src:outgoing.src,
+              ratio:outgoing.ratio, productRect:outgoing.productRect, rotate:outgoing.rotate,
+              rotationBaked:true, preserveFrame:true
+            });
+          }
+          return true;
+        }).catch(function(error){
+          console.warn('[bn-editor] 無影子商品圖產生失敗，暫時保留原圖', error);
+          postFrameMessage(frame, msg);
+          return false;
+        });
+      });
+    }
+    function broadcast(msg){
+      document.querySelectorAll('.preview-block iframe').forEach(function(f){ sendFrameMessage(f,msg); });
+    }
+    function broadcastTo(id,msg){
+      var f = document.getElementById('iframe-'+id);
+      if(f) sendFrameMessage(f,msg);
+    }
     function requestProductLayouts(){ broadcast({type:'bn-product-layout-request'}); }
     function getIframeLayoutId(frame){
       try{
@@ -4330,9 +4443,7 @@
 
       setProgress(total===1 ? '準備下載 1 個版位…' : '準備打包 '+total+' 個版位…');
 
-      function sendToIframe(iframeEl, msg){
-        try{ iframeEl && iframeEl.contentWindow && iframeEl.contentWindow.postMessage(msg, '*'); }catch(_){ }
-      }
+      function sendToIframe(iframeEl, msg){ return sendFrameMessage(iframeEl, msg); }
 
       function syncIframeForExport(iframeEl, cb){
         if(!iframeEl){ cb && cb(); return; }
@@ -4345,7 +4456,7 @@
         exportProducts.forEach(function(p, idx){
           sendToIframe(iframeEl, {
             type:'bn-product-add', preserveExistingLayout:true,
-            id:p.id, src:p.src, ratio:p.ratio, name:p.name, rotate:(p.meta&&p.meta.rotate)||0,
+            id:p.id, src:p.src, baseSrc:p.baseSrc||(p.meta&&p.meta.baseSrc), ratio:p.ratio, name:p.name, rotate:(p.meta&&p.meta.rotate)||0,
             index:idx, sizeScale:p.sizeScale||1, position:p.position||0, zOrder:p.zOrder||0,
             layoutById:p.layouts||null, layout:p.layout||null, productRect:p.meta&&p.meta.productRect
           });
@@ -4397,7 +4508,7 @@
         }
 
         /* 給 iframe 一點時間套用 style / 圖片 / 背景後再截圖。 */
-        setTimeout(function(){ cb && cb(); }, 260);
+        waitForNoShadowFrameMessages(iframeEl).then(function(){ setTimeout(function(){ cb && cb(); }, 260); });
       }
 
       function resyncAllAfterExport(){
@@ -4441,9 +4552,9 @@
       }
 
       /* 下載 JPG KB 限制：依版位名稱自動套用目標大小。
-         所有版位 keepSize=true：鎖定畫素尺寸，只靠 JPEG 品質壓縮、不縮圖，維持原解析度。
-         先用 JPEG quality 二分搜尋（0.75～0.95）+ 線性插值預測精確逼近目標 KB。 */
+         依現有流程優先調整 JPEG 品質；Coin Page 若仍超過硬上限，才逐步縮圖。 */
       var BN_DOWNLOAD_KB_LIMITS = [
+        {keys:['coin_pagebn','coinpagebn'], kb:244, keepSize:false, mustMeetLimit:true},
         {keys:['dd card','ddcard','dd card','dd-card'], kb:245, keepSize:true},
         {keys:['hbn'], kb:145, keepSize:true},
         {keys:['fb','facebook'], kb:450, keepSize:true},
@@ -4679,8 +4790,22 @@
               if(!keepSize) scale *= 0.95;
             }
 
-            /* 到品質下限（或 keepSize 不縮圖）仍超標：輸出下限品質的 JPG，寧可略超 KB 也不壓爛畫面。 */
+            /* 一般版位到品質下限仍超標時沿用原有回退；Coin Page 有硬上限，
+               會再逐步縮圖直到達標，絕不以超標圖片完成下載。 */
             var fallback = best || canvasToJpegDataUrl(drawCanvas(), BN_JPEG_MIN_QUALITY);
+            if(opts && opts.mustMeetLimit && (!fallback || dataUrlByteSize(fallback) > maxBytes)){
+              for(var hardStep=0; hardStep<240; hardStep++){
+                scale *= 0.9;
+                var hardW = Math.max(1, Math.round(srcW * scale));
+                var hardH = Math.max(1, Math.round(srcH * scale));
+                var hardCanvas = drawCanvas();
+                var hardOut = canvasToJpegDataUrl(hardCanvas, BN_JPEG_MIN_QUALITY);
+                if(hardOut && dataUrlByteSize(hardOut) <= maxBytes){ cb(hardOut, true); return; }
+                if(hardW === 1 && hardH === 1) break;
+              }
+              cb(null, false);
+              return;
+            }
             cb(fallback || dataUrl, !!fallback);
           }catch(e){ cb(dataUrl, false); }
         };
@@ -4831,6 +4956,7 @@
         var limitItem0 = isSearchIcon0 ? null : getDownloadLimitItemByName(baseName);
         var kbLimit0 = limitItem0 ? limitItem0.kb : null;
         var keepSize0 = !!(limitItem0 && limitItem0.keepSize);
+        var mustMeetLimit0 = !!(limitItem0 && limitItem0.mustMeetLimit);
         syncIframeForExport(iframe, function(){
           captureOne(iframe, baseName+'.png', function(res){
             var dataUrl = res && res.dataUrl || null;
@@ -4889,7 +5015,8 @@
                 setProgress('壓縮 '+baseName+' 至 '+kbLimit+'KB 以下…');
                 compressDataUrlToTargetKb(dataUrl, kbLimit, function(jpgUrl, didCompress){
                   afterMainReady(jpgUrl, baseName + (didCompress ? '.jpg' : '.png'));
-                }, {bgUrl: res && res.bgUrl, fgUrl: res && res.fgUrl}, {keepSize: keepSize0});
+                }, {bgUrl: res && res.bgUrl, fgUrl: res && res.fgUrl},
+                  {keepSize: keepSize0, mustMeetLimit: mustMeetLimit0});
               }else{
                 afterMainReady(dataUrl, outName);
               }

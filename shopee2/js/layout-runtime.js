@@ -30,12 +30,12 @@
      左中右的百分比位置會比 FB Post 拉得開。只縮「有效商品群」的寬度，
      版位原本的 CSS 寬度、文字、背景與 CTA 位置都不改。 */
   var _bnModerateProductSpacingTemplate = /^(?:Coin_pageBN_APP|HBN_|活動總覽|SBA_|AMS\s*BN-)/i.test(fname || '');
-  /* SearchICON／首頁 LOGO 牆都不接受背景圖片；只有首頁 LOGO 牆固定白底（整張）。
-     SearchICON_LOGO / PRODUCT / TEXT：圓底（.背景色）跟著父頁選取的背景色，
-     但圓底之下的畫布（#canvas）固定白色，不跟著背景色跑。 */
-  var _bnNoImageBackgroundTemplate = /^(searchicon_(logo|product|text|120)|首頁logo牆)$/i.test(fname || '');
-  /* 首頁 LOGO 牆與 Campaign Card 都固定使用白色畫布底。 */
-  var _bnFixedWhiteBackgroundTemplate = _bnHomepageLogoWallTemplate || _bnCampaignCardTemplate;
+  /* SearchICON／首頁 LOGO 牆／Campaign Card 不接受背景圖片；首頁 LOGO 牆固定白底，
+     Campaign Card 固定 PSD 紅底；SearchICON 圓底仍跟父頁選取的背景色。 */
+  var _bnNoImageBackgroundTemplate = /^(searchicon_(logo|product|text|120)|首頁logo牆|campaign_card)$/i.test(fname || '');
+  /* 首頁 LOGO 牆固定白底；Campaign Card 固定使用 PSD 紅底。 */
+  var _bnFixedWhiteBackgroundTemplate = _bnHomepageLogoWallTemplate;
+  var _bnFixedCanvasBackground = _bnCampaignCardTemplate ? '#D0011B' : (_bnHomepageLogoWallTemplate ? '#fff' : '');
   var _bnWhiteCanvasUnderCircleTemplate = /^searchicon_(logo|product|text)$/i.test(fname || '');
   var _bnCurrentCanvasBg = '';
   /* 代言人照＋簽名檔＋代言人小字只放在這些版位：ddcard、IG、HBN、LPBN、Coin_pageBN、
@@ -326,7 +326,7 @@
           init 時就設好，不依賴父層 bn-color；
           避免 iframe reload 後背景色消失，或父層重新同步時閃回預設顏色。
           父層之後發 bn-color 仍可覆蓋（同為 inline style）。── */
-    var canvasBgRaw = root.getPropertyValue('--canvas-bg').trim();
+    var canvasBgRaw = _bnFixedCanvasBackground || root.getPropertyValue('--canvas-bg').trim();
     if (canvasBgRaw && canvasBgRaw !== 'none' && canvasBgRaw !== '') {
       var _bgEl = canvas.querySelector('.背景色') || canvas.querySelector('.bg') || canvas.querySelector('.底色');
       if (_bgEl) {
@@ -1214,8 +1214,8 @@
 
     if (e.data.type === 'bn-color') {
       var c = Object.assign({},e.data.data||{}), cv = document.getElementById('canvas');
-      if((_bnFixedWhiteBackgroundTemplate || _bnWhiteCanvasUnderCircleTemplate) && cv){
-        cv.style.setProperty('background', '#fff', 'important');
+      if((_bnFixedCanvasBackground || _bnWhiteCanvasUnderCircleTemplate) && cv){
+        cv.style.setProperty('background', _bnFixedCanvasBackground || '#fff', 'important');
       }
       _bnRestrictedColorKeys.forEach(function(key){
         if(c[key]!==undefined) c[key]=_bnSafeRestrictedColor(key,c[key]);
@@ -1223,9 +1223,8 @@
       _bnLastSafeColors=Object.assign({},_bnLastSafeColors,c);
       if (c.canvasBg) {
         _bnCurrentCanvasBg = c.canvasBg;
-        /* 首頁 LOGO 牆與 Campaign Card 固定白底；SearchICON 的圓底（.背景色）仍吃目前選取的背景色，
-           圓底之下的 #canvas 已在上面鎖白，這裡不要再把顏色寫到 #canvas。 */
-        var canvasBgForLayout = _bnFixedWhiteBackgroundTemplate ? '#fff' : c.canvasBg;
+        /* 首頁 LOGO 牆固定白底、Campaign Card 固定 PSD 紅底；SearchICON 圓底仍吃目前選取色。 */
+        var canvasBgForLayout = _bnFixedCanvasBackground || c.canvasBg;
         /* 支援 .背景色 和 .bg 兩種 class 名稱 */
         var bg = cv.querySelector('.背景色') || cv.querySelector('.bg') || cv.querySelector('.底色');
         if(bg) bg.style.setProperty('background-color', canvasBgForLayout, 'important');
@@ -1289,7 +1288,8 @@
       if(c.canvasBg) refreshEndorserNoteColorSoon();
       function ac(cls,col){ if(!col)return; document.querySelectorAll('.'+cls).forEach(function(el){ if(!el.querySelector('.cta-text')) el.style.setProperty('color',col,'important'); }); }
       ac('主標',c.mainText); ac('副標',c.subText); ac('日期',c.dateText); ac('品牌名',c.brandText);
-      ac('CampaignCard文案','#990000');
+      /* Campaign Card 文案固定 PSD 深紅（Campaign Card單格.psd 取樣 #9C0014），不跟主標色連動 */
+      ac('CampaignCard文案','#9C0014');
       /* Search_Image：副標案型七字內 顏色跟著副標文字色連動 */
       document.querySelectorAll('.副標案型七字內').forEach(function(el){ if(c.subText) el.style.setProperty('color', c.subText, 'important'); });
       /* AR：六字內 顏色固定跟著副標文字色連動（僅文字內容獨立，顏色仍預設連動） */
@@ -1713,14 +1713,17 @@
       var pimg = document.createElement('img');
       pimg.style.cssText = 'width:100%;height:100%;object-fit:contain;pointer-events:none;display:block;';
       box.dataset.rotate = String(Number(e.data.rotate) || 0);
+      box.dataset.rotationBaked = e.data.rotationBaked ? '1' : '0';
       /* 載入後依框上的 productRect 把商品本體對齊框（影子露在框外）；
          之後換圖也走同一個 handler，不會拿到舊範圍。 */
       pimg.onload = function(){
         if (_bnCampaignCardTemplate && box.dataset.campaignCardProduct === '1') {
           var savedRotate = parseFloat(box.dataset.rotate) || 0;
-          if (savedRotate) {
+          if (savedRotate && box.dataset.rotationBaked !== '1') {
             pimg.style.transformOrigin = '50% 50%';
             pimg.style.transform = 'rotate(' + savedRotate + 'deg)';
+          } else if (box.dataset.rotationBaked === '1') {
+            pimg.style.transform = '';
           }
           if (!productRect && pimg.naturalWidth && pimg.naturalHeight) {
             box.dataset.ratio = String(pimg.naturalWidth / pimg.naturalHeight);
@@ -1802,6 +1805,8 @@
         }
         if(e.data.ratio !== undefined) boxU.dataset.imageRatio = String(e.data.ratio);
         var imgU = boxU.querySelector('img');
+        if(e.data.rotationBaked !== undefined) boxU.dataset.rotationBaked = e.data.rotationBaked ? '1' : '0';
+        if(imgU && e.data.rotationBaked) imgU.style.transform = '';
         if(imgU && e.data.src){
           if(e.data.preserveFrame){
             /* 換背景後重烘商品影子只會改圖片像素，不是一次新的商品編輯。
@@ -2160,7 +2165,7 @@
          首頁 LOGO 牆則整張固定白色。 */
       if(_bnNoImageBackgroundTemplate){
         var cvSearchIcon = document.getElementById('canvas');
-        var noImageBg = _bnFixedWhiteBackgroundTemplate ? '#fff' : _bnCurrentCanvasBg;
+        var noImageBg = _bnFixedCanvasBackground || _bnCurrentCanvasBg;
         if(!noImageBg){
           noImageBg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim() || '#fff';
         }
@@ -2712,7 +2717,7 @@
          #dbdbdb 灰底（實測：拿掉陰影即純白）。截圖時暫時移除陰影並鎖定白底。 */
       _logoWallCaptureEls = [];
       window.__bnLogoWallShadowSpecs = [];
-      if(_bnFixedWhiteBackgroundTemplate){
+      if(_bnFixedWhiteBackgroundTemplate || _bnCampaignCardTemplate){
         document.querySelectorAll('.logo範圍').forEach(function(zn){
           var _cs = window.getComputedStyle(zn);
           if(_cs.boxShadow && _cs.boxShadow !== 'none'){
@@ -5484,7 +5489,7 @@
     function options(layer){return {
       scale:captureScale,width:W,height:H,windowWidth:Math.max(W,window.innerWidth),windowHeight:Math.max(H,window.innerHeight),
       scrollX:0,scrollY:0,useCORS:true,allowTaint:false,imageTimeout:8000,logging:false,
-      backgroundColor:layer==='foreground'?null:(_bnFixedWhiteBackgroundTemplate||_bnWhiteCanvasUnderCircleTemplate?'#ffffff':null),
+      backgroundColor:layer==='foreground'?null:(_bnCampaignCardTemplate?'#D0011B':(_bnFixedWhiteBackgroundTemplate||_bnWhiteCanvasUnderCircleTemplate?'#ffffff':null)),
       onclone:function(doc){
         if(context.done)throw bnCaptureError('CANCELLED','截圖已結束。','render');
         var clone=doc.getElementById('canvas');if(!clone)throw bnCaptureError('NO_CANVAS','找不到截圖畫布。','render');
