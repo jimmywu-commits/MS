@@ -2372,7 +2372,7 @@
       var _cv=document.getElementById('canvas');
       var captureContext={msgId:e.data.msgId,source:e.source||window.parent,started:Date.now(),deadline:Date.now()+45000,stage:'prepare',done:false,mainUrl:null,assets:Object.create(null)};
       var _overEls,_contentWarningCaptureEls,_editEls,_captureAdjustEls,_transformAdjustEls,_iconRasterEls,_gradRasterEls,_emptyZoneEls,_objectFitAdjustEls,_logoWallCaptureEls;
-      var captureStyles=[],captureContainers=Array.prototype.slice.call(document.querySelectorAll('iframe.html2canvas-container'));
+      var captureStyles=[];
       var captureOldWarning=window.__bnContentWarningCaptureActive;
       var captureOldShadows=window.__bnLogoWallShadowSpecs;
       var captureTimer=setTimeout(function(){captureFinish(captureContext.mainUrl,null,null,captureContext.mainUrl?null:bnCaptureError('CAPTURE_TIMEOUT','版位截圖逾時，畫布已還原，可重新下載。',captureContext.stage));},45000);
@@ -2386,7 +2386,6 @@
           try{o.style===null?o.el.removeAttribute('style'):o.el.setAttribute('style',o.style);o.cls===null?o.el.removeAttribute('class'):o.el.setAttribute('class',o.cls);}catch(_){}
         });
         window.__bnContentWarningCaptureActive=!!captureOldWarning;window.__bnLogoWallShadowSpecs=captureOldShadows;
-        document.querySelectorAll('iframe.html2canvas-container').forEach(function(frame){if(captureContainers.indexOf(frame)<0)frame.remove();});
         var failure=error?{code:error.code||'CAPTURE_FAILED',message:String(error.message||'截圖失敗，請重試。').slice(0,300),stage:error.stage||captureContext.stage}:null;
         window._bnLastCaptureReport={msgId:captureContext.msgId,stage:captureContext.stage,elapsed:Date.now()-captureContext.started,error:failure,warning:captureContext.layerWarning||null};
         try{captureContext.source.postMessage({type:'bn-snapshot',msgId:captureContext.msgId,dataUrl:dataUrl||null,bgUrl:bgUrl||null,fgUrl:fgUrl||null,error:failure,report:window._bnLastCaptureReport},'*');}catch(_){}
