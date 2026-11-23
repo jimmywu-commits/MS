@@ -15,7 +15,7 @@
   // 這些不是「使用者的編輯行為」，不該進歷史
   var NON_UNDOABLE = {
     "@@INIT": true,
-    SET_LIBRARY: true, // 開機載入內建 + localStorage 素材
+    SET_LIBRARY: true, // 開機載入內建 + 本機暫存 素材
   };
 
   function createStore(reducer, preloadedState) {

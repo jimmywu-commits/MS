@@ -24,29 +24,34 @@
     return el("div", { class: "note" }, [text]);
   }
 
+  /* 蝦皮資產使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 規則）。
+     被主頁嵌入（網址 bridge=1）時，主頁回覆前先視為未同意；獨立開啟時不擋。 */
+  var hostedByMs = window.parent !== window && /(?:^|[?&])bridge=1(?:&|$)/.test(location.search);
+  var hostTermsAccepted = null;
+  var termsSyncers = [];
+
+  function postToHost(msg) {
+    if (!hostedByMs) return;
+    try { window.parent.postMessage(msg, "*"); } catch (e) {}
+  }
+
+  window.addEventListener("message", function (e) {
+    if (!e.data || e.data.type !== "ms-asset-terms-state" || e.source !== window.parent) return;
+    hostTermsAccepted = !!e.data.accepted;
+    termsSyncers.forEach(function (fn) { fn(); });
+  });
+  postToHost({ type: "ms-asset-terms-request" });
+
   function msTermsAccepted() {
-    try {
-      if (window.parent && window.parent !== window && typeof window.parent.msAssetTermsAccepted === "function") {
-        return !!window.parent.msAssetTermsAccepted();
-      }
-    } catch (e) {}
-    return true;
+    return hostedByMs ? hostTermsAccepted === true : true;
   }
 
   function msTermsOpen() {
-    try {
-      if (window.parent && window.parent !== window && typeof window.parent.msOpenAssetTerms === "function") {
-        window.parent.msOpenAssetTerms();
-      }
-    } catch (e) {}
+    postToHost({ type: "ms-asset-terms-open" });
   }
 
   function msTermsSet(value) {
-    try {
-      if (window.parent && window.parent !== window && typeof window.parent.msSetAssetTermsAccepted === "function") {
-        window.parent.msSetAssetTermsAccepted(!!value);
-      }
-    } catch (e) {}
+    postToHost({ type: "ms-asset-terms-set", accepted: !!value });
   }
 
   function buildMsTermsLine(button) {
@@ -61,7 +66,7 @@
     check.addEventListener("click", function (e) { if (!msTermsAccepted()) { e.preventDefault(); msTermsOpen(); } });
     check.addEventListener("change", function () { if (!check.checked) { msTermsSet(false); sync(); } });
     link.addEventListener("click", function (e) { e.preventDefault(); msTermsOpen(); });
-    window.addEventListener("storage", sync);
+    termsSyncers.push(sync);
     sync();
     return wrap;
   }

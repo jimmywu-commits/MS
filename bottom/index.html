@@ -21,8 +21,14 @@
     })();
   </script>
   <link rel="stylesheet" href="src/ui/style.css?v=20261019-logo-tools1" />
-  <script src="https://unpkg.com/konva@9/konva.min.js"></script>
-  <script src="https://unpkg.com/jszip@3/dist/jszip.min.js"></script>
+  <!-- TP 規則：暫存一律經過 BnStore；函式庫只從 cdnjs 載入，版本寫死並附 integrity。
+       cdnjs 上 konva 只有 10.x 有檔案（9.x 是空的），所以用 10.10.0。 -->
+  <script src="../shopee2/js/bn-store.js"></script>
+  <script src="../shopee2/js/vendor/browser-loader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/konva/10.10.0/konva.min.js" integrity="sha512-QUZcTHYj4/ijQfVL11UOdCdgcTFELZeXxln+W8cyPmbbQnjwptBcXc5G0EPr2UihbtzT+kTkYhUMXVZfwHZ/Mw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- konva 10 預設把文字畫低約 2px；打開舊版文字排法，輸出跟 konva 9 一致。 -->
+  <script>if (window.Konva) Konva.legacyTextRendering = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
   <div id="app">

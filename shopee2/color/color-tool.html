@@ -211,6 +211,8 @@
 </div>
 </section>
 
+<!-- 暫存一律經過 BnStore（與曝光資源共用；上 TP 時換成只放記憶體的版本）。 -->
+<script src="../js/bn-store.js"></script>
 <script>
 /* ========== 取色演算法（以 1200x360 版型為基準，其他尺寸會等比例換算） ========== */
 const CTA_BOX=[942,292,1174,332];
@@ -355,22 +357,31 @@ const tbody=$('#tbl tbody'); const results=[];
 
 function setStatus(t){$('#status').textContent=t;}
 
+/* 範例圖清單固定讀 hbndemo/index.json（GitLab 網站不提供資料夾列表；TP 的 fetch 也只能用寫死的網址）。
+   新增範例圖時，記得把檔名加進 hbndemo/index.json。圖片用 Image 載入再畫成檔案，不用組字串的 fetch。 */
+function imageFileFromUrl(url,name){
+  return new Promise((ok,err)=>{
+    const im=new Image(); im.crossOrigin='anonymous';
+    im.onload=()=>{ try{
+      const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0);
+      const type=/\.png$/i.test(name)?'image/png':'image/jpeg';
+      c.toBlob(b=>b?ok(new File([b],name,{type})):err(new Error('toBlob failed')),type,0.95);
+    }catch(e){ err(e); } };
+    im.onerror=()=>err(new Error('load failed: '+name));
+    im.src=url;
+  });
+}
 async function loadFromHttpListing(){
-  const res=await fetch('hbndemo/',{cache:'no-store'}); if(!res.ok) throw new Error('no listing');
-  const html=await res.text(); const doc=new DOMParser().parseFromString(html,'text/html');
-  const names=[...doc.querySelectorAll('a[href]')].map(a=>decodeURIComponent(a.getAttribute('href'))).filter(n=>IMG_RE.test(n)&&!n.includes('/'));
+  const res=await fetch('hbndemo/index.json',{cache:'no-store'}); if(!res.ok) throw new Error('no listing');
+  const names=(await res.json()).filter(n=>IMG_RE.test(n)&&!String(n).includes('/'));
   if(!names.length) throw new Error('no images');
   const files=[];
-  for(const nm of names){ const r=await fetch('hbndemo/'+encodeURIComponent(nm)); files.push(new File([await r.blob()],nm)); }
+  for(const nm of names){ files.push(await imageFileFromUrl('hbndemo/'+encodeURIComponent(nm),nm)); }
   return files;
 }
 
-/* 記住資料夾 handle（IndexedDB） */
-const idb={
-  open(){return new Promise((ok,err)=>{const q=indexedDB.open('hbn-color-tool',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>ok(q.result);q.onerror=()=>err(q.error);});},
-  async get(k){const db=await this.open();return new Promise((ok,err)=>{const t=db.transaction('kv').objectStore('kv').get(k);t.onsuccess=()=>ok(t.result);t.onerror=()=>err(t.error);});},
-  async set(k,v){const db=await this.open();return new Promise((ok,err)=>{const t=db.transaction('kv','readwrite').objectStore('kv').put(v,k);t.onsuccess=()=>ok();t.onerror=()=>err(t.error);});}
-};
+/* 記住資料夾 handle（大型暫存，經 BnStore；資料庫名稱與舊版相同，舊資料讀得到） */
+const idb=window.BnStore.big('hbn-color-tool','kv');
 async function filesFromDirHandle(h){
   const files=[];
   for await(const [name,entry] of h.entries()){ if(entry.kind==='file'&&IMG_RE.test(name)) files.push(await entry.getFile()); }
@@ -686,11 +697,11 @@ function switchTab(name,fromHash){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
   $('#tab-pick').hidden=name!=='pick'; $('#tab-sim').hidden=name!=='sim'; $('#pickBar').style.display=name==='pick'?'':'none';
   if(!fromHash && location.hash!=='#'+name) history.replaceState(null,'','#'+name);   // 兩個頁簽各有獨立網址：…html#sim / …html#pick
-  try{localStorage.setItem('hbn-tab',name);}catch(e){}
+  try{BnStore.local.set('hbn-tab',name);}catch(e){}
 }
 document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
 window.addEventListener('hashchange',()=>switchTab(location.hash.slice(1),true));
-(function(){ let t=location.hash.slice(1); if(t!=='pick'&&t!=='sim'){ try{t=localStorage.getItem('hbn-tab')||'sim';}catch(e){t='sim';} } switchTab(t); })();
+(function(){ let t=location.hash.slice(1); if(t!=='pick'&&t!=='sim'){ try{t=BnStore.local.get('hbn-tab')||'sim';}catch(e){t='sim';} } switchTab(t); })();
 runSim();
 
 /* 啟動：若由本機 http 伺服器開啟（啟動取色工具.bat），自動讀取資料夾 */
@@ -1142,37 +1153,34 @@ if (_isBodaHost) {
     terms.innerHTML = '<input type="checkbox" aria-label="我已閱讀並接受蝦皮資產使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal">「蝦皮資產使用條款」</a></label>';
     const termsCheck = terms.querySelector('input');
     const termsLink = terms.querySelector('a');
-    const parentTermsAccepted = () => {
-      try { return !!(window.parent && window.parent !== window && typeof window.parent.msAssetTermsAccepted === 'function' ? window.parent.msAssetTermsAccepted() : true); }
-      catch (e) { return true; }
-    };
-    const parentTermsOpen = () => {
-      try { if (window.parent && typeof window.parent.msOpenAssetTerms === 'function') window.parent.msOpenAssetTerms(); }
-      catch (e) {}
-    };
-    const parentTermsSet = (value) => {
-      try { if (window.parent && typeof window.parent.msSetAssetTermsAccepted === 'function') window.parent.msSetAssetTermsAccepted(!!value); }
-      catch (e) {}
-    };
+    /* 蝦皮資產使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 規則）。
+       被主頁嵌入（host=boda）時，主頁回覆前先視為未同意；獨立開啟時不擋。 */
+    const hostedByMs = window.parent !== window && /(?:^|[?&])host=boda(?:&|$)/i.test(location.search);
+    let hostTermsAccepted = null;
+    const postToHost = (msg) => { if (hostedByMs) { try { window.parent.postMessage(msg, '*'); } catch (e) {} } };
+    const parentTermsAccepted = () => hostedByMs ? hostTermsAccepted === true : true;
+    const parentTermsOpen = () => postToHost({ type: 'ms-asset-terms-open' });
+    const parentTermsSet = (value) => postToHost({ type: 'ms-asset-terms-set', accepted: !!value });
+    window.addEventListener('message', (e) => {
+      if (!e.data || e.data.type !== 'ms-asset-terms-state' || e.source !== window.parent) return;
+      hostTermsAccepted = !!e.data.accepted;
+      syncTerms();
+    });
     const syncTerms = () => { const ok = parentTermsAccepted(); termsCheck.checked = ok; csvBtn.disabled = !ok; };
     termsCheck.addEventListener('click', (e) => { if (!parentTermsAccepted()) { e.preventDefault(); parentTermsOpen(); } });
     termsCheck.addEventListener('change', () => { if (!termsCheck.checked) { parentTermsSet(false); syncTerms(); } });
     termsLink.addEventListener('click', (e) => { e.preventDefault(); parentTermsOpen(); });
-    window.addEventListener('storage', syncTerms);
     bar.insertBefore(terms, bar.firstChild);
     syncTerms();
+    postToHost({ type: 'ms-asset-terms-request' });
     const done = document.createElement('button');
     done.type = 'button';
     done.id = 'bodaColorDone';
     done.textContent = '取色工具完成';
     done.title = '標記「取色工具」這一步已完成，並前往下一步';
     done.onclick = function () {
-      let handled = false;
-      try {
-        const b = window.parent.document.querySelector('#step-actions [data-step-act="done"]');
-        if (b) { b.click(); handled = true; }
-      } catch (e) { /* 不同網域時改用訊息 */ }
-      if (!handled && window.parent !== window) window.parent.postMessage({ type: 'wo-color-tool-done' }, '*');
+      /* 主頁收到 wo-color-tool-done 會完成「取色工具」這一步（TP 規則：不直接操作主頁的按鈕）。 */
+      if (window.parent !== window) window.parent.postMessage({ type: 'wo-color-tool-done' }, '*');
     };
     bar.insertBefore(done, bar.firstChild);
     csvBtn.classList.remove('primary');

@@ -1,11 +1,11 @@
 /*
- * 本機自動暫存：每次編輯後自動存到 localStorage，重新整理不會掉。
+ * 本機自動暫存：每次編輯後自動存到 本機暫存，重新整理不會掉。
  *
  * 用的是和「進度存檔.json」完全相同的序列化格式（ProjectFile.serialize），
  * 所以即使手動匯出的 JSON 也能當暫存用、反過來也通。
  *
- * 寫入用 debounce（1 秒），避免連續打字時每個字都寫一次 localStorage。
- * localStorage 滿了就靜默放棄——這只是保護網，不應該影響正常使用。
+ * 寫入用 debounce（1 秒），避免連續打字時每個字都寫一次 本機暫存。
+ * 本機暫存 滿了就靜默放棄——這只是保護網，不應該影響正常使用。
  */
 (function () {
   var KEY = "boda-bottom-autosave";
@@ -25,13 +25,13 @@
     try {
       var state = store.getState();
       if (isPristine(state)) {
-        localStorage.removeItem(KEY);
+        window.BnStore.local.remove(KEY);
         return;
       }
       var json = window.ProjectFile.serialize(state);
-      localStorage.setItem(KEY, json);
+      window.BnStore.local.set(KEY, json);
     } catch (e) {
-      // localStorage 滿了或被停用，靜默放棄
+      // 本機暫存 滿了或被停用，靜默放棄
     }
   }
 
@@ -42,7 +42,7 @@
 
   function restore(store, Actions) {
     var raw;
-    try { raw = localStorage.getItem(KEY); } catch (e) { return false; }
+    try { raw = window.BnStore.local.get(KEY); } catch (e) { return false; }
     if (!raw) return false;
     try {
       var data = window.ProjectFile.parse(raw);
@@ -52,13 +52,13 @@
       return true;
     } catch (e) {
       // 暫存損壞，清掉重來
-      try { localStorage.removeItem(KEY); } catch (_) {}
+      try { window.BnStore.local.remove(KEY); } catch (_) {}
       return false;
     }
   }
 
   function clear() {
-    try { localStorage.removeItem(KEY); } catch (e) {}
+    try { window.BnStore.local.remove(KEY); } catch (e) {}
   }
 
   function mount(store) {

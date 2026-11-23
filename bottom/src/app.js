@@ -5,7 +5,7 @@
 
   /*
    * 素材庫只有版控過的 img/（經 tools/build-icon-manifest.js 產生成 manifest.js）。
-   * 上傳的圖只活在這次工作階段，重新整理就沒了——刻意不做 localStorage 留存：
+   * 上傳的圖只活在這次工作階段，重新整理就沒了——刻意不做 本機暫存 留存：
    * 留存會讓每個人的下拉選單長得不一樣、而且無從清理，
    * 素材的唯一正式來源就應該是 img/ 這份看得到、進得了版控的資料夾。
    * 這次上傳的圖仍然會內嵌進匯出的「進度存檔.json」，交接不會掉圖。
@@ -78,7 +78,7 @@
 
     /* 單獨開啟 bottom/index.html 時保留原本的開場工單對話框；嵌入 BODA 時工具列
        已經直接放在左欄，並會自動接主工具工單，不再用 Modal 擋住畫布。
-       如果 localStorage 有暫存（hasAutoSave），直接恢復編輯、不擋對話框。 */
+       如果 本機暫存 有暫存（hasAutoSave），直接恢復編輯、不擋對話框。 */
     if ((!window.BottomParentBridge || !window.BottomParentBridge.isEmbedded()) && !hasAutoSave) {
       window.StartupDialog.mount(panel);
     }

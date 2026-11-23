@@ -13,8 +13,6 @@
  * 先畫大到至少 CROP_MIN_WIDTH 再裁，向量圖放大不失真，裁完才有足夠解析度。
  */
 (function () {
-  var CSS_URL = "https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css";
-  var JS_URL = "https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js";
   var CROP_MIN_WIDTH = 428; // = icon 框寬 107 的 4 倍，確保裁切後仍夠銳利
   var MAX_OUTPUT = 4000; // viewMode:0 可以把裁切框拖得很誇張，輸出要設上限
   var HISTORY_LIMIT = 30;
@@ -26,24 +24,14 @@
   // 這一次開啟編輯器的工作階段
   var session = null; // { history: [dataUrl], index, onDone, tolerance }
 
+  /* CropperJS（含 CSS）由 ../shopee2/js/vendor/browser-loader.js 從 cdnjs 載入（版本寫死、附 integrity）。 */
   function loadCropper() {
     if (window.Cropper) return Promise.resolve();
     if (loadingPromise) return loadingPromise;
-
-    loadingPromise = new Promise(function (resolve, reject) {
-      var link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = CSS_URL;
-      document.head.appendChild(link);
-
-      var script = document.createElement("script");
-      script.src = JS_URL;
-      script.onload = function () { resolve(); };
-      script.onerror = function () {
-        loadingPromise = null;
-        reject(new Error("無法載入裁切元件 CropperJS，請確認網路連線"));
-      };
-      document.head.appendChild(script);
+    if (!window.BodaVendor) return Promise.reject(new Error("函式庫載入元件未載入，請重新整理頁面"));
+    loadingPromise = window.BodaVendor.ensure("cropper").catch(function (error) {
+      loadingPromise = null;
+      throw new Error("無法載入裁切元件 CropperJS，請確認網路連線（" + error.message + "）");
     });
     return loadingPromise;
   }
