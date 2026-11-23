@@ -391,7 +391,7 @@
       return makePreviewImg(img).then(function(pi){ state.previewImg = pi; renderPreview(); });
     }).catch(function(err){
       console.warn('[bn-shadow] open failed', err);
-      alert('影子編輯器載入失敗：' + (err && err.message || err));
+      BnDialog.alert('影子編輯器載入失敗：' + (err && err.message || err));
       close();
     });
   }
@@ -413,7 +413,7 @@
     }).catch(function(err){
       btn.disabled = false; btn.textContent = '套用';
       console.warn('[bn-shadow] apply failed', err);
-      alert('影子套用失敗：' + (err && err.message || err));
+      BnDialog.alert('影子套用失敗：' + (err && err.message || err));
     });
   }
 

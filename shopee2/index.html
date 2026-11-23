@@ -3,6 +3,8 @@
 <head>
 <!-- 所有本機暫存都經過 BnStore；上 TP 時打包腳本會換成 js/bn-store-tp.js（只放記憶體）。 -->
 <script src="js/bn-store.js"></script>
+<!-- 提示／確認視窗：TP 不允許原生 alert、confirm。 -->
+<script src="js/bn-dialog.js"></script>
 <script>
 var BN_HOST_PARAMS = new URLSearchParams(location.search);
 var BN_HOST = (BN_HOST_PARAMS.get('host') || '').toLowerCase();
@@ -3899,7 +3901,7 @@ document.addEventListener('click', function(e) {
 /* EyeDropper 吸管 */
 function openEyeDropper(){
   if(!window.EyeDropper){
-    alert('你的瀏覽器不支援吸管功能（需要 Chrome 95+）');
+    BnDialog.alert('你的瀏覽器不支援吸管功能（需要 Chrome 95+）');
     return;
   }
   var ed = new EyeDropper();

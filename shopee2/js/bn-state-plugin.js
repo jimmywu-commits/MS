@@ -1139,8 +1139,14 @@
     clrBtn.style.cssText='width:100%;padding:7px 6px;background:transparent;border:1px solid var(--border,#30363d);border-radius:7px;color:#ef4444;font-size:11px;cursor:pointer;transition:.12s;text-align:center;';
     clrBtn.addEventListener('mouseenter',function(){ clrBtn.style.background='rgba(239,68,68,.08)'; });
     clrBtn.addEventListener('mouseleave',function(){ clrBtn.style.background='transparent'; });
-    clrBtn.addEventListener('click',function(){
-      if(!confirm('確定要清除本機暫存？頁面將重新整理，畫面會回到預設值。')) return;
+    clrBtn.addEventListener('click',function onClearClick(ev){
+      /* TP 不允許原生 confirm（會直接回 false），改用頁面內的確認視窗；按確定後再跑一次這個處理函式。 */
+      if(!(ev && ev._bnConfirmed)){
+        global.BnDialog.confirm('確定要清除本機暫存？頁面將重新整理，畫面會回到預設值。', {okText:'清除', danger:true}).then(function(ok){
+          if(ok) onClearClick({_bnConfirmed:true});
+        });
+        return;
+      }
       /* 先鎖住所有自動暫存，避免清除後在 reload 前又把舊資料寫回去。 */
       global._bnClearingState = true;
       clearTimeout(global._bnSaveTimer);

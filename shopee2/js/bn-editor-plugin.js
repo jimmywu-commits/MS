@@ -939,7 +939,7 @@
 
       if(window.BNLogoMenu){ doShow(); }
       else {
-        loadScriptOnce('js/logo-editor-plugin.js').then(doShow)['catch'](function(){ alert('logo-editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/logo-editor-plugin.js').then(doShow)['catch'](function(){ BnDialog.alert('logo-editor-plugin.js 載入失敗'); });
       }
     }
 
@@ -1037,7 +1037,7 @@
       if(window.BNLogoMenu){
         doAttach();
       } else {
-        loadScriptOnce('js/logo-editor-plugin.js').then(doAttach)['catch'](function(){ alert('logo-editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/logo-editor-plugin.js').then(doAttach)['catch'](function(){ BnDialog.alert('logo-editor-plugin.js 載入失敗'); });
       }
     }
 
@@ -1283,14 +1283,14 @@
     function openCharacterEditor(slotKey){
       if(!window[slotKey]) return;
       if(!window.HBNProductEditorPlugin){
-        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenCharacterEditor(slotKey); })['catch'](function(){ alert('editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenCharacterEditor(slotKey); })['catch'](function(){ BnDialog.alert('editor-plugin.js 載入失敗'); });
         return;
       }
       doOpenCharacterEditor(slotKey);
     }
 
     function doOpenCharacterEditor(slotKey){
-      if(!window.HBNProductEditorPlugin){ alert('editor-plugin.js 未載入'); return; }
+      if(!window.HBNProductEditorPlugin){ BnDialog.alert('editor-plugin.js 未載入'); return; }
       var c = window[slotKey];
       if(!c) return;
 
@@ -1391,7 +1391,7 @@
             broadcastCharacter(slotKey);
             markStateDirty();
           });
-        })['catch'](function(){ alert('人物圖片讀取失敗，請換一張圖片再試'); });
+        })['catch'](function(){ BnDialog.alert('人物圖片讀取失敗，請換一張圖片再試'); });
       });
     }
 
@@ -1576,7 +1576,7 @@
       var keepScale = !(opts && opts.keepScale === false);
       if(!window._bnGroundShadow){
         return loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ return setEndorserRotation(slotKey, deg, done, opts); })['catch'](function(){
-          alert('bn-shadow-plugin.js 載入失敗');
+          BnDialog.alert('bn-shadow-plugin.js 載入失敗');
           if(done) done();
         });
       }
@@ -1664,7 +1664,7 @@
     function openEndorserEditor(slotKey){
       if(!window[slotKey]) return;
       if(!window.HBNProductEditorPlugin){
-        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEndorserEditor(slotKey); })['catch'](function(){ alert('editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEndorserEditor(slotKey); })['catch'](function(){ BnDialog.alert('editor-plugin.js 載入失敗'); });
         return;
       }
       doOpenEndorserEditor(slotKey);
@@ -1710,7 +1710,7 @@
           renderEndorserUI();
           broadcast({type:'bn-endorser-update-image', slot:slotKey, id:slot.id, src:slot.src, ratio:slot.ratio, rotate:0});
           markStateDirty();
-        })['catch'](function(){ alert(ENDORSER_LABEL[slotKey] + '編輯結果讀取失敗'); });
+        })['catch'](function(){ BnDialog.alert(ENDORSER_LABEL[slotKey] + '編輯結果讀取失敗'); });
       });
       observer.observe(img, {attributes:true, attributeFilter:['src']});
       setEndorserEditing(slotKey);
@@ -1977,7 +1977,7 @@
           renderEndorserUI();
           broadcastEndorser(slotKey);
           markStateDirty();
-        })['catch'](function(){ alert(ENDORSER_LABEL[slotKey] + '讀取失敗，請換一張圖片再試'); });
+        })['catch'](function(){ BnDialog.alert(ENDORSER_LABEL[slotKey] + '讀取失敗，請換一張圖片再試'); });
       });
     }
 
@@ -3862,7 +3862,7 @@
 
       /* 確保 editor-plugin.js 已載入 */
       if(!window.HBNProductEditorPlugin){
-        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEditor(pid); })['catch'](function(){ alert('editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEditor(pid); })['catch'](function(){ BnDialog.alert('editor-plugin.js 載入失敗'); });
         return;
       }
       doOpenEditor(pid);
@@ -3873,7 +3873,7 @@
       var p=window._bnProducts.find(function(x){return x.id===pid;});
       if(!p)return;
       if(!window._bnGroundShadow){
-        loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ openGroundShadowEditor(pid); })['catch'](function(){ alert('bn-shadow-plugin.js 載入失敗'); });
+        loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ openGroundShadowEditor(pid); })['catch'](function(){ BnDialog.alert('bn-shadow-plugin.js 載入失敗'); });
         return;
       }
       window._bnGroundShadow.openEditor(p, function(){
@@ -3896,7 +3896,7 @@
       if(!p){ if(done) done(); return Promise.resolve(); }
       if(!window._bnGroundShadow){
         var loadJob = loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ return setProductRotation(pid, deg, done, rotationAnchorMode); })['catch'](function(){
-          alert('bn-shadow-plugin.js 載入失敗');
+          BnDialog.alert('bn-shadow-plugin.js 載入失敗');
           if(done) done();
         });
         _rotatePromises[pid] = loadJob;
@@ -3981,7 +3981,7 @@
     }, true);
 
     function doOpenEditor(pid){
-      if(!window.HBNProductEditorPlugin){ alert('editor-plugin.js 未載入'); return; }
+      if(!window.HBNProductEditorPlugin){ BnDialog.alert('editor-plugin.js 未載入'); return; }
       var p=window._bnProducts.find(function(x){return x.id===pid;});
       if(!p)return;
       _editingShadowPid = pid;
