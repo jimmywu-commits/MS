@@ -493,11 +493,9 @@
       });
       _bnTagWrap.style.display = visible ? 'block' : 'none';
     }
-    /* 掛標網址探測結果的快取：同源時借用父頁的 BnStore.session（整個分頁共用，
-       版位 iframe 重載也不用再探測一輪）；TP 上讀不到父頁，就只記在這個版位頁的記憶體。 */
+    /* 掛標網址探測結果的快取：只記在這個版位頁的記憶體（TP 規則：版位不讀父頁）。 */
     var _bnTagProbeMemory = Object.create(null);
     function _bnTagProbeCache(){
-      try { if(window.parent && window.parent !== window && window.parent.BnStore) return window.parent.BnStore.session; } catch(_) {}
       return {
         get: function(k){ return k in _bnTagProbeMemory ? _bnTagProbeMemory[k] : null; },
         set: function(k, v){ _bnTagProbeMemory[k] = String(v); }
@@ -546,7 +544,8 @@
     window._bnApplyTag = function(){ if(!_bnSkipTag) _bnLoadTagLayers(); };
     var _bnSkipTag = _bnCampaignCardTemplate;
     if(/ddcard/i.test(fname)){
-      try { _bnSkipTag = !/^#ddcard$/i.test(parent.location.hash.trim()); } catch(_){}
+      /* 主頁的 #hash 由網址參數 bnhash 帶進來（TP 規則：版位不讀父頁網址） */
+      try { _bnSkipTag = !/^#ddcard$/i.test(String(new URLSearchParams(location.search).get('bnhash') || '').trim()); } catch(_){}
     }
     if(!_bnSkipTag) _bnLoadTagLayers();
 
@@ -5475,6 +5474,9 @@
     var HIDE_SELECTOR='[data-corner],[data-rotate-handle],[data-rotate-badge],.bn-content-warning-tip,#_bn_bg_overlay';
     function captureFilter(layer){
       return function(node){
+        /* HTML 註解不會畫出來，而且內容有「--」（例如 --layers）時，html-to-image 產生的 SVG
+           就不是合法 XML，整張截圖失敗（SCBN、AMS、Search_Image、SearchICON 版位都有這種註解）。 */
+        if(node.nodeType===8)return false;
         if(node.nodeType!==1)return true;
         if(node.matches&&node.matches(HIDE_SELECTOR))return false;
         /* 沒設 src 的 <img>（例如還沒放底圖的 #底圖）會被 html-to-image 當成目前頁面去抓，

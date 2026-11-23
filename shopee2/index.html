@@ -1845,7 +1845,8 @@ function renderPreviews() {
       '<div class="preview-block-body" id="pbody-' + l.id + '" style="min-height:' + Math.max(40, placeholderH) + 'px">' +
         '<iframe id="iframe-' + l.id + '"' +
           /* 每次重建 iframe 都帶時間戳，避免一般瀏覽器沿用舊版排版 HTML。 */
-          ' data-bn-src="html/' + l.file + '?bnid=' + l.id + '&t=' + Date.now() + '"' +
+          /* bnhash：主頁目前的 #hash，DD Card 用它判斷要不要顯示掛標（版位不讀父頁網址）。 */
+          ' data-bn-src="html/' + l.file + '?bnid=' + l.id + '&bnhash=' + encodeURIComponent(location.hash || '') + '&t=' + Date.now() + '"' +
           ' style="border:none;display:block;transform-origin:top left;visibility:hidden"' +
           '>' +
         '</iframe>' +

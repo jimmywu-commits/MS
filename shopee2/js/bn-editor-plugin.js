@@ -4208,6 +4208,27 @@
       window.HBNProductEditorPlugin.open(img);
     }
 
+    /* ══ 蝦皮資產使用條款（主頁 ⇄ 曝光資源，只用 postMessage） ══
+       只有被 MS 主頁嵌入（網址 host=boda）時才需要主頁的同意狀態；獨立開啟（含 TP）時不擋。
+       主頁回覆前先視為「未同意」，主頁會在載入與每次變更時送 ms-asset-terms-state。 */
+    var _bnHostTermsAccepted = null;
+    function bnHostedByMs(){
+      try { return window.parent !== window && /(?:^|[?&])host=boda(?:&|$)/i.test(location.search); } catch(_) { return false; }
+    }
+    function bnHostTermsAccepted(){ return bnHostedByMs() ? _bnHostTermsAccepted === true : true; }
+    function bnHostTermsPost(type, extra){
+      if(!bnHostedByMs()) return;
+      var msg = {type:type};
+      if(extra) for(var k in extra) msg[k] = extra[k];
+      try { window.parent.postMessage(msg, '*'); } catch(_) {}
+    }
+    window.addEventListener('message', function(e){
+      if(!e.data || e.data.type !== 'ms-asset-terms-state' || e.source !== window.parent) return;
+      _bnHostTermsAccepted = !!e.data.accepted;
+      if(typeof window._bnSyncHostTerms === 'function') window._bnSyncHostTerms();
+    });
+    bnHostTermsPost('ms-asset-terms-request');
+
     /* ══ 下載 ══ */
     function insertDownloadBar(){
       var sidebar=document.getElementById('sidebar');
@@ -4219,10 +4240,12 @@
       if(scroll && scroll.nextSibling) sidebar.insertBefore(bar, scroll.nextSibling);
       else sidebar.appendChild(bar);
       var check=document.getElementById('bn-ms-terms-check'), link=document.getElementById('bn-ms-terms-link'), button=document.getElementById('bn-dl-all');
-      function parentTermsAccepted(){ try { return !!(window.parent && typeof window.parent.msAssetTermsAccepted === 'function' ? window.parent.msAssetTermsAccepted() : true); } catch(_) { return true; } }
-      function parentTermsOpen(){ try { if(window.parent && typeof window.parent.msOpenAssetTerms === 'function') window.parent.msOpenAssetTerms(); } catch(_) {} }
-      function parentTermsSet(value){ try { if(window.parent && typeof window.parent.msSetAssetTermsAccepted === 'function') window.parent.msSetAssetTermsAccepted(!!value); } catch(_) {} }
+      /* 蝦皮資產使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 上互相讀不到）。 */
+      function parentTermsAccepted(){ return bnHostTermsAccepted(); }
+      function parentTermsOpen(){ bnHostTermsPost('ms-asset-terms-open'); }
+      function parentTermsSet(value){ bnHostTermsPost('ms-asset-terms-set', {accepted:!!value}); }
       function syncTerms(){ var ok=parentTermsAccepted(); check.checked=ok; button.disabled=!ok; }
+      window._bnSyncHostTerms = syncTerms;
       check.addEventListener('click',function(e){ if(!parentTermsAccepted()){ e.preventDefault(); parentTermsOpen(); } });
       check.addEventListener('change',function(){ if(!check.checked){ parentTermsSet(false); syncTerms(); } });
       link.addEventListener('click',function(e){ e.preventDefault(); parentTermsOpen(); });
@@ -4346,7 +4369,8 @@
 
     function downloadAll(_layoutSynced){
       if(_layoutSynced!==true&&window._bnDownloadBusy)return;
-      if(window.parent && typeof window.parent.msRequireAssetTerms === 'function' && !window.parent.msRequireAssetTerms()){
+      if(!bnHostTermsAccepted()){
+        bnHostTermsPost('ms-asset-terms-open');
         _bnSettleCollect(new Error('尚未同意蝦皮資產使用條款'));
         return;
       }

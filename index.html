@@ -32470,6 +32470,7 @@ ensureBlocksLoaded(function () {
     var packageButton = document.querySelector('#nav-rail .nav-step[data-step="download"]');
     if (packageButton) packageButton.classList.toggle('ms-terms-locked', !ok);
     document.querySelectorAll('[data-ms-terms-confirm]').forEach(function (button) { button.disabled = !ok; });
+    document.querySelectorAll('iframe').forEach(function (frame) { if (frame.contentWindow) postTermsState(frame.contentWindow); });
   }
   function bindTermsLines() {
     document.querySelectorAll('[data-ms-terms-check]').forEach(function (check) {
@@ -32503,6 +32504,18 @@ ensureBlocksLoaded(function () {
   window.msOpenAssetTerms = openTerms;
   window.msSetAssetTermsAccepted = function (value) { writeConsent(!!value); syncTermsUi(); };
   window.msSyncAssetTerms = syncTermsUi;
+  /* 曝光資源 iframe 用 postMessage 查詢／開啟／設定條款（TP 規則：主頁與 iframe 不直接互相呼叫）。
+     每次同意狀態改變，syncTermsUi 也會把最新狀態送給所有 iframe。 */
+  function postTermsState(target) {
+    try { target.postMessage({ type: 'ms-asset-terms-state', accepted: accepted() }, '*'); } catch (_) {}
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d.type !== 'string' || d.type.indexOf('ms-asset-terms-') !== 0 || d.type === 'ms-asset-terms-state') return;
+    if (d.type === 'ms-asset-terms-open') openTerms();
+    else if (d.type === 'ms-asset-terms-set') { writeConsent(!!d.accepted); syncTermsUi(); }
+    if (e.source) postTermsState(e.source);
+  });
   function init() {
     var rights = document.getElementById('ms-rights-modal'), link = document.getElementById('ms-rights-link');
     if (link) link.addEventListener('click', function (e) { e.preventDefault(); openRights(); });

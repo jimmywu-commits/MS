@@ -645,6 +645,9 @@
       /* 代言人小字與字色另存在 endorserNote；放進 toolbar 會在還原時再觸發 input，
          把預設色票誤當成「手動選色」。 */
       if(/^bn-endorser-/.test(key)) return;
+      /* 蝦皮資產使用條款的同意狀態由 MS 主頁管理（ms-asset-terms-* 訊息），不能存進暫存：
+         還原舊暫存時若重播「未勾選」，會把使用者在主頁的同意撤銷。 */
+      if(key === 'bn-ms-terms-check') return;
       var v;
       if(el.type === 'checkbox' || el.type === 'radio') v = !!el.checked;
       else v = el.value;
@@ -672,6 +675,7 @@
       if(!el || el.type === 'file') return;
       if(key === 'cp-hex-input' || key === 'cp-native') return;
       if(/^bn-endorser-/.test(key)) return;
+      if(key === 'bn-ms-terms-check') return;
       var item = controls[key] || {};
       if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!item.value;
       else if(item.value !== undefined) el.value = item.value;
