@@ -9,6 +9,17 @@
   var _bnEditorScriptNode=document.currentScript;
   var _bnEditorScriptBase=new URL('.',(_bnEditorScriptNode&&_bnEditorScriptNode.src)||new URL('js/bn-editor-plugin.js',document.baseURI).href).href;
 
+  /* 版位 iframe 的量測值（畫布／背景區尺寸、背景色），由 layout-runtime 用 bn-layout-metrics 送來。
+     TP 上讀不到 iframe 內容，一律用這份快取，不直接讀 iframe 的 document。 */
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.type !== 'bn-layout-metrics') return;
+    var frames = document.querySelectorAll('iframe');
+    for (var i = 0; i < frames.length; i++) {
+      if (frames[i].contentWindow === e.source) { frames[i]._bnMetrics = e.data; return; }
+    }
+  });
+  function bnFrameMetrics(ifr) { return (ifr && ifr._bnMetrics) || null; }
+
   function ready(fn) {
     if (document.readyState !== 'loading') fn();
     else document.addEventListener('DOMContentLoaded', fn);
@@ -1041,7 +1052,7 @@
 
       if(window.BNLogoMenu){ doShow(); }
       else {
-        loadScriptOnce('js/logo-editor-plugin.js').then(doShow)['catch'](function(){ alert('logo-editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/logo-editor-plugin.js').then(doShow)['catch'](function(){ BnDialog.alert('logo-editor-plugin.js 載入失敗'); });
       }
     }
 
@@ -1139,7 +1150,7 @@
       if(window.BNLogoMenu){
         doAttach();
       } else {
-        loadScriptOnce('js/logo-editor-plugin.js').then(doAttach)['catch'](function(){ alert('logo-editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/logo-editor-plugin.js').then(doAttach)['catch'](function(){ BnDialog.alert('logo-editor-plugin.js 載入失敗'); });
       }
     }
 
@@ -1385,14 +1396,14 @@
     function openCharacterEditor(slotKey){
       if(!window[slotKey]) return;
       if(!window.HBNProductEditorPlugin){
-        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenCharacterEditor(slotKey); })['catch'](function(){ alert('editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenCharacterEditor(slotKey); })['catch'](function(){ BnDialog.alert('editor-plugin.js 載入失敗'); });
         return;
       }
       doOpenCharacterEditor(slotKey);
     }
 
     function doOpenCharacterEditor(slotKey){
-      if(!window.HBNProductEditorPlugin){ alert('editor-plugin.js 未載入'); return; }
+      if(!window.HBNProductEditorPlugin){ BnDialog.alert('editor-plugin.js 未載入'); return; }
       var c = window[slotKey];
       if(!c) return;
 
@@ -1493,7 +1504,7 @@
             broadcastCharacter(slotKey);
             markStateDirty();
           });
-        })['catch'](function(){ alert('人物圖片讀取失敗，請換一張圖片再試'); });
+        })['catch'](function(){ BnDialog.alert('人物圖片讀取失敗，請換一張圖片再試'); });
       });
     }
 
@@ -1678,7 +1689,7 @@
       var keepScale = !(opts && opts.keepScale === false);
       if(!window._bnGroundShadow){
         return loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ return setEndorserRotation(slotKey, deg, done, opts); })['catch'](function(){
-          alert('bn-shadow-plugin.js 載入失敗');
+          BnDialog.alert('bn-shadow-plugin.js 載入失敗');
           if(done) done();
         });
       }
@@ -1766,7 +1777,7 @@
     function openEndorserEditor(slotKey){
       if(!window[slotKey]) return;
       if(!window.HBNProductEditorPlugin){
-        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEndorserEditor(slotKey); })['catch'](function(){ alert('editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEndorserEditor(slotKey); })['catch'](function(){ BnDialog.alert('editor-plugin.js 載入失敗'); });
         return;
       }
       doOpenEndorserEditor(slotKey);
@@ -1812,7 +1823,7 @@
           renderEndorserUI();
           broadcast({type:'bn-endorser-update-image', slot:slotKey, id:slot.id, src:slot.src, ratio:slot.ratio, rotate:0});
           markStateDirty();
-        })['catch'](function(){ alert(ENDORSER_LABEL[slotKey] + '編輯結果讀取失敗'); });
+        })['catch'](function(){ BnDialog.alert(ENDORSER_LABEL[slotKey] + '編輯結果讀取失敗'); });
       });
       observer.observe(img, {attributes:true, attributeFilter:['src']});
       setEndorserEditing(slotKey);
@@ -2079,7 +2090,7 @@
           renderEndorserUI();
           broadcastEndorser(slotKey);
           markStateDirty();
-        })['catch'](function(){ alert(ENDORSER_LABEL[slotKey] + '讀取失敗，請換一張圖片再試'); });
+        })['catch'](function(){ BnDialog.alert(ENDORSER_LABEL[slotKey] + '讀取失敗，請換一張圖片再試'); });
       });
     }
 
@@ -2266,7 +2277,7 @@
           Object.keys(nextStates).forEach(function(id){
             var st = nextStates[id] || {};
             var prev = prevStates[id] || {};
-            /* __BN_IDB__ 是 localStorage 輕量備援的佔位符，不能當成 null 廣播，否則會洗掉畫布背景。 */
+            /* __BN_IDB__ 是 本機暫存 輕量備援的佔位符，不能當成 null 廣播，否則會洗掉畫布背景。 */
             var src = isNoImageBackgroundLayout(id, null) ? null
               : (st.src === '__BN_IDB__' ? (prev.src || window._bgDataUrl || null) : (st.src || null));
             if(src) hasRealSrc = true;
@@ -2376,9 +2387,11 @@
           var qs = (ifrEl.src||'').split('?')[1]||'';
           var id = new URLSearchParams(qs).get('bnid');
           if(id) return String(id);
-          /* fallback：從 contentWindow 的 location 取 */
-          var loc = ifrEl.contentWindow && ifrEl.contentWindow.location;
-          if(loc){ id = new URLSearchParams(loc.search||'').get('bnid'); if(id) return String(id); }
+          /* fallback：延遲載入的 iframe 還沒設 src，從 data-bn-src 取；再不行用版位回報的 bnid */
+          id = new URLSearchParams(((ifrEl.dataset && ifrEl.dataset.bnSrc)||'').split('?')[1]||'').get('bnid');
+          if(id) return String(id);
+          var m = bnFrameMetrics(ifrEl);
+          if(m && m.bnid) return String(m.bnid);
         }catch(_){}
         return null;
       }
@@ -2587,10 +2600,10 @@
         return bgNaturalCache[src];
       }
       function getBgContainerSize(ifrEl,image){
-        var el=null;try{var doc=ifrEl.contentDocument;el=doc&&(doc.querySelector('.背景色,.bg')||doc.getElementById('canvas'));}catch(_){}
-        var css=el&&el.ownerDocument.defaultView.getComputedStyle(el);
-        return {w:el&&(el.clientWidth||parseFloat(css.width))||parseFloat(ifrEl.style.width)||ifrEl.width||image.w,
-          h:el&&(el.clientHeight||parseFloat(css.height))||parseFloat(ifrEl.style.height)||ifrEl.height||image.h};
+        /* 背景區尺寸由版位用 bn-layout-metrics 回報（不直接讀 iframe 內容）；還沒收到時用 iframe 尺寸。 */
+        var m=bnFrameMetrics(ifrEl),bg=m&&(m.bg||m.canvas);
+        return {w:bg&&bg.w||parseFloat(ifrEl.style.width)||ifrEl.width||image.w,
+          h:bg&&bg.h||parseFloat(ifrEl.style.height)||ifrEl.height||image.h};
       }
 
       /* 建立每個 preview-block 右側的背景圖控制面板 */
@@ -2874,26 +2887,14 @@
           return '';
         }
 
+        /* 版位尺寸由版位用 bn-layout-metrics 回報（不直接讀 iframe 內容） */
         try{
-          var doc = ifrEl && (ifrEl.contentDocument || (ifrEl.contentWindow && ifrEl.contentWindow.document));
-          if(doc){
-            var body = doc.body || null;
-            var byData = body ? pickBySize(body.getAttribute('data-fw'), body.getAttribute('data-fh')) : '';
+          var metrics = bnFrameMetrics(ifrEl);
+          if(metrics){
+            var byData = pickBySize(metrics.fw, metrics.fh);
             if(byData) return byData;
-
-            var canvas = doc.getElementById('canvas') || doc.querySelector('#canvas,.canvas,[data-canvas]');
-            if(canvas){
-              var rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
-              var byRect = rect ? pickBySize(rect.width, rect.height) : '';
-              if(byRect) return byRect;
-
-              var cs = doc.defaultView && doc.defaultView.getComputedStyle ? doc.defaultView.getComputedStyle(canvas) : null;
-              var byCss = cs ? pickBySize(cs.width, cs.height) : '';
-              if(byCss) return byCss;
-
-              var byEl = pickBySize(canvas.offsetWidth || canvas.clientWidth || canvas.scrollWidth, canvas.offsetHeight || canvas.clientHeight || canvas.scrollHeight);
-              if(byEl) return byEl;
-            }
+            var byCanvas = metrics.canvas ? pickBySize(metrics.canvas.w, metrics.canvas.h) : '';
+            if(byCanvas) return byCanvas;
           }
         }catch(_){}
 
@@ -3974,7 +3975,7 @@
 
       /* 確保 editor-plugin.js 已載入 */
       if(!window.HBNProductEditorPlugin){
-        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEditor(pid); })['catch'](function(){ alert('editor-plugin.js 載入失敗'); });
+        loadScriptOnce('js/editor-plugin.js').then(function(){ doOpenEditor(pid); })['catch'](function(){ BnDialog.alert('editor-plugin.js 載入失敗'); });
         return;
       }
       doOpenEditor(pid);
@@ -3985,7 +3986,7 @@
       var p=window._bnProducts.find(function(x){return x.id===pid;});
       if(!p)return;
       if(!window._bnGroundShadow){
-        loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ openGroundShadowEditor(pid); })['catch'](function(){ alert('bn-shadow-plugin.js 載入失敗'); });
+        loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ openGroundShadowEditor(pid); })['catch'](function(){ BnDialog.alert('bn-shadow-plugin.js 載入失敗'); });
         return;
       }
       window._bnGroundShadow.openEditor(p, function(){
@@ -4008,7 +4009,7 @@
       if(!p){ if(done) done(); return Promise.resolve(); }
       if(!window._bnGroundShadow){
         var loadJob = loadScriptOnce('js/bn-shadow-plugin.js?v=20261113-solid-body').then(function(){ return setProductRotation(pid, deg, done, rotationAnchorMode); })['catch'](function(){
-          alert('bn-shadow-plugin.js 載入失敗');
+          BnDialog.alert('bn-shadow-plugin.js 載入失敗');
           if(done) done();
         });
         _rotatePromises[pid] = loadJob;
@@ -4093,7 +4094,7 @@
     }, true);
 
     function doOpenEditor(pid){
-      if(!window.HBNProductEditorPlugin){ alert('editor-plugin.js 未載入'); return; }
+      if(!window.HBNProductEditorPlugin){ BnDialog.alert('editor-plugin.js 未載入'); return; }
       var p=window._bnProducts.find(function(x){return x.id===pid;});
       if(!p)return;
       _editingShadowPid = pid;
@@ -4207,6 +4208,27 @@
       window.HBNProductEditorPlugin.open(img);
     }
 
+    /* ══ 蝦皮資產使用條款（主頁 ⇄ 曝光資源，只用 postMessage） ══
+       只有被 MS 主頁嵌入（網址 host=boda）時才需要主頁的同意狀態；獨立開啟（含 TP）時不擋。
+       主頁回覆前先視為「未同意」，主頁會在載入與每次變更時送 ms-asset-terms-state。 */
+    var _bnHostTermsAccepted = null;
+    function bnHostedByMs(){
+      try { return window.parent !== window && /(?:^|[?&])host=boda(?:&|$)/i.test(location.search); } catch(_) { return false; }
+    }
+    function bnHostTermsAccepted(){ return bnHostedByMs() ? _bnHostTermsAccepted === true : true; }
+    function bnHostTermsPost(type, extra){
+      if(!bnHostedByMs()) return;
+      var msg = {type:type};
+      if(extra) for(var k in extra) msg[k] = extra[k];
+      try { window.parent.postMessage(msg, '*'); } catch(_) {}
+    }
+    window.addEventListener('message', function(e){
+      if(!e.data || e.data.type !== 'ms-asset-terms-state' || e.source !== window.parent) return;
+      _bnHostTermsAccepted = !!e.data.accepted;
+      if(typeof window._bnSyncHostTerms === 'function') window._bnSyncHostTerms();
+    });
+    bnHostTermsPost('ms-asset-terms-request');
+
     /* ══ 下載 ══ */
     function insertDownloadBar(){
       var sidebar=document.getElementById('sidebar');
@@ -4218,10 +4240,12 @@
       if(scroll && scroll.nextSibling) sidebar.insertBefore(bar, scroll.nextSibling);
       else sidebar.appendChild(bar);
       var check=document.getElementById('bn-ms-terms-check'), link=document.getElementById('bn-ms-terms-link'), button=document.getElementById('bn-dl-all');
-      function parentTermsAccepted(){ try { return !!(window.parent && typeof window.parent.msAssetTermsAccepted === 'function' ? window.parent.msAssetTermsAccepted() : true); } catch(_) { return true; } }
-      function parentTermsOpen(){ try { if(window.parent && typeof window.parent.msOpenAssetTerms === 'function') window.parent.msOpenAssetTerms(); } catch(_) {} }
-      function parentTermsSet(value){ try { if(window.parent && typeof window.parent.msSetAssetTermsAccepted === 'function') window.parent.msSetAssetTermsAccepted(!!value); } catch(_) {} }
+      /* 蝦皮資產使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 上互相讀不到）。 */
+      function parentTermsAccepted(){ return bnHostTermsAccepted(); }
+      function parentTermsOpen(){ bnHostTermsPost('ms-asset-terms-open'); }
+      function parentTermsSet(value){ bnHostTermsPost('ms-asset-terms-set', {accepted:!!value}); }
       function syncTerms(){ var ok=parentTermsAccepted(); check.checked=ok; button.disabled=!ok; }
+      window._bnSyncHostTerms = syncTerms;
       check.addEventListener('click',function(e){ if(!parentTermsAccepted()){ e.preventDefault(); parentTermsOpen(); } });
       check.addEventListener('change',function(){ if(!check.checked){ parentTermsSet(false); syncTerms(); } });
       link.addEventListener('click',function(e){ e.preventDefault(); parentTermsOpen(); });
@@ -4278,22 +4302,10 @@
       var found = null;
       document.querySelectorAll('.preview-block iframe').forEach(function(ifr){
         if(found) return;
-        try{
-          var doc = ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document);
-          if(!doc) return;
-          var candidates = [
-            doc.querySelector('.背景色'),
-            doc.querySelector('.bg'),
-            doc.getElementById('canvas'),
-            doc.body
-          ];
-          candidates.forEach(function(el){
-            if(found || !el) return;
-            var cs = doc.defaultView.getComputedStyle(el);
-            var hex = _bnRgbToHex(cs.backgroundColor);
-            if(hex) found = hex;
-          });
-        }catch(_){ }
+        /* 背景色由版位用 bn-layout-metrics 回報（不直接讀 iframe 內容） */
+        var m = bnFrameMetrics(ifr);
+        var hex = m && _bnRgbToHex(m.bgColor);
+        if(hex) found = hex;
       });
       return found;
     }
@@ -4357,7 +4369,8 @@
 
     function downloadAll(_layoutSynced){
       if(_layoutSynced!==true&&window._bnDownloadBusy)return;
-      if(window.parent && typeof window.parent.msRequireAssetTerms === 'function' && !window.parent.msRequireAssetTerms()){
+      if(!bnHostTermsAccepted()){
+        bnHostTermsPost('ms-asset-terms-open');
         _bnSettleCollect(new Error('尚未同意蝦皮資產使用條款'));
         return;
       }
@@ -4535,16 +4548,14 @@
         return String(name||'layout').trim().replace(/[\/\\:*?"<>|]/g,'_') || 'layout';
       }
 
+      /* JSZip 改由 js/vendor/browser-loader.js 從 cdnjs 載入（版本寫死、附 integrity），
+         TP 不允許把函式庫放進包內。 */
       function loadJSZip(cb){
         if(window.JSZip){cb();return;}
-        var script=document.createElement('script'),settled=false;
-        var timer=setTimeout(function(){finish(new Error('JSZip 載入逾時，請確認 js/vendor/jszip.min.js 已一起更新'));},8000);
-        function finish(err){if(settled)return;settled=true;clearTimeout(timer);script.onload=script.onerror=null;if(err)script.remove();cb(err);}
-        script.dataset.bnJszip='1';
-        script.src=new URL('vendor/jszip.min.js',_bnEditorScriptBase).href;
-        script.onload=function(){finish(window.JSZip?null:new Error('JSZip 未正確載入'));};
-        script.onerror=function(){finish(new Error('請確認 js/vendor/jszip.min.js 已一起更新'));};
-        document.head.appendChild(script);
+        if(!window.BodaVendor){cb(new Error('函式庫載入元件未載入，請確認 js/vendor/browser-loader.js 已一起更新'));return;}
+        window.BodaVendor.ensure('jszip').then(function(){
+          cb(window.JSZip?null:new Error('JSZip 未正確載入'));
+        },function(err){cb(err);});
       }
 
       function dataUrlToBase64(dataUrl){

@@ -19,16 +19,13 @@
   global.__BN_LOGO_MENU_PLUGIN__ = true;
 
   /* ── 載入 CropperJS ── */
+  /* 由 js/vendor/browser-loader.js 從 cdnjs 載入（版本寫死、附 integrity），TP 只允許 cdnjs。 */
   function loadCropper(cb){
     if(global.Cropper){ cb(); return; }
-    var link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css';
-    document.head.appendChild(link);
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js';
-    s.onload = cb;
-    document.head.appendChild(s);
+    if(!global.BodaVendor){ console.warn('[BNLogoMenu] 找不到 js/vendor/browser-loader.js，無法載入裁切工具'); return; }
+    global.BodaVendor.ensure('cropper').then(function(){ cb(); }, function(err){
+      console.warn('[BNLogoMenu] 裁切工具載入失敗', err);
+    });
   }
 
   /* ── 注入 CSS ── */

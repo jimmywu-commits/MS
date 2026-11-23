@@ -29,8 +29,6 @@
   window.__BN_BG_LIBRARY_PLUGIN_READY__ = true;
 
   var CFG = window.BN_BG_LIBRARY_CONFIG || {};
-  var MANIFEST_URL = CFG.manifestUrl || 'bgimg/index.json';
-  var BRAND_URL = CFG.brandUrl || 'bgimg/brand.json';
   var IMG_BASE_URL = CFG.imgBaseUrl || 'bgimg/';
   var CATEGORY_ONLY_CATEGORIES = ['EL','Fashion','FMCG','Lifestyle'];
   var CATEGORIES = CFG.categories || CATEGORY_ONLY_CATEGORIES.slice();
@@ -50,7 +48,7 @@
   var cards = [];
   var selected = null;
   var lastLibraryMode = null;
-  /* BODA 父頁剛切換等級時，子頁的 level plugin／localStorage 可能尚未同步。
+  /* BODA 父頁剛切換等級時，子頁的 level plugin／本機暫存 可能尚未同步。
      這個值以 wo-level／bn-level-change 收到的最新代碼為準，避免圖庫重繪時讀回舊等級。 */
   var latestBodaLevelId = '';
   /* 一般 B 等級只提供「類別」與圖庫圖片；A 與 B+ 皆可使用完整圖庫。
@@ -88,7 +86,7 @@
       if(!id && typeof window._bnGetCurrentLevelId === 'function') id = window._bnGetCurrentLevelId() || '';
     }catch(_){ }
     if(!id){
-      try{ id = localStorage.getItem('wo_level_v1') || ''; }catch(_){ }
+      try{ id = BnStore.local.get('wo_level_v1') || ''; }catch(_){ }
     }
     return String(id || '').trim();
   }
@@ -576,10 +574,9 @@
     });
   }
 
-  function loadJson(url){
-    return fetch(url + (url.indexOf('?') === -1 ? '?t=' : '&t=') + Date.now())
-      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
-  }
+  /* TP 的 fetch 只能用寫死的網址（不能用變數、組字串或加 ?t=），
+     所以圖庫清單固定讀 bgimg/index.json 與 bgimg/brand.json，不再吃 CFG.manifestUrl / brandUrl。 */
+  function okJson(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
   function loadImages(){
     if(imagesLoaded) return Promise.resolve();
@@ -591,8 +588,8 @@
       return Promise.resolve();
     }
     return Promise.all([
-      loadJson(MANIFEST_URL).catch(function(){ return null; }),
-      loadJson(BRAND_URL).catch(function(){ return null; })
+      fetch('bgimg/index.json', {cache:'no-store'}).then(okJson).catch(function(){ return null; }),
+      fetch('bgimg/brand.json', {cache:'no-store'}).then(okJson).catch(function(){ return null; })
     ]).then(function(res){
       indexData = res[0] || {};
       brandData = res[1] || null;
@@ -934,17 +931,24 @@
 
   function imageToDataUrl(src){
     if(!src || /^data:/i.test(src)) return Promise.resolve(src);
-    return fetch(encodeSrc(src)).then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.blob();
-    }).then(function(blob){
-      return new Promise(function(resolve, reject){
-        var fr = new FileReader();
-        fr.onload = function(){ resolve(fr.result); };
-        fr.onerror = reject;
-        fr.readAsDataURL(blob);
-      });
-    }).catch(function(){ return src; });
+    /* TP 不能 fetch 組出來的網址，改用 Image 畫進 canvas 再取 dataURL。
+       crossOrigin 一定要在 src 之前設，不然 canvas 會被鎖住無法匯出。
+       JPG 維持 JPG（品質 0.95，避免檔案變大），其他格式用 PNG 保留透明。 */
+    return new Promise(function(resolve){
+      var im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = function(){
+        try{
+          var cv = document.createElement('canvas');
+          cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+          cv.getContext('2d').drawImage(im, 0, 0);
+          var isJpg = /\.jpe?g(?:[?#]|$)/i.test(src);
+          resolve(isJpg ? cv.toDataURL('image/jpeg', 0.95) : cv.toDataURL('image/png'));
+        }catch(_){ resolve(src); }
+      };
+      im.onerror = function(){ resolve(src); };
+      im.src = encodeSrc(src);
+    });
   }
 
   function getLayoutInfoForIframe(iframe){

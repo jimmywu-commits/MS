@@ -3,7 +3,7 @@
  * ------------------------------------------------------------
  * 資料來源：js/changelog.json（最新一筆放最前面，填法見該檔 _說明）。
  * 顯示規則：
- *   - localStorage 'jbp_whatsnew_seen' 記住「使用者已看過的最新 version」。
+ *   - 本機暫存 'jbp_whatsnew_seen' 記住「使用者已看過的最新 version」。
  *   - 頁面載入：最新 version > seen → 自動跳一次，列出所有沒看過的版本；
  *     關閉（×／知道了／Esc／點外面）就寫入 seen，同版本不再跳。
  *   - 第一次使用（沒有 seen）不跳，直接把目前版本記為已看過。
@@ -47,8 +47,8 @@
   var releases = [];
   var modal = null;
 
-  function getSeen(){ try{ return localStorage.getItem(SEEN_KEY) || ''; }catch(_){ return ''; } }
-  function setSeen(v){ try{ localStorage.setItem(SEEN_KEY, v); }catch(_){} }
+  function getSeen(){ try{ return BnStore.local.get(SEEN_KEY) || ''; }catch(_){ return ''; } }
+  function setSeen(v){ try{ BnStore.local.set(SEEN_KEY, v); }catch(_){} }
   function latest(){ return releases.length ? String(releases[0].version) : ''; }
   function unseen(){ var s = getSeen(); return releases.filter(function(r){ return String(r.version) > s; }); }
 
@@ -111,7 +111,8 @@
   }
 
   function load(){
-    return fetch(SRC + '?t=' + Date.now(), {cache:'no-store'}).then(function(r){
+    /* TP 的 fetch 只能用寫死的網址，不能用變數或加 ?t=（與 SRC 相同）。 */
+    return fetch('js/changelog.json', {cache:'no-store'}).then(function(r){
       if(!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function(data){
@@ -140,6 +141,6 @@
   window._bnWhatsNew = {
     open: function(){ open(releases, '更新紀錄'); },
     reload: function(){ return load().then(updateBadge); },
-    reset: function(){ try{ localStorage.removeItem(SEEN_KEY); }catch(_){} updateBadge(); }
+    reset: function(){ try{ BnStore.local.remove(SEEN_KEY); }catch(_){} updateBadge(); }
   };
 })();

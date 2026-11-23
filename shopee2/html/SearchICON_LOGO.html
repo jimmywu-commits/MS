@@ -7,17 +7,17 @@
 @font-face {
   font-family: "ShopeeNotoSans (content)";
   font-weight: 300;
-  src: url("../fonts/ShopeeNotoSans(content)-Regular.woff2") format("woff2"),url("../fonts/ShopeeNotoSans(content)-Regular.ttf") format("truetype");
+  src: url("../fonts/ShopeeNotoSans(content)-Regular.woff2") format("woff2");
 }
 @font-face {
   font-family: "ShopeeNotoSans (content)";
   font-weight: 400;
-  src: url("../fonts/ShopeeNotoSans(content)-Medium.woff2") format("woff2"),url("../fonts/ShopeeNotoSans(content)-Medium.ttf") format("truetype");
+  src: url("../fonts/ShopeeNotoSans(content)-Medium.woff2") format("woff2");
 }
 @font-face {
   font-family: "ShopeeNotoSans (content)";
   font-weight: 700;
-  src: url("../fonts/ShopeeNotoSans(content)-Bold.woff2") format("woff2"),url("../fonts/ShopeeNotoSans(content)-Bold.ttf") format("truetype");
+  src: url("../fonts/ShopeeNotoSans(content)-Bold.woff2") format("woff2");
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
@@ -88,6 +88,16 @@ html, body {
     catch(_){ return ''; }
   }
   var STORAGE_KEY = 'bn_searchicon_logo_layout_' + getBnId();
+  /* LOGO 位置只記在這頁的記憶體（TP 規則：版位不讀父頁）；
+     真正的保存靠 bn-searchicon-logo-layout-update 訊息交給主頁，主頁再隨 bn-logo 送回 logoLayoutById。 */
+  var _slMemory = Object.create(null);
+  function layoutCache(){
+    return {
+      get: function(k){ return k in _slMemory ? _slMemory[k] : null; },
+      set: function(k, v){ _slMemory[k] = String(v); },
+      remove: function(k){ delete _slMemory[k]; }
+    };
+  }
   var pendingLayout = null;
 
   function saveLayout(box){
@@ -97,7 +107,7 @@ html, body {
     };
     pendingLayout = layout;
     try{
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
+      layoutCache().set(STORAGE_KEY, JSON.stringify(layout));
     }catch(_){}
     try{
       window.parent && window.parent.postMessage({
@@ -111,7 +121,7 @@ html, body {
   function loadLayout(){
     try{
       if(pendingLayout) return pendingLayout;
-      var raw = sessionStorage.getItem(STORAGE_KEY);
+      var raw = layoutCache().get(STORAGE_KEY);
       if(!raw) return null;
       var d = JSON.parse(raw);
       var okNum = function(v){ return typeof v === 'number' && isFinite(v); };
@@ -303,13 +313,13 @@ html, body {
     }
     if (e.data.type === 'bn-logo' || e.data.type === 'bn-logos') {
       /* 新暫存會把檔名鍵先映射成目前 bnid 再送進來；欄位明確存在但
-         沒有本版位資料時，也要清掉舊 sessionStorage，避免舊位置污染匯入。 */
+         沒有本版位資料時，也要清掉舊的位置快取，避免舊位置污染匯入。 */
       if(Object.prototype.hasOwnProperty.call(e.data, 'logoLayoutById')){
         var layoutMap = e.data.logoLayoutById || {};
         pendingLayout = layoutMap[getBnId()] || null;
         try{
-          if(pendingLayout) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(pendingLayout));
-          else sessionStorage.removeItem(STORAGE_KEY);
+          if(pendingLayout) layoutCache().set(STORAGE_KEY, JSON.stringify(pendingLayout));
+          else layoutCache().remove(STORAGE_KEY);
         }catch(_){ }
       }
       var logos = (e.data.type === 'bn-logos') ? (e.data.logos || [])

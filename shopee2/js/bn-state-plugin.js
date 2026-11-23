@@ -1,7 +1,7 @@
 /*!
  * BN State Plugin
  * 1. banwords：用 applyToElement（同 sba.html），含 toast + 手動選 xlsx fallback
- * 2. 本機暫存（localStorage）
+ * 2. 本機暫存（經 js/bn-store.js 的 BnStore）
  * 3. 下載暫存 / 上傳暫存按鈕
  *
  * 依賴：js/banwords-engine-hbn.js（自動載入）
@@ -29,63 +29,19 @@
 
 
 
-  /* IndexedDB：完整本機暫存。背景圖 dataURL 很容易超過 localStorage 容量，
-     因此完整 state 存 IndexedDB；localStorage 僅作為小型備援/舊版相容。 */
+  /* 大型暫存（瀏覽器資料庫）：完整本機暫存。背景圖 dataURL 很容易超過一般本機暫存的容量，
+     因此完整 state 存大型暫存；一般本機暫存僅作為小型備援/舊版相容。
+     一律經過 js/bn-store.js（BnStore），TP 版打包時會換成只放記憶體的版本。 */
   var IDB_DB = 'bn_editor_state_db';
   var IDB_STORE = 'states';
   var IDB_KEY = 'current';
-  var BANWORD_RULES_URL = 'banwords.rules.json?v=20261113-slim1';
-  var XLSX_PARSER_URL = 'js/vendor/xlsx-0.18.5.full.min.js?v=20261113-slim1';
-  var xlsxParserPromise = null;
+  var stateDb = global.BnStore.big(IDB_DB, IDB_STORE);
 
-  function openStateDb(){
-    return new Promise(function(resolve, reject){
-      if(!('indexedDB' in global)){ reject(new Error('IndexedDB not supported')); return; }
-      var req = indexedDB.open(IDB_DB, 1);
-      req.onupgradeneeded = function(){
-        var db = req.result;
-        if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
-      };
-      req.onsuccess = function(){ resolve(req.result); };
-      req.onerror = function(){ reject(req.error || new Error('IndexedDB open failed')); };
-    });
-  }
+  function idbSetState(state){ return stateDb.set(IDB_KEY, state); }
+  function idbGetState(){ return stateDb.get(IDB_KEY); }
+  function idbClearState(){ return stateDb.remove(IDB_KEY); }
 
-  function idbSetState(state){
-    return openStateDb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, 'readwrite');
-        tx.objectStore(IDB_STORE).put(state, IDB_KEY);
-        tx.oncomplete = function(){ db.close(); resolve(); };
-        tx.onerror = function(){ var err = tx.error; try{ db.close(); }catch(_){} reject(err || new Error('IndexedDB write failed')); };
-      });
-    });
-  }
-
-  function idbGetState(){
-    return openStateDb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, 'readonly');
-        var req = tx.objectStore(IDB_STORE).get(IDB_KEY);
-        req.onsuccess = function(){ resolve(req.result || null); };
-        req.onerror = function(){ reject(req.error || new Error('IndexedDB read failed')); };
-        tx.oncomplete = function(){ try{ db.close(); }catch(_){} };
-      });
-    });
-  }
-
-  function idbClearState(){
-    return openStateDb().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(IDB_STORE, 'readwrite');
-        tx.objectStore(IDB_STORE).delete(IDB_KEY);
-        tx.oncomplete = function(){ db.close(); resolve(); };
-        tx.onerror = function(){ var err = tx.error; try{ db.close(); }catch(_){} reject(err || new Error('IndexedDB delete failed')); };
-      });
-    });
-  }
-
-  function stripHeavyStateForLocalStorage(state){
+  function stripHeavyStateForLightStore(state){
     var light = clone(state || {});
     light._heavyStripped = true;
     if(light.background && light.background.states){
@@ -103,7 +59,7 @@
     if(light.logos){ light.logos.forEach(function(l){ if(l && l.src) l.src='__BN_IDB__'; }); }
     if(light.character && light.character.src){ light.character.src='__BN_IDB__'; }
     if(light.character2 && light.character2.src){ light.character2.src='__BN_IDB__'; }
-    /* 代言人照／簽名檔：圖片（含旋轉前原圖）只存在 IndexedDB 完整版 */
+    /* 代言人照／簽名檔：圖片（含旋轉前原圖）只存在 大型暫存 完整版 */
     ['endorserPhoto','endorserSign'].forEach(function(key){
       var slot = light[key];
       if(!slot || !slot.src) return;
@@ -120,7 +76,7 @@
 
   function readLocalState(key){
     try{
-      var raw = localStorage.getItem(key);
+      var raw = BnStore.local.get(key);
       if(!raw) return null;
       var state = JSON.parse(raw);
       return state && state.version === 1 ? state : null;
@@ -438,8 +394,10 @@
     }, 10);
   }
 
-  /* ── banwords.xlsx 載入（含 fallback 手動選取，同 sba.html） ── */
-  function ensureExcelPicker(){
+  /* ── 禁用詞規則載入（banwords.rules.json，由 banwords.xlsx 轉出） ──
+     TP 不收 xlsx、fetch 只能用寫死的網址，所以固定讀 banwords.rules.json。
+     這是自動改字的來源，讀不到時要明顯提示，否則文案規則會整個失效。 */
+  function ensureBanwordsPicker(){
     var wrap = document.getElementById('_bn_excelManualLoader');
     if(wrap) return wrap;
     wrap = document.createElement('div');
@@ -452,10 +410,10 @@
       'font-size:13px;line-height:1.5;max-width:320px;display:none;',
     ].join('');
     wrap.innerHTML=[
-      '<div style="font-weight:700;margin-bottom:6px;">讀取 banwords.xlsx 失敗</div>',
-      '<div style="margin-bottom:8px;">請手動選取同層的「banwords.xlsx」</div>',
-      '<button id="_bn_excelManualBtn" style="border:0;background:#fff;color:#111;padding:6px 10px;border-radius:8px;cursor:pointer;">手動選取 banwords.xlsx</button>',
-      '<input type="file" id="_bn_excelManualInput" accept=".xlsx" style="display:none">',
+      '<div style="font-weight:700;margin-bottom:6px;">讀取 banwords.rules.json 失敗</div>',
+      '<div style="margin-bottom:8px;">禁用詞與自動改字目前沒有作用。請手動選取「banwords.rules.json」</div>',
+      '<button id="_bn_excelManualBtn" style="border:0;background:#fff;color:#111;padding:6px 10px;border-radius:8px;cursor:pointer;">手動選取 banwords.rules.json</button>',
+      '<input type="file" id="_bn_excelManualInput" accept=".json,application/json" style="display:none">',
     ].join('');
     document.body.appendChild(wrap);
 
@@ -465,9 +423,11 @@
     wrap.querySelector('#_bn_excelManualInput').addEventListener('change', function(e){
       var file = e.target.files && e.target.files[0];
       if(!file) return;
-      ensureXLSXParser().then(function(){ return file.arrayBuffer(); }).then(function(buf){
-        var rules = global.banwordEngine.loadRulesFromExcelArrayBuffer(buf);
-        showToast('已手動載入 banwords.xlsx（'+( Array.isArray(rules)?rules.length:0 )+'條）','ok',2200);
+      file.text().then(function(text){
+        var parsed = JSON.parse(text);
+        if(!Array.isArray(parsed)) throw new Error('banwords.rules.json 格式錯誤');
+        var rules = global.banwordEngine.setRules(parsed);
+        showToast('已手動載入 banwords.rules.json（'+( Array.isArray(rules)?rules.length:0 )+'條）','ok',2200);
         wrap.style.display = 'none';
         bridgeInputs();
       }).catch(function(err){
@@ -477,25 +437,9 @@
     return wrap;
   }
 
-  function ensureXLSXParser(){
-    if(global.XLSX && global.XLSX.read) return Promise.resolve(global.XLSX);
-    if(xlsxParserPromise) return xlsxParserPromise;
-    xlsxParserPromise = new Promise(function(resolve, reject){
-      var script = document.createElement('script');
-      script.src = XLSX_PARSER_URL;
-      script.onload = function(){
-        if(global.XLSX && global.XLSX.read) resolve(global.XLSX);
-        else { xlsxParserPromise = null; reject(new Error('SheetJS parser failed to initialize')); }
-      };
-      script.onerror = function(){ xlsxParserPromise = null; reject(new Error('無法載入本機試算表解析器')); };
-      document.head.appendChild(script);
-    });
-    return xlsxParserPromise;
-  }
-
   function loadBanwordsRules(){
     if(!global.banwordEngine) return;
-    fetch(BANWORD_RULES_URL, {cache:'default'})
+    fetch('banwords.rules.json', {cache:'no-cache'})
     .then(function(r){
       if(!r.ok) throw new Error('HTTP '+r.status);
       return r.json();
@@ -508,7 +452,8 @@
     })
     .catch(function(err){
       console.warn('[BNState] banwords.rules.json 載入失敗', err);
-      ensureExcelPicker().style.display = 'block';
+      ensureBanwordsPicker().style.display = 'block';
+      showToast('禁用詞規則無法載入：'+err.message,'err',5000);
       bridgeInputs();
     });
   }
@@ -700,6 +645,9 @@
       /* 代言人小字與字色另存在 endorserNote；放進 toolbar 會在還原時再觸發 input，
          把預設色票誤當成「手動選色」。 */
       if(/^bn-endorser-/.test(key)) return;
+      /* 蝦皮資產使用條款的同意狀態由 MS 主頁管理（ms-asset-terms-* 訊息），不能存進暫存：
+         還原舊暫存時若重播「未勾選」，會把使用者在主頁的同意撤銷。 */
+      if(key === 'bn-ms-terms-check') return;
       var v;
       if(el.type === 'checkbox' || el.type === 'radio') v = !!el.checked;
       else v = el.value;
@@ -727,6 +675,7 @@
       if(!el || el.type === 'file') return;
       if(key === 'cp-hex-input' || key === 'cp-native') return;
       if(/^bn-endorser-/.test(key)) return;
+      if(key === 'bn-ms-terms-check') return;
       var item = controls[key] || {};
       if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!item.value;
       else if(item.value !== undefined) el.value = item.value;
@@ -1034,16 +983,16 @@
     try{ state = collectState(); }
     catch(e){ console.warn('[BNState] collectState 失敗', e); return; }
 
-    /* 完整資料（含背景圖、商品圖、logo dataURL）優先寫入 IndexedDB。 */
+    /* 完整資料（含背景圖、商品圖、logo dataURL）優先寫入 大型暫存。 */
     idbSetState(state).catch(function(e){
-      console.warn('[BNState] IndexedDB autoSave 失敗，改嘗試 localStorage 完整備援', e);
-      try{ localStorage.setItem(STORAGE_KEY + '_full', JSON.stringify(state)); }
-      catch(err){ console.warn('[BNState] localStorage full autoSave 也失敗，可能圖片太大', err); }
+      console.warn('[BNState] 大型暫存 autoSave 失敗，改嘗試 本機暫存 完整備援', e);
+      try{ BnStore.local.set(STORAGE_KEY + '_full', JSON.stringify(state)); }
+      catch(err){ console.warn('[BNState] 本機暫存 full autoSave 也失敗，可能圖片太大', err); }
     });
 
-    /* localStorage 只放輕量摘要供文字/工具列備援；帶 _heavyStripped，載入時不會拿它清掉背景/商品/logo。 */
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(stripHeavyStateForLocalStorage(state))); }
-    catch(e){ console.warn('[BNState] localStorage light autoSave 失敗',e); }
+    /* 本機暫存 只放輕量摘要供文字/工具列備援；帶 _heavyStripped，載入時不會拿它清掉背景/商品/logo。 */
+    try{ BnStore.local.set(STORAGE_KEY, JSON.stringify(stripHeavyStateForLightStore(state))); }
+    catch(e){ console.warn('[BNState] 本機暫存 light autoSave 失敗',e); }
   }
 
   function autoLoad(){
@@ -1051,8 +1000,8 @@
     var localLight = readLocalState(STORAGE_KEY);
 
     idbGetState().then(function(idbState){
-      /* 不能盲目用 IndexedDB：若上一輪 IDB 寫入失敗或落後，會讀到更舊的商品位置。
-         這裡改成在 IDB / localStorage full 之間取 ts 最新的完整 state；
+      /* 不能盲目用 大型暫存：若上一輪 IDB 寫入失敗或落後，會讀到更舊的商品位置。
+         這裡改成在 IDB / 本機暫存 full 之間取 ts 最新的完整 state；
          只有沒有完整 state 時，才使用輕量備援，避免舊資料蓋掉新畫面。 */
       var full = getNewestState([idbState, localFull], true);
       if(full){
@@ -1066,7 +1015,7 @@
         console.log('[BNState] 輕量本機暫存載入完成，來源時間:', new Date(localLight.ts || Date.now()).toLocaleString());
       }
     }).catch(function(e){
-      console.warn('[BNState] IndexedDB autoLoad 失敗，改用 localStorage', e);
+      console.warn('[BNState] 大型暫存 autoLoad 失敗，改用 本機暫存', e);
       var full = getNewestState([localFull], true);
       if(full){ applyState(mergeLightIntoFull(full, localLight)); return; }
       if(localLight) applyState(localLight);
@@ -1132,7 +1081,7 @@
           console.warn('[BNState] download collectState 失敗', error);
           return;
         }
-        /* 下載 JSON 不做任何全域重建/還原/刷新，也不寫 localStorage。 */
+        /* 下載 JSON 不做任何全域重建/還原/刷新，也不寫 本機暫存。 */
         var blob = new Blob([JSON.stringify(snapshot,null,2)], {type:'application/json'});
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -1194,13 +1143,19 @@
     clrBtn.style.cssText='width:100%;padding:7px 6px;background:transparent;border:1px solid var(--border,#30363d);border-radius:7px;color:#ef4444;font-size:11px;cursor:pointer;transition:.12s;text-align:center;';
     clrBtn.addEventListener('mouseenter',function(){ clrBtn.style.background='rgba(239,68,68,.08)'; });
     clrBtn.addEventListener('mouseleave',function(){ clrBtn.style.background='transparent'; });
-    clrBtn.addEventListener('click',function(){
-      if(!confirm('確定要清除本機暫存？頁面將重新整理，畫面會回到預設值。')) return;
+    clrBtn.addEventListener('click',function onClearClick(ev){
+      /* TP 不允許原生 confirm（會直接回 false），改用頁面內的確認視窗；按確定後再跑一次這個處理函式。 */
+      if(!(ev && ev._bnConfirmed)){
+        global.BnDialog.confirm('確定要清除本機暫存？頁面將重新整理，畫面會回到預設值。', {okText:'清除', danger:true}).then(function(ok){
+          if(ok) onClearClick({_bnConfirmed:true});
+        });
+        return;
+      }
       /* 先鎖住所有自動暫存，避免清除後在 reload 前又把舊資料寫回去。 */
       global._bnClearingState = true;
       clearTimeout(global._bnSaveTimer);
       try{
-        /* 1. 清除 localStorage + IndexedDB 完整暫存
+        /* 1. 清除 本機暫存 + 大型暫存 完整暫存
            ────────────────────────────────────────────────
            重要：'bn-layouts' 這個鍵值絕對不能清掉！它存的是「版位清單設定」
            （每個版位對應的 id / 檔名），不是使用者的編輯進度。
@@ -1225,41 +1180,41 @@
            若不清除，頁面 reload 後仍會把舊文案或舊背景色重新套回來。 */
         var preservedLayoutKey = 'bn-layouts';
         var preservedExternalKeys = {};
-        Object.keys(localStorage).forEach(function(k){
+        BnStore.local.keys().forEach(function(k){
           var isBnState = k.indexOf('bn') === 0 && k !== preservedLayoutKey && !preservedExternalKeys[k];
           var isSharedBnInput = k === 'wo_shared_exposure_text_v1' || k === 'wo_shared_canvas_bg_v1';
           if(isBnState || isSharedBnInput){
-            try{ localStorage.removeItem(k); }catch(_){ }
+            try{ BnStore.local.remove(k); }catch(_){ }
           }
         });
 
-        /* 版位掛標／蝦皮 LOGO 的網址探測只存在 sessionStorage，
+        /* 版位掛標／蝦皮 LOGO 的網址探測只存在 分頁暫存，
            不是編輯內容，但清除暫存時一併清掉，確保本分頁也是真正乾淨。 */
         try{
-          Object.keys(sessionStorage).forEach(function(k){
-            if(k.indexOf('bn') === 0) sessionStorage.removeItem(k);
+          BnStore.session.keys().forEach(function(k){
+            if(k.indexOf('bn') === 0) BnStore.session.remove(k);
           });
         }catch(_){ }
 
         /* 保留版位 id／檔名／尺寸／啟用狀態，僅清掉使用者勾選結果，
            讓畫面回到初次載入時的預設勾選規則。 */
         try{
-          var rawLayouts = localStorage.getItem(preservedLayoutKey);
+          var rawLayouts = BnStore.local.get(preservedLayoutKey);
           if(rawLayouts){
             var savedLayouts = JSON.parse(rawLayouts);
             if(Array.isArray(savedLayouts)){
               savedLayouts.forEach(function(layout){
                 if(layout && Object.prototype.hasOwnProperty.call(layout,'checked')) delete layout.checked;
               });
-              localStorage.setItem(preservedLayoutKey, JSON.stringify(savedLayouts));
+              BnStore.local.set(preservedLayoutKey, JSON.stringify(savedLayouts));
             }
           }
         }catch(_){ }
 
-        Promise.resolve(idbClearState()).catch(function(e){ console.warn('[BNState] IndexedDB clear 失敗', e); })
+        Promise.resolve(idbClearState()).catch(function(e){ console.warn('[BNState] 大型暫存 clear 失敗', e); })
           .then(function(){
             /* 一定要重新整理頁面才會真正回到預設值。
-               之前這裡只清掉 localStorage/IndexedDB（儲存層），
+               之前這裡只清掉 本機暫存/大型暫存（儲存層），
                沒有重置「目前頁面正在執行中」的商品/人物/Logo/各版位背景
                這些記憶體內的狀態——這些變數分散在好幾支不同的檔案裡，
                不重新整理頁面的話，即使儲存的資料清掉了，畫面上看到的
