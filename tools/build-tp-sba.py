@@ -4,15 +4,22 @@
 用法（在 repo 根目錄）：
     python tools/build-tp-sba.py                       # 產出 output/tp-sba/
     python tools/build-tp-sba.py --bg-per-category 3   # 每個底圖分類放 3 張（預設 2）
-    python tools/build-tp-sba.py --fonts               # 連字型一起放（TP 目前可能不收 woff2）
+    python tools/build-tp-sba.py --no-fonts            # 不放字型（改用系統字型）
+    python tools/build-tp-sba.py --no-slim             # 不精簡程式（保留註解與縮排，方便除錯）
     python tools/build-tp-sba.py --manual-url https://…/JBP編輯器使用說明書.pdf
+發佈：python tools/publish-tp-sba.py（見該檔說明）
 
 做的事：
   1. 只複製 SBA 三個版位（SBA_APP方LOGO、SBA_APP橫LOGO、SBA_PC）需要的檔案。
   2. js/bn-store.js 換成 js/bn-store-tp.js（只放記憶體，包內不會出現瀏覽器儲存 API）。
   3. js/index.js 只列 SBA 三個版位；bgimg/index.json 只留選到的橫式底圖。
   4. 使用說明書 PDF 不放（TP 不收 pdf）：給 --manual-url 就改成開新分頁連過去，否則隱藏按鈕。
-  5. 依 TP 發佈規則檢查整包，有問題就列出來並以錯誤碼 1 結束。
+  5. 精簡文字檔：拿掉整行的註解與行首縮排（TP 單次發佈請求上限 1 MiB），精簡後用 node 檢查語法。
+  6. 依 TP 發佈規則檢查整包，有問題就列出來並以錯誤碼 1 結束。
+
+TP artifact_publish 的限制（2026-11 工具說明）：
+  - 文字檔（html/css/js/json/svg/txt/md/csv/tsv）：最多 100 個、共 5 MiB，而且整個發佈請求不能超過 1 MiB。
+  - 圖片與字型（png/jpg/gif/webp、woff2/woff/ttf/otf）另外上傳成 assets：每個最大 20 MiB、最多 2000 個、共 1 GiB。
 
 TP 規則出處：docs/給Jimmy_bned上TP修改說明_20261120.md、tp 的 artifact_authoring_guide。
 """
@@ -62,9 +69,17 @@ FONT_FILES = [
 ]
 BG_CATEGORIES = ['EL', 'Fashion', 'FMCG', 'Lifestyle']
 
-TEXT_EXT = {'.html', '.js', '.css', '.json'}
-BLOCKED_EXT = {'.xlsx', '.xls', '.pdf', '.ttf', '.otf', '.mp4', '.mov', '.zip'}
-FONT_EXT = {'.woff2', '.woff'}
+TEXT_EXT = {'.html', '.js', '.css', '.json', '.svg', '.txt', '.md', '.csv', '.tsv'}
+ASSET_TYPES = {
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
+    '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.otf': 'font/otf',
+}
+TEXT_MAX_FILES = 100
+TEXT_MAX_BYTES = 5 * 1024 * 1024
+REQUEST_MAX_BYTES = 1024 * 1024
+REQUEST_SAFE_BYTES = 960 * 1024      # 留一點給請求裡的其他欄位
+ASSET_MAX_BYTES = 20 * 1024 * 1024
+ASSET_MAX_COUNT = 2000
 
 
 def copy(rel_src, out, rel_dst=None):
@@ -117,6 +132,70 @@ def build_backgrounds(out, per_category):
         copy(rel, out)
     write_text(out, 'bgimg/index.json', json.dumps(picked, ensure_ascii=False, indent=1))
     return len(files)
+
+
+# ── 精簡 ────────────────────────────────────────────────────────────
+# 只拿掉「整行」的註解與行首縮排，不動同一行裡程式後面的註解，避免誤刪字串裡的 // 或 /*。
+_BLOCK_COMMENT_LINE = re.compile(r'(?m)^[ \t]*/\*(?:(?!\*/)[\s\S])*\*/[ \t]*\r?\n')
+_LINE_COMMENT_LINE = re.compile(r'(?m)^[ \t]*//[^\n]*\n')
+_HTML_COMMENT = re.compile(r'<!--(?!\[)(?:(?!-->)[\s\S])*-->')
+_INDENT = re.compile(r'(?m)^[ \t]+')
+_BLANK_LINES = re.compile(r'(?:\r?\n){2,}')
+
+
+def slim_text(text, ext):
+    if ext == '.json':
+        try:
+            return json.dumps(json.loads(text), ensure_ascii=False, separators=(',', ':'))
+        except ValueError:
+            return text
+    if ext not in ('.js', '.html', '.css'):
+        return text
+    text = _BLOCK_COMMENT_LINE.sub('', text)
+    if ext != '.css':
+        text = _LINE_COMMENT_LINE.sub('', text)
+    if ext == '.html':
+        text = _HTML_COMMENT.sub('', text)
+    text = _INDENT.sub('', text)
+    return _BLANK_LINES.sub('\n', text)
+
+
+def slim_bundle(out):
+    before = after = 0
+    for p in sorted(out.rglob('*')):
+        ext = p.suffix.lower()
+        if not p.is_file() or ext not in ('.js', '.html', '.css', '.json'):
+            continue
+        raw = p.read_text(encoding='utf-8')
+        new = slim_text(raw, ext)
+        before += len(raw.encode('utf-8'))
+        after += len(new.encode('utf-8'))
+        p.write_text(new, encoding='utf-8', newline='')
+    return before, after
+
+
+def syntax_check(out):
+    """用 node --check 檢查每支 .js 與 .html 裡的內嵌 script；沒有 node 就略過。"""
+    node = shutil.which('node')
+    if not node:
+        return ['找不到 node，略過語法檢查'], []
+    import subprocess
+    import tempfile
+    errors = []
+    jobs = [(p.relative_to(out).as_posix(), p.read_text(encoding='utf-8')) for p in sorted(out.rglob('*.js'))]
+    for p in sorted(out.rglob('*.html')):
+        text = p.read_text(encoding='utf-8')
+        for i, block in enumerate(re.findall(r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>', text)):
+            jobs.append((f'{p.relative_to(out).as_posix()} 第 {i + 1} 段 script', block))
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_js = Path(tmp) / 'check.js'
+        for label, code in jobs:
+            tmp_js.write_text(code, encoding='utf-8')
+            r = subprocess.run([node, '--check', str(tmp_js)], capture_output=True, text=True, encoding='utf-8', errors='replace')
+            if r.returncode != 0:
+                msg = (r.stderr or '').strip().splitlines()
+                errors.append(f'{label}：精簡後語法錯誤（{msg[-1] if msg else "?"}）')
+    return [], errors
 
 
 def strip_font_faces(out):
@@ -184,21 +263,37 @@ def strip_comments(text, ext):
     return text
 
 
-def check_bundle(out, max_files, max_mb, allow_fonts):
+def publish_request_bytes(out, text_files):
+    """估算 artifact_publish 請求的大小（文字檔內容會以 JSON 字串送出）。"""
+    payload = [{'path': p.relative_to(out).as_posix(), 'content': p.read_text(encoding='utf-8')} for p in text_files]
+    return len(json.dumps({'files': payload}, ensure_ascii=False).encode('utf-8'))
+
+
+def check_bundle(out):
     errors, warnings = [], []
     files = sorted(p for p in out.rglob('*') if p.is_file())
-    total = sum(p.stat().st_size for p in files)
-    if len(files) > max_files:
-        errors.append(f'檔案數 {len(files)} 超過 TP 上限 {max_files}')
-    if total > max_mb * 1024 * 1024:
-        warnings.append(f'總大小 {total / 1048576:.1f} MB，超過 {max_mb} MB（之前實測的大小上限）')
+    text_files = [p for p in files if p.suffix.lower() in TEXT_EXT]
+    assets = [p for p in files if p.suffix.lower() in ASSET_TYPES]
+    text_bytes = sum(p.stat().st_size for p in text_files)
+    asset_bytes = sum(p.stat().st_size for p in assets)
+    if len(text_files) > TEXT_MAX_FILES:
+        errors.append(f'文字檔 {len(text_files)} 個，超過 TP 上限 {TEXT_MAX_FILES}')
+    if text_bytes > TEXT_MAX_BYTES:
+        errors.append(f'文字檔共 {text_bytes / 1048576:.2f} MiB，超過 TP 上限 5 MiB')
+    request = publish_request_bytes(out, text_files)
+    if request > REQUEST_MAX_BYTES:
+        errors.append(f'發佈請求約 {request / 1048576:.2f} MiB，超過 TP 單次上限 1 MiB')
+    elif request > REQUEST_SAFE_BYTES:
+        warnings.append(f'發佈請求約 {request / 1048576:.2f} MiB，接近 TP 單次上限 1 MiB')
+    if len(assets) > ASSET_MAX_COUNT:
+        errors.append(f'圖片／字型 {len(assets)} 個，超過 TP 上限 {ASSET_MAX_COUNT}')
     for p in files:
         rel = p.relative_to(out).as_posix()
         ext = p.suffix.lower()
-        if ext in BLOCKED_EXT:
-            errors.append(f'{rel}：TP 不收 {ext} 檔')
-        if ext in FONT_EXT and allow_fonts:
-            warnings.append(f'{rel}：字型檔，要先確認 TP 收不收 {ext}')
+        if ext not in TEXT_EXT and ext not in ASSET_TYPES:
+            errors.append(f'{rel}：TP 不收 {ext or "沒有副檔名的"} 檔')
+        if ext in ASSET_TYPES and p.stat().st_size > ASSET_MAX_BYTES:
+            errors.append(f'{rel}：{p.stat().st_size / 1048576:.1f} MiB，超過單一 asset 上限 20 MiB')
         if ext not in TEXT_EXT:
             continue
         raw = p.read_text(encoding='utf-8', errors='replace')
@@ -222,7 +317,9 @@ def check_bundle(out, max_files, max_mb, allow_fonts):
             cand = [out / target, base / ((m.group(1) or '') + target), out / 'html' / ((m.group(1) or '') + target)]
             if not any(c.resolve().is_file() for c in cand):
                 warnings.append(f'{rel} 參照了包內沒有的 {target}')
-    return files, total, errors, sorted(set(warnings))
+    stats = {'text_files': len(text_files), 'text_bytes': text_bytes, 'request_bytes': request,
+             'assets': len(assets), 'asset_bytes': asset_bytes}
+    return files, stats, errors, sorted(set(warnings))
 
 
 def main():
@@ -233,10 +330,9 @@ def main():
     ap = argparse.ArgumentParser(description='打包 SBA 版位的 TP 版')
     ap.add_argument('--out', default=str(DEFAULT_OUT), help='輸出資料夾（預設 output/tp-sba）')
     ap.add_argument('--bg-per-category', type=int, default=2, help='每個底圖分類放幾張（預設 2，0＝不放底圖）')
-    ap.add_argument('--fonts', action='store_true', help='放入 ShopeeNotoSans woff2 字型（約 23 MB）')
+    ap.add_argument('--no-fonts', dest='fonts', action='store_false', help='不放 ShopeeNotoSans 字型（預設會放，以 asset 上傳，約 23 MB）')
+    ap.add_argument('--no-slim', dest='slim', action='store_false', help='不精簡程式（保留註解與縮排）')
     ap.add_argument('--manual-url', default='', help='使用說明書的網址；不給就隱藏按鈕')
-    ap.add_argument('--max-files', type=int, default=100)
-    ap.add_argument('--max-mb', type=float, default=5.0)
     args = ap.parse_args()
 
     out = Path(args.out).resolve()
@@ -265,14 +361,24 @@ def main():
         write_text(out, 'bgimg/index.json', '{}')
     patch_index_html(out, args.manual_url)
 
-    files, total, errors, warnings = check_bundle(out, args.max_files, args.max_mb, args.fonts)
+    slim_note = ''
+    syntax_errors = []
+    if args.slim:
+        before, after = slim_bundle(out)
+        slim_note = f'；程式精簡 {before / 1048576:.2f} → {after / 1048576:.2f} MiB'
+        skipped, syntax_errors = syntax_check(out)
+        for s in skipped:
+            print('提醒：' + s)
+
+    files, stats, errors, warnings = check_bundle(out)
+    errors = syntax_errors + errors
     manifest = [{'path': p.relative_to(out).as_posix(), 'bytes': p.stat().st_size} for p in files]
-    (ROOT / 'output').mkdir(exist_ok=True)
     (out.parent / (out.name + '-manifest.json')).write_text(
-        json.dumps({'files': manifest, 'total_bytes': total}, ensure_ascii=False, indent=1), encoding='utf-8')
+        json.dumps({'files': manifest, **stats}, ensure_ascii=False, indent=1), encoding='utf-8')
 
     print(f'輸出：{out}')
-    print(f'檔案 {len(files)} 個（上限 {args.max_files}），共 {total / 1048576:.2f} MB；底圖 {bg_count} 張；字型 {"有" if args.fonts else "沒有"}')
+    print(f'文字檔 {stats["text_files"]} 個、{stats["text_bytes"] / 1048576:.2f} MiB（發佈請求約 {stats["request_bytes"] / 1048576:.2f} MiB，上限 1 MiB）{slim_note}')
+    print(f'圖片／字型 {stats["assets"]} 個、{stats["asset_bytes"] / 1048576:.2f} MiB（以 asset 上傳）；底圖 {bg_count} 張；字型 {"有" if args.fonts else "沒有"}')
     if not args.fonts:
         print('注意：沒有放字型，TP 上預覽與下載圖會用系統字型。')
     for w in warnings:
