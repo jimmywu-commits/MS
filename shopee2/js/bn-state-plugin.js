@@ -566,7 +566,54 @@
     if(!entity) return entity;
     var out = clone(entity);
     out.layouts = mergeFileMapIntoIdMap(out.layouts, out.layoutsByFile, index, savedManifest);
-    return out;
+    return repairZeroLayouts(out, index);
+  }
+
+  /* 2026-11-24 以前，在曝光資源沒顯示時（例如在別的步驟按「下載暫存」）存檔，
+     已勾選版位的商品／人物位置會被存成 0×0（量不到大小）。還原時把這種位置換成
+     同一組方／橫版位（例如 HBN_方式 ↔ HBN_橫式）的位置；兩邊都沒有就拿掉，用版位預設排法。 */
+  function layoutHasSize(l){
+    return !!(l && typeof l === 'object' && Number(l.width) > 0 && Number(l.height) > 0);
+  }
+  function isZeroSizeLayout(l){
+    return !!(l && typeof l === 'object' && ('width' in l || 'height' in l) && !layoutHasSize(l));
+  }
+  function layoutPairKey(file){
+    return String(file || '')
+      .replace(/\.html$/i, '')
+      .replace(/#U65b9|#U6a6b/gi, '')
+      .replace(/[方橫横]/g, '')
+      .replace(/(square|vertical|portrait|horizontal|landscape)/gi, '')
+      .replace(/[\s_\-()（）]+/g, '')
+      .toLowerCase();
+  }
+  function repairZeroLayouts(entity, index){
+    if(!entity || typeof entity !== 'object') return entity;
+    index = index || getLayoutIndex();
+    var map = entity.layouts;
+    if(map && typeof map === 'object'){
+      var byPair = {};
+      Object.keys(map).forEach(function(id){
+        if(!layoutHasSize(map[id])) return;
+        var file = index.byId[String(id)];
+        if(file && !byPair[layoutPairKey(file)]) byPair[layoutPairKey(file)] = map[id];
+      });
+      Object.keys(map).forEach(function(id){
+        if(!isZeroSizeLayout(map[id])) return;
+        var file = index.byId[String(id)];
+        var pair = file && byPair[layoutPairKey(file)];
+        if(pair) map[id] = clone(pair);
+        else delete map[id];
+      });
+    }
+    if(isZeroSizeLayout(entity.layout)) delete entity.layout;
+    /* layoutsByFile 已併進 layouts，這份舊資料不要再帶著 0×0 往下傳 */
+    if(entity.layoutsByFile && typeof entity.layoutsByFile === 'object'){
+      Object.keys(entity.layoutsByFile).forEach(function(file){
+        if(isZeroSizeLayout(entity.layoutsByFile[file])) delete entity.layoutsByFile[file];
+      });
+    }
+    return entity;
   }
 
   function isHexColor(v){
@@ -909,6 +956,13 @@
       var ccaPlaceholder = !!(cca && ['product','logo'].some(function(k){ return cca[k] && cca[k].src === '__BN_IDB__'; }));
       if(!ccaPlaceholder){
         global._bnCampaignCardAssets = cca ? clone(cca) : null;
+        /* 曝光資源沒顯示時存下的 0×0 位置不能用（見 repairZeroLayouts） */
+        ['product','logo'].forEach(function(k){
+          var a = global._bnCampaignCardAssets && global._bnCampaignCardAssets[k];
+          if(!a) return;
+          if(a.layoutById) Object.keys(a.layoutById).forEach(function(id){ if(isZeroSizeLayout(a.layoutById[id])) delete a.layoutById[id]; });
+          if(isZeroSizeLayout(a.layout)) delete a.layout;
+        });
         if(typeof global._bnBroadcastCampaignCardAssets==='function') global._bnBroadcastCampaignCardAssets();
       }
     }

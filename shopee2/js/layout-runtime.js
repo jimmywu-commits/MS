@@ -2760,6 +2760,9 @@
       var zone = getProductZone(); if(!zone || !box) return;
       var zr = zone.getBoundingClientRect();
       var br = box.getBoundingClientRect();
+      /* 曝光資源被藏起來時（例如在別的步驟按「下載暫存」），量到的大小全是 0：
+         這時不能回報，否則 0×0 會蓋掉真正的位置，上傳暫存後整個跑版。 */
+      if(!(zr.width > 0 && zr.height > 0 && br.width > 0 && br.height > 0)) return;
       /* getBoundingClientRect() 取到的是目前畫面上的顯示像素；如果畫布／
          iframe 正在縮放，直接把這些值存回父頁，下載重建時就會用另一套
          原始設計尺寸而偏位。先除以 zone 的顯示倍率，統一回到版型設計座標。 */
@@ -3659,6 +3662,8 @@
       var zone = getProductZone(); if(!zone || !box) return;
       var zr = zone.getBoundingClientRect();
       var br = box.getBoundingClientRect();
+      /* 曝光資源被藏起來時量到的是 0，不回報（同 postProductLayout） */
+      if(!(zr.width > 0 && zr.height > 0 && br.width > 0 && br.height > 0)) return;
       var css=window.getComputedStyle(zone),zw=parseFloat(css.width)||zone.offsetWidth||zr.width||1,zh=parseFloat(css.height)||zone.offsetHeight||zr.height||1;
       var sx=zr.width/zw||1,sy=zr.height/zh||1,area=getProductSyncArea(zone);
       var left=(br.left-zr.left)/sx,top=(br.top-zr.top)/sy,width=br.width/sx,height=br.height/sy;

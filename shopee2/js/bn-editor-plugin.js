@@ -813,6 +813,12 @@
     window._bnSyncLogoLayoutSelection = syncLogoLayoutSelection;
     window.addEventListener('message', function(ev){
       var d = ev.data || {};
+      /* 版位被藏起來（例如在別的步驟下載暫存）時量到的位置大小是 0×0；
+         這種回報不能寫進狀態，否則會蓋掉真正的位置，上傳暫存後整個跑版。
+         （舊版 iframe 也可能送來，所以這裡再擋一次。） */
+      if(d.layout && typeof d.layout === 'object' && /layout-update$/.test(String(d.type || '')) &&
+         ('width' in d.layout || 'height' in d.layout) &&
+         !(Number(d.layout.width) > 0 && Number(d.layout.height) > 0)) return;
       if(d.type === 'bn-searchicon-logo-layout-update' && d.layout){
         if(window._bnSuppressProductLayoutWrite || window._bnExporting) return;
         var logoLayoutId = d.bnid ? String(d.bnid) : '';
