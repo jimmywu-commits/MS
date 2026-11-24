@@ -12775,6 +12775,13 @@ function applyWorkbookOverviewLevel(wb) {
    2. 「◆ 底色色號:」右邊第二格是 #色碼（第一格可保留勾選框或其他提示）；
       只要第二格有合法 #RRGGBB 就匯入，不受第一格勾選狀態影響。
    找不到錨點或任何標籤時回 null，讓舊的 0918V3 固定儲存格路徑繼續運作。 */
+/* 工單 LOGO 區下面那列是給人填素材資料夾路徑的（例：G:\共用雲端硬碟\…\素材），不是 LOGO 檔名，
+   2026-11-24 起 LOGO 一律不讀路徑：含反斜線、磁碟代號（G:）、網址或 //、\\ 開頭的都算路徑。 */
+function isWorkOrderPathText(value) {
+  var s = String(value == null ? '' : value).trim();
+  if (!s) return false;
+  return /\\/.test(s) || /^[A-Za-z]:/.test(s) || /^(?:https?:)?\/\//i.test(s);
+}
 function parseWorkbookOverviewLogoFiles(ws, maxRow, maxCol) {
   if (!ws) return [];
   maxRow = Math.min(Number(maxRow || ws.rowCount) || 0, 500);
@@ -12810,13 +12817,22 @@ function parseWorkbookOverviewLogoFiles(ws, maxRow, maxCol) {
     }
     return false;
   }
-  function firstValueBelow(headerRow, col) {
+  function firstValueBelow(headerRow, col, slotCols) {
     for (var offset = 1; offset <= 4 && headerRow + offset <= maxRow; offset++) {
       var cell = sourceCell(headerRow + offset, col);
       /* 標題若是縱向合併格，合併範圍內仍屬同一個標題，不算「正下方資料」。 */
       if (cell && Number(cell.row) <= headerRow) continue;
+      /* 橫跨左／中／右兩欄以上的合併格（路徑列、主標列…）代表 LOGO 區已經結束，不再往下找；
+         否則中間／右邊沒填 LOGO 時，會把下面的路徑或主標當成 LOGO。 */
+      var spansSides = cell && (slotCols || []).some(function (otherCol) {
+        if (otherCol === col) return false;
+        var other = sourceCell(headerRow + offset, otherCol);
+        return other && other.address === cell.address;
+      });
+      if (spansSides) break;
       var value = text(headerRow + offset, col);
       if (!value) continue;
+      if (isWorkOrderPathText(value)) continue;
       if (sideIndex(value) !== -1) continue;
       var key = compact(value);
       if (/^logo\(限|^logo限|^logo上傳|^檔案格式|^規範字數|^內容$/.test(key)) continue;
@@ -12838,8 +12854,9 @@ function parseWorkbookOverviewLogoFiles(ws, maxRow, maxCol) {
     var firstCol = slots[0].col, lastCol = slots[slots.length - 1].col;
     if (!isLogoContext(row, firstCol, lastCol)) continue;
     var names = [];
+    var slotCols = slots.map(function (slot) { return slot.col; });
     slots.forEach(function (slot) {
-      var value = firstValueBelow(row, slot.col);
+      var value = firstValueBelow(row, slot.col, slotCols);
       if (value) names.push(value);
     });
     names = normalizeExposureLogoFileNames(names.join(','));
@@ -12962,7 +12979,9 @@ function parseWorkbookOverviewByLabels(wb) {
           }
           var logoNames = [];
           logoCols.forEach(function (lcol) {
-            var lv = text(rr, lcol) || text(rr + 1, lcol);
+            /* 路徑列是給人放資料夾路徑的，不讀（見 isWorkOrderPathText） */
+            var lv0 = text(rr, lcol), lv1 = text(rr + 1, lcol);
+            var lv = (!isWorkOrderPathText(lv0) && lv0) || (!isWorkOrderPathText(lv1) && lv1) || '';
             if (lv) logoNames.push(lv);
           });
           result.logoFiles = normalizeExposureLogoFileNames(logoNames.join(','));
@@ -13057,13 +13076,15 @@ function parseWorkbookOverviewByLabels(wb) {
     break;
   }
   /* LOGO 區塊（標籤列和下面兩列、左中右三欄）裡有寫明副檔名的圖檔（例：樂維根_新LOGO_640x360.jpg），
-     就以那幾個為準。有的工單在 LOGO 列填品牌名或商品 KV 名、真正的 LOGO 檔名寫在下面的路徑列，
-     照舊只讀 LOGO 列會把商品圖當成 LOGO。完整路徑只取檔名。 */
+     就以那幾個為準。有的工單在 LOGO 列填品牌名或商品 KV 名、真正的 LOGO 檔名寫在下面一列，
+     照舊只讀 LOGO 列會把商品圖當成 LOGO。
+     2026-11-24 起寫成路徑的格子（G:\…\xxx.png）一律不讀：路徑列是給人放資料夾路徑的。 */
   if (logoBlock) {
     var explicitLogos = [];
     for (var lr = logoBlock.row; lr <= Math.min(maxRow, logoBlock.row + 2); lr++) {
       logoBlock.cols.forEach(function (lcol) {
         var raw = text(lr, lcol);
+        if (isWorkOrderPathText(raw)) return;
         if (!/\.(png|jpe?g|webp|gif|svg)$/i.test(raw)) return;
         var base = raw.split(/[\\/]/).pop().trim();
         if (base && explicitLogos.indexOf(base) === -1) explicitLogos.push(base);
