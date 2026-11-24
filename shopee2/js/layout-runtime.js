@@ -5048,8 +5048,40 @@
       if(_editing) commitEdit();
     });
 
+    /* AR（六字內）在畫布上按 Enter 是換行（跟左側 AR 文案欄一樣），點畫布外面才結束編輯。
+       換行算 0.5 字，跟左側欄位同一套算法，加了會超過 6 字就擋下來。 */
+    function insertArLineBreak(){
+      var sel = window.getSelection();
+      if(!sel || !sel.rangeCount) return;
+      var text = el.textContent || '';
+      var pos = getEditableSelectionOffsets(el);
+      if(calcUnits(text.slice(0,pos.start) + '\n' + text.slice(pos.end)) > 6){
+        flashEditLimit(el);
+        return;
+      }
+      /* 用瀏覽器內建的換行（white-space:pre-line 下會插入 \n 文字）：
+         在文字最後按 Enter 時，自己插 \n 游標會跳回上一行，內建的會處理好。 */
+      var ok = false;
+      try{ ok = document.execCommand('insertLineBreak'); }catch(_){ ok = false; }
+      if(!ok){
+        var rng = sel.getRangeAt(0);
+        rng.deleteContents();
+        var br = document.createTextNode('\n');
+        rng.insertNode(br);
+        rng.setStartAfter(br);
+        rng.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(rng);
+        try{ el.dispatchEvent(new Event('input', {bubbles:true})); }catch(_){}
+      }
+    }
+
     el.addEventListener('keydown', function(e){
-      if(e.key === 'Enter'){ e.preventDefault(); commitEdit(); }
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        if(cls === '六字內') insertArLineBreak();
+        else commitEdit();
+      }
       if(e.key === 'Escape'){
         _editing = false;
         el.contentEditable = 'false';
