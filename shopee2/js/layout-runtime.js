@@ -1699,11 +1699,15 @@
       box.dataset.position  = e.data.position !== undefined ? e.data.position : e.data.index || 0;
       if(e.data.layoutById || e.data.layout){
         var __bnid = getCurrentBnId();
-        var __lay = (e.data.layoutById && (__bnid in e.data.layoutById) ? e.data.layoutById[__bnid] : null) || e.data.layout || null;
+        var __ownLay = e.data.layoutById && (__bnid in e.data.layoutById) ? e.data.layoutById[__bnid] : null;
+        var __lay = __ownLay || e.data.layout || null;
         /* 首頁LOGO牆：只有在LOGO牆上親手調過（wallManual）的位置才還原，其餘一律重新置中 */
         if(__lay && _bnHomepageLogoWallTemplate && !__lay.wallManual) __lay = null;
         if(__lay){
           box.dataset.savedLayout = JSON.stringify(__lay);
+          /* 這個版位自己量到的位置（不是別的版位連動來的）：還原時照原本的 px 放回去 */
+          if(__lay === __ownLay) box.dataset.savedLayoutOwn = '1';
+          else delete box.dataset.savedLayoutOwn;
           box.dataset.manualLayout = '1';
           if(_bnHomepageLogoWallTemplate) box.dataset.wallManual = '1';
         }
@@ -2971,9 +2975,19 @@
 
     positions.forEach(function(p, i){
       var saved = null;
+      var savedOwn = false;
       if(p.box.dataset.savedLayout){
         try{ saved = JSON.parse(p.box.dataset.savedLayout); }catch(_){ saved = null; }
+        savedOwn = p.box.dataset.savedLayoutOwn === '1';
         delete p.box.dataset.savedLayout;
+        delete p.box.dataset.savedLayoutOwn;
+        /* 這個版位自己存的位置：用存下來的 px（版型設計座標），不要再用百分比換算、
+           也不要夾進 CTA 安全區。拖曳時商品可以放到整個商品範圍（含安全區外），
+           以前還原時被夾回安全區，上傳暫存後商品會往右／往上跑（2026-11-24）。 */
+        if(saved && savedOwn && Number(saved.width) > 0 && Number(saved.height) > 0 &&
+           isFinite(Number(saved.left)) && isFinite(Number(saved.top))){
+          saved = {left:Number(saved.left), top:Number(saved.top), width:Number(saved.width), height:Number(saved.height)};
+        }
       } else if(p.box.dataset.manualLayout === '1') {
         /* 已套用過手動/暫存位置的商品，後續新增其他商品時不可再被自動排版覆蓋。 */
         var curL = parseFloat(p.box.style.left);

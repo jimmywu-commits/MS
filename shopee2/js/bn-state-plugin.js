@@ -566,7 +566,31 @@
     if(!entity) return entity;
     var out = clone(entity);
     out.layouts = mergeFileMapIntoIdMap(out.layouts, out.layoutsByFile, index, savedManifest);
+    remapLayoutSrcIds(out, index, savedManifest);
     return repairZeroLayouts(out, index);
+  }
+
+  /* 代言人／小字的位置會記「在哪個版位調的」（layout.src＝版位 id）。版位 id 每台電腦／瀏覽器不同，
+     換電腦上傳暫存檔時對不上，曝光資源就把手動擺好的位置當成「別的版位連動來的」，
+     重新自動配合（不出框）而往內縮（2026-11-24）。還原時依暫存檔的版位清單換成目前的 id。 */
+  function remapLayoutSrcIds(entity, index, savedManifest){
+    if(!entity || !Array.isArray(savedManifest)) return entity;
+    index = index || getLayoutIndex();
+    var oldToNew = {};
+    savedManifest.forEach(function(saved){
+      if(!saved) return;
+      var currentId = index.byFile[normalizeLayoutFile(saved.file || saved.name)];
+      if(currentId && String(saved.id) !== String(currentId)) oldToNew[String(saved.id)] = String(currentId);
+    });
+    if(!Object.keys(oldToNew).length) return entity;
+    [entity.layouts, entity.layoutsByFile].forEach(function(map){
+      if(!map || typeof map !== 'object') return;
+      Object.keys(map).forEach(function(k){
+        var l = map[k];
+        if(l && typeof l === 'object' && l.src != null && oldToNew[String(l.src)]) l.src = oldToNew[String(l.src)];
+      });
+    });
+    return entity;
   }
 
   /* 2026-11-24 以前，在曝光資源沒顯示時（例如在別的步驟按「下載暫存」）存檔，
