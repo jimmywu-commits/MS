@@ -1179,15 +1179,12 @@
           /* 副標案型七字內 編輯時不反向同步到其他版位的 .副標，由 bn-text-update 統一處理 */
         }
       });
-      /* AR：六字內 優先用側欄「AR文案」（BODA 工單 AR 列勾選的文案）；AR 文案沒填才連動副標。
-         使用者在 AR 畫布內手動編輯過後（bnManualText），不再被覆蓋──編輯結果保持獨立。
-         以前這裡只看副標，AR 文案欄的值根本沒有用到。 */
+      /* AR：六字內 只吃側欄「AR文案」（MS 主頁工單 AR 列勾選的文案），不連動副標；AR 文案沒填就留空。
+         畫布上直接改的字會回寫到「AR文案」欄，所以一律以欄位為準（含 Enter 換行）。
+         以前點過畫布就標記「手動獨立」、之後不再吃欄位，會讓欄位換行後畫布沒跟著變。 */
       var arEl = document.querySelector('.六字內');
-      if(arEl && !arEl.children.length && arEl.dataset.bnManualText !== '1'){
-        var arText = typeof d['六字內'] === 'string' ? d['六字內'].trim() : '';
-        if(arText === '最多六個字內') arText = '';   /* 側欄預設提示字，不算有填 */
-        if(arText) arEl.textContent = arText;
-        else if(d['副標'] !== undefined) arEl.textContent = d['副標'];
+      if(arEl && !arEl.children.length && typeof d['六字內'] === 'string'){
+        arEl.textContent = d['六字內'].trim();
       }
       setTimeout(function(){ try{ refreshOverflowAll(); }catch(_){} }, 0);
       setTimeout(function(){ applyContentWarnings(window.__bnContentWarningMessages||[]); },0);
@@ -5005,8 +5002,6 @@
       el.style.outline = 'none';
       hideCounter(cls);
       markOverflow(el, cls);
-      /* AR：六字內 一旦在畫布內手動編輯過，標記獨立，之後副標變更不再覆蓋 */
-      if(cls === '六字內') el.dataset.bnManualText = '1';
       if(cls === 'CampaignCard文案') renderCampaignCardText(el, el.textContent.trim());
       _sendUpdate(el, cls);
     }

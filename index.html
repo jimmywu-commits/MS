@@ -13033,7 +13033,7 @@ function parseWorkbookOverviewByLabels(wb) {
     result.found = true;
   }
   /* AR「文案6字內 or LOGO 2擇1」：H 欄勾選（True）＝用右邊 I 欄的文案，優先度最高；
-     勾 False 時改看下一列「LOGO路徑」。兩者都沒填，AR 文案才退回副標（在 syncWorkbookOverviewTextToExposure 處理）。 */
+     勾 False 時改看下一列「LOGO路徑」。兩者都沒填，AR 文案就留空（不改用副標）。 */
   for (var ar = anchorRow || 1; ar <= maxRow && anchorRow; ar++) {
     var arLabelCol = 0;
     for (var ac = 1; ac <= maxCol; ac++) {
@@ -13445,8 +13445,8 @@ function syncWorkbookOverviewTextToExposure(wb) {
   if (byLabels && (byLabels.main || byLabels.sub || byLabels.date || byLabels.productFiles.length || byLabels.logoFiles.length ||
       byLabels.campaignCardSection || byLabels.campaignCardText || byLabels.campaignCardProductFile || byLabels.campaignCardLogoFile)) {
     /* BD 標籤版：固定儲存格 B10～B19 在這種表裡是別的欄位，不能混用。 */
-    /* AR 文案優先序：工單 AR 列勾選（True）的文案 → 沒有文案、也沒有 LOGO 路徑時才吃副標。 */
-    var arText = byLabels.ar || (byLabels.arLogo ? '' : byLabels.sub) || '';
+    /* AR 文案只吃工單 AR 列勾選（True）的文案；沒填就留空，不再改用副標。 */
+    var arText = byLabels.ar || '';
     var labelData = {
       brand: '', main: byLabels.main, sub: byLabels.sub, date: byLabels.date,
       icon: '', ar: arText, logoFiles: byLabels.logoFiles.join(','),
