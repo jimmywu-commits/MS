@@ -59,6 +59,14 @@
     if(light.logos){ light.logos.forEach(function(l){ if(l && l.src) l.src='__BN_IDB__'; }); }
     if(light.character && light.character.src){ light.character.src='__BN_IDB__'; }
     if(light.character2 && light.character2.src){ light.character2.src='__BN_IDB__'; }
+    /* Campaign Card 專屬商品／LOGO：圖片只存在大型暫存完整版，輕量版只留位置 */
+    if(light.campaignCardAssets){
+      ['product','logo'].forEach(function(k){
+        var a = light.campaignCardAssets[k];
+        if(!a) return;
+        ['src','baseSrc','logoSrc'].forEach(function(f){ if(a[f]) a[f] = '__BN_IDB__'; });
+      });
+    }
     /* 代言人照／簽名檔：圖片（含旋轉前原圖）只存在 大型暫存 完整版 */
     ['endorserPhoto','endorserSign'].forEach(function(key){
       var slot = light[key];
@@ -119,6 +127,17 @@
         var target = (ll && ll.id && logosById[ll.id]) || merged.logos[i];
         if(!target || !ll) return;
         Object.keys(ll).forEach(function(k){ if(k !== 'src' && ll[k] !== undefined) target[k] = clone(ll[k]); });
+      });
+    }
+
+    if(light.campaignCardAssets && merged.campaignCardAssets){
+      ['product','logo'].forEach(function(k){
+        var la = light.campaignCardAssets[k], ma = merged.campaignCardAssets[k];
+        if(!la || !ma) return;
+        Object.keys(la).forEach(function(f){
+          if(f === 'src' || f === 'baseSrc' || f === 'logoSrc' || la[f] === undefined) return;
+          ma[f] = clone(la[f]);
+        });
       });
     }
 
@@ -754,6 +773,9 @@
           layouts:p.layouts ? clone(p.layouts) : undefined,
           crop:p.crop ? clone(p.crop) : undefined, meta:p.meta ? clone(p.meta) : undefined}, layoutIndex);
       }),
+      /* Campaign Card 專屬商品／LOGO（工單「Campaign Card單格」帶入的素材，跟一般商品分開）。
+         以前沒存：上傳暫存檔後 Campaign Card 改用一般商品（去背裁切版），大小、位置都跟存檔前不同。 */
+      campaignCardAssets: global._bnCampaignCardAssets ? clone(global._bnCampaignCardAssets) : null,
       /* 只有 false 代表該版位解鎖；沒有記錄的版位預設全部連動。 */
       productLayoutLocks: clone(global._bnProductLayoutLocks || {}),
       background:{
@@ -878,6 +900,16 @@
         if(typeof global._bnRequestProductLayouts==='function'){
           [500, 1200, 2200].forEach(function(delay){ setTimeout(global._bnRequestProductLayouts, delay); });
         }
+      }
+    }
+    /* Campaign Card 專屬商品／LOGO：舊暫存檔沒有這個欄位就不動；null＝存檔時沒有，還原成移除。
+       輕量版（圖片是佔位符）不能拿來蓋掉真正的圖。 */
+    if('campaignCardAssets' in state){
+      var cca = state.campaignCardAssets;
+      var ccaPlaceholder = !!(cca && ['product','logo'].some(function(k){ return cca[k] && cca[k].src === '__BN_IDB__'; }));
+      if(!ccaPlaceholder){
+        global._bnCampaignCardAssets = cca ? clone(cca) : null;
+        if(typeof global._bnBroadcastCampaignCardAssets==='function') global._bnBroadcastCampaignCardAssets();
       }
     }
     if('character' in state || 'character2' in state){

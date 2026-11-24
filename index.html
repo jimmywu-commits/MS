@@ -25288,6 +25288,11 @@ function tryApplyPendingExposureSnapshotState() {
   try {
     var plugin = win._bnStatePlugin;
     if (plugin && typeof plugin.apply === 'function') {
+      /* 曝光資源的等級要先跟主頁一致：之後才換等級的話，等級外掛會把剛還原的版位勾選清掉、改回等級預設。 */
+      try {
+        if (typeof win._bnApplyLevel === 'function' && typeof win._bnGetCurrentLevelId === 'function' &&
+            win._bnGetCurrentLevelId() !== currentLevelId) win._bnApplyLevel(currentLevelId, false);
+      } catch (_) {}
       plugin.apply(pendingExposureSnapshotState, { source: 'upload', forceColors: true });
       if (typeof plugin.save === 'function') setTimeout(plugin.save, 2300);
       pendingExposureSnapshotState = null;
@@ -25407,6 +25412,9 @@ function buildImportSnapshot() {
       /* 活動名稱與工單檔名一起存，從暫存檔還原後下載 ZIP 仍能用活動名稱命名 */
       activityName: currentImportActivityName || '',
       workOrderName: currentImportWorkbookName || '',
+      /* 活動等級也要存：換電腦或按過「重置」後上傳暫存檔，等級會回到預設（大促 Brand star），
+         曝光資源就不還原暫存的版位勾選（勾選是依等級存的），MSBN 顆數上限也會錯。 */
+      levelId: currentLevelId,
       columns: res[0],
       uploadedImages: res[1],
       theme: JSON.parse(JSON.stringify(importTheme)), /* 統一顏色也一起存，還原後顏色一模一樣 */
@@ -25918,6 +25926,10 @@ function restoreImportSnapshot(snap) {
     if (bottomPreviewBridgeReady) dispatchBottomPreviewForExport();
     queueBottomPersist();
   }
+  /* 先還原活動等級，再還原曝光資源：曝光資源的版位勾選只在「目前等級＝暫存時的等級」才會還原。
+     舊暫存檔沒有 levelId 時，改用曝光資源狀態裡記的等級。 */
+  var snapLevelId = String(snap.levelId || (snap.exposureState && snap.exposureState.checkedLevelId) || '');
+  if (snapLevelId && typeof window.woApplyLevelFromSnapshot === 'function') window.woApplyLevelFromSnapshot(snapLevelId);
   if (snap.exposureState && typeof snap.exposureState === 'object') {
     queueExposureSnapshotStateApply(snap.exposureState, 'snapshot-restore');
   }
@@ -29436,6 +29448,18 @@ function applyCanvasZoom(el) {
     uploadLevelChosen = true; /* 工單帶入等級後，上傳頁改顯示實際等級 */
     applyLevelId(id, false, { force: true, broadcastEvenIfSame: true });
     notifyActivityPageRule(currentLevelId, 'workorder');
+  };
+  /* 暫存檔還原：暫存檔記的等級就是當時在做的等級，直接套用、不跳確認。
+     「要不要做活動頁」需要詢問的等級（ask）不再問一次，沿用目前的選擇。 */
+  window.woApplyLevelFromSnapshot = function (id) {
+    var raw = String(id || '');
+    if (LEGACY_LEVEL_IDS[raw]) raw = LEGACY_LEVEL_IDS[raw];
+    if (!LEVELS.some(function (l) { return l.id === raw; })) return false;
+    uploadLevelChosen = true;
+    applyLevelId(raw, false, { force: true, broadcastEvenIfSame: true });
+    var rule = (typeof ACTIVITY_PAGE_RULES !== 'undefined' && ACTIVITY_PAGE_RULES[raw]) || 'full';
+    if (rule !== 'ask') notifyActivityPageRule(currentLevelId, 'snapshot');
+    return true;
   };
   /* 首頁「開始編輯」要知道等級選了沒（上傳頁顯示「未選擇」時＝還沒選）、選的是哪個等級 */
   window.bodaUploadLevelChosen = function () { return uploadLevelChosen; };

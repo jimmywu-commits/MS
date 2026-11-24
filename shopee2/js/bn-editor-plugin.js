@@ -5118,6 +5118,10 @@
           logoLayoutById:window._bnLogoLayouts || {}});
       }
     };
+    /* 暫存還原 Campaign Card 專屬素材後重新送給各版位（沒有素材時送空的，版位會移除舊的） */
+    window._bnBroadcastCampaignCardAssets = function(){
+      broadcast({type:'bn-campaign-card-assets', assets:window._bnCampaignCardAssets || {}});
+    };
     window._bnSyncLogoLayoutSelection = syncLogoLayoutSelection;
     window._bnRenderProdList = function(){ renderProdList(); };
     window._bnRequestProductLayouts = requestProductLayouts;
