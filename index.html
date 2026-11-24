@@ -12708,11 +12708,11 @@ function importPackageActivityName() {
   var fromFile = String(currentImportWorkbookName || '').replace(/\.[^.]+$/, '').trim();
   return importPackageSafeName(fromWorkbook || fromFile || '活動頁', '活動頁');
 }
-function parseWorkbookOverviewLevel(wb) {
-  var ws = workOrderWorksheet(wb, '工單總覽');
+/* 在一個頁簽裡找「包套」（或「包套等級」）標籤，讀標籤右邊第一個有填的格子（最多往右 6 格）。 */
+function findWorkbookPackageLevelInSheet(ws, maxRows, maxCols) {
   if (!ws) return null;
-  var maxRow = Math.min(Number(ws.rowCount) || 0, 120);
-  var maxCol = Math.min(Number(ws.columnCount) || 0, 30);
+  var maxRow = Math.min(Number(ws.rowCount) || 0, maxRows || 120);
+  var maxCol = Math.min(Number(ws.columnCount) || 0, maxCols || 30);
   function masterCell(row, col) {
     var cell = ws.getCell(row, col);
     return cell && cell.isMerged && cell.master ? cell.master : cell;
@@ -12731,14 +12731,42 @@ function parseWorkbookOverviewLevel(wb) {
         if (!valueCell || (valueCell.address !== ws.getCell(row, valueCol).address)) continue;
         var raw = workbookCellPlainString(valueCell);
         if (!raw) continue;
-        return { raw: raw, id: workbookLevelIdFromValue(raw), row: row, col: valueCol };
+        return { raw: raw, id: workbookLevelIdFromValue(raw), row: row, col: valueCol,
+          sheet: String(ws.name || ws.title || '') };
       }
     }
   }
+  return null;
+}
+/* Layout 頁簽：名稱含「Layout」的頁簽（例：MS Layout），名稱帶「舊／備份／副本／Backup／Copy」的不算；
+   名稱越短越優先（MS Layout 先於 MS Layout 2）。 */
+function workbookLayoutSheets(wb) {
+  var sheets = wb && Array.isArray(wb.worksheets) ? wb.worksheets : [];
+  return sheets.filter(function (ws) {
+    var name = String(ws && (ws.name || ws.title) || '');
+    return /layout/i.test(name) && !/舊|備份|副本|backup|copy/i.test(name);
+  }).sort(function (a, b) {
+    return String(a.name || a.title || '').length - String(b.name || b.title || '').length;
+  });
+}
+/* 活動等級（包套）來源，2026-11-24 起：
+   1. 先找 Layout 頁簽的「包套」標籤右邊那格，而且要認得出是哪個等級；
+   2. Layout 頁簽沒有（或寫的認不出來），才讀「工單總覽」頁簽的「包套」；
+   3. 都沒有時，向下相容早期固定 B3 的 BODA 工單。 */
+function parseWorkbookOverviewLevel(wb) {
+  var layoutSheets = workbookLayoutSheets(wb);
+  for (var i = 0; i < layoutSheets.length; i++) {
+    var fromLayout = findWorkbookPackageLevelInSheet(layoutSheets[i], 200, 60);
+    if (fromLayout && fromLayout.id) return fromLayout;
+  }
+  var ws = workOrderWorksheet(wb, '工單總覽');
+  if (!ws) return null;
+  var fromOverview = findWorkbookPackageLevelInSheet(ws, 120, 30);
+  if (fromOverview) return fromOverview;
 
   /* 向下相容早期固定 B3 的 BODA 工單。 */
   var fallback = workbookCellPlainString(ws.getCell('B3'));
-  return fallback ? { raw: fallback, id: workbookLevelIdFromValue(fallback), row: 3, col: 2 } : null;
+  return fallback ? { raw: fallback, id: workbookLevelIdFromValue(fallback), row: 3, col: 2, sheet: String(ws.name || '') } : null;
 }
 function applyWorkbookOverviewLevel(wb) {
   var parsed = parseWorkbookOverviewLevel(wb);
@@ -12747,7 +12775,7 @@ function applyWorkbookOverviewLevel(wb) {
   if (!parsed) parsed = { raw: '', row: 0, col: 0 };
   parsed.id = targetId;
   parsed.usedDefault = !matchedId;
-  if (parsed.usedDefault) console.warn('[BODA] 工單總覽的包套無法對應，已使用預設等級 大促 Brand star：', parsed.raw || '空白');
+  if (parsed.usedDefault) console.warn('[BODA] Layout／工單總覽的包套無法對應，已使用預設等級 大促 Brand star：', parsed.raw || '空白');
   /* 工單沒寫（或認不出）等級、首頁又已經選好時，保留首頁的選擇，不用預設等級蓋掉。 */
   if (parsed.usedDefault && typeof window.bodaUploadLevelChosen === 'function' && window.bodaUploadLevelChosen()) return parsed;
   /* STEP 1 有可能在等級控制器完成初始化前就讀完活頁簿。先記住結果並延後補套，
