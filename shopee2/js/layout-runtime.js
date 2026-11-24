@@ -19,6 +19,10 @@
   var _bnCampaignCardTemplate = /campaign_card/i.test(fname || '') ||
     !!(document.body && document.body.classList.contains('campaign-card-template'));
   var _bnCampaignCardLogoAsset = null;
+  /* Campaign Card 的 LOGO 大小比照首頁LOGO牆（2026-11-24）：高度最多到整個 LOGO 白色膠囊，
+     寬度最多為膠囊寬的 200/320（首頁LOGO牆是 320 寬的膠囊、LOGO 最寬 200），兩側留白不壓到圓角。
+     以前高度固定最多 29px，看起來太小。畫布與下載截圖都用這個函式，兩邊大小一致。 */
+  function bnCampaignCardLogoMaxW(zoneW){ return Math.max(1, Math.round((zoneW || 182) * 200 / 320)); }
   var _bnSingleProductOnlyTemplate = /searchicon_product|campaign_card/i.test(fname || '');
   var _bnSingleLogoTemplate = /^(ar_logo|首頁logo牆|campaign_card)$/i.test(fname || '');
   var _bnHomepageLogoWallTemplate = /^首頁logo牆$/i.test(fname || '');
@@ -1409,7 +1413,8 @@
         var gap = 15;
         var zoneW = parseFloat(window.getComputedStyle(zone).width) || 490;
         var zoneH = parseFloat(window.getComputedStyle(zone).height) || 50;
-        var logoFitH = _bnCampaignCardTemplate ? Math.min(29, zoneH) : zoneH;
+        var logoFitH = zoneH;
+        var logoMaxW = _bnCampaignCardTemplate ? bnCampaignCardLogoMaxW(zoneW) : 200;
         var maxTotal = Math.min(490, zoneW);
         var imgs = [];
         /* 不要把 CSS 的 position:absolute 覆蓋成 relative。
@@ -1427,7 +1432,7 @@
         function relayout(){
           var widths = imgs.map(function(img){
             var ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1;
-            return Math.min(_bnCampaignCardTemplate ? 182 : 200, Math.max(1, Math.round(logoFitH * ratio)));
+            return Math.min(logoMaxW, Math.max(1, Math.round(logoFitH * ratio)));
           });
           var total = widths.reduce(function(a,b){ return a + b; }, 0) + gap * Math.max(0, widths.length - 1);
           var scale = total > maxTotal ? (maxTotal - gap * Math.max(0, widths.length - 1)) / Math.max(1, widths.reduce(function(a,b){ return a + b; }, 0)) : 1;
@@ -1443,8 +1448,8 @@
             img.style.transform = 'translateY(-50%)';
             img.style.width = widths[i] + 'px';
             img.style.height = 'auto';
-            img.style.maxWidth = (_bnCampaignCardTemplate ? 182 : 200) + 'px';
-            img.style.maxHeight = _bnCampaignCardTemplate ? (logoFitH + 'px') : '100%';
+            img.style.maxWidth = logoMaxW + 'px';
+            img.style.maxHeight = '100%';
             img.style.objectFit = 'contain';
             img.style.objectPosition = alignMode === 'center' ? 'center center' : 'left center';
             img.style.pointerEvents = 'none';
@@ -2685,10 +2690,12 @@
           var bw = box.clientWidth, bh = box.clientHeight;
           var nw = img.naturalWidth, nh = img.naturalHeight;
           if(!bw || !bh || !nw || !nh) return;
-          var fitH = _bnCampaignCardTemplate && img.classList.contains('bn-logo-img') ? Math.min(29, bh) : bh;
-          var boxRatio = bw / fitH, imgRatio = nw / nh;
+          var fitH = bh;
+          /* Campaign Card LOGO：寬度上限跟畫布一樣（bnCampaignCardLogoMaxW），下載才不會比畫布大 */
+          var fitW = _bnCampaignCardTemplate && img.classList.contains('bn-logo-img') ? Math.min(bw, bnCampaignCardLogoMaxW(bw)) : bw;
+          var boxRatio = fitW / fitH, imgRatio = nw / nh;
           var dispW, dispH;
-          if(imgRatio > boxRatio){ dispW = bw; dispH = bw / imgRatio; }
+          if(imgRatio > boxRatio){ dispW = fitW; dispH = fitW / imgRatio; }
           else { dispH = fitH; dispW = fitH * imgRatio; }
           /* 比例已經吻合（差距在1px內），不用特別處理，減少不必要的 style 改動 */
           if(Math.abs(dispW - bw) < 1 && Math.abs(dispH - bh) < 1) return;
@@ -2704,6 +2711,11 @@
           img.style.maxHeight = 'none';
           img.style.left = Math.round((bw - dispW) / 2) + 'px';
           img.style.top  = Math.round((bh - dispH) / 2) + 'px';
+          /* 這裡已用 left/top 算好置中；畫布上的 LOGO 是 top:50%＋translateY(-50%) 置中，
+             不拿掉 transform 會再往上移半個 LOGO 高（Campaign Card 下載的 LOGO 會跑出白色膠囊）。
+             截圖結束後 captureStyles 會把 style 整個還原。只處理 LOGO 的純位移置中；人物圖可能有翻轉／旋轉，不能動。 */
+          if(img.classList.contains('bn-logo-img') && /translate/i.test(img.style.transform || '') &&
+             !/scale|rotate|matrix|skew/i.test(img.style.transform || '')) img.style.transform = 'none';
         });
       }
       var logoCaptureSelector = '.bn-logo-box img, .bn-prod-box img, .bn-char-box img, .logo範圍_左 img.bn-logo-img, .logo範圍_中 img.bn-logo-img, .logo範圍_右 img.bn-logo-img';
