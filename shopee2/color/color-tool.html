@@ -1067,8 +1067,19 @@ if (_isBodaHost) {
     e.preventDefault(); e.stopImmediatePropagation();
     bodaWarn(() => { _bodaWarnPass = true; rerun(); });
   }
+  /* 2026-11-25：只有上方六色（底色、主標、副標、日期、CTA 文字、CTA 底色）換色才提醒；
+     下方「系統價格配色」「頁面標題選單」（.refs 區）不會動到曝光資源，直接改不跳窗。 */
+  const TOP_KEYS = ['bg', 'main', 'sub', 'warn', 'ctatxt', 'ctabg'];
+  function topHasManual() {
+    try { const ov = (simState && simState.ov) || {}; return TOP_KEYS.some(k => !!ov[k]); } catch (_) { return true; }
+  }
   document.addEventListener('click', function (e) {
     const t = e.target;
+    /* 下方參考區：不提醒 */
+    if (t.closest && t.closest('.refs')) return;
+    /* 「重設手動修改」：只有上方六色有手動修改時才提醒 */
+    const reset = t.closest && t.closest('#simReset');
+    if (reset) { if (topHasManual()) guard(e, () => reset.click()); return; }
     /* 色塊選色器（底色那張已停用） */
     const inp = t.closest && t.closest('.role .box input[type=color]');
     if (inp) {
