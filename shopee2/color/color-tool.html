@@ -1161,10 +1161,10 @@ if (_isBodaHost) {
     bar.classList.add('boda-out-bar');
     const terms = document.createElement('div');
     terms.className = 'ms-terms-line';
-    terms.innerHTML = '<input type="checkbox" aria-label="我已閱讀並接受蝦皮資產使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal">「蝦皮資產使用條款」</a></label>';
+    terms.innerHTML = '<input type="checkbox" aria-label="我已閱讀並接受廣告套裝版位素材編輯器使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal">「廣告套裝版位素材編輯器使用條款」</a></label>';
     const termsCheck = terms.querySelector('input');
     const termsLink = terms.querySelector('a');
-    /* 蝦皮資產使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 規則）。
+    /* 廣告套裝版位素材編輯器使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 規則）。
        被主頁嵌入（host=boda）時，主頁回覆前先視為未同意；獨立開啟時不擋。 */
     const hostedByMs = window.parent !== window && /(?:^|[?&])host=boda(?:&|$)/i.test(location.search);
     let hostTermsAccepted = null;

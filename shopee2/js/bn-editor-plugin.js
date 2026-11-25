@@ -4214,7 +4214,7 @@
       window.HBNProductEditorPlugin.open(img);
     }
 
-    /* ══ 蝦皮資產使用條款（主頁 ⇄ 曝光資源，只用 postMessage） ══
+    /* ══ 廣告套裝版位素材編輯器使用條款（主頁 ⇄ 曝光資源，只用 postMessage） ══
        只有被 MS 主頁嵌入（網址 host=boda）時才需要主頁的同意狀態；獨立開啟（含 TP）時不擋。
        主頁回覆前先視為「未同意」，主頁會在載入與每次變更時送 ms-asset-terms-state。 */
     var _bnHostTermsAccepted = null;
@@ -4240,13 +4240,13 @@
       var sidebar=document.getElementById('sidebar');
       if(!sidebar||document.getElementById('bn-download-bar'))return;
       var bar=document.createElement('div');bar.id='bn-download-bar';
-      bar.innerHTML='<div class="bn-ms-terms-line"><input type="checkbox" id="bn-ms-terms-check" aria-label="我已閱讀並接受蝦皮資產使用條款"><label for="bn-ms-terms-check">我已閱讀並接受 <a href="#ms-terms-modal" id="bn-ms-terms-link">「蝦皮資產使用條款」</a></label></div><button class="bn-dl-btn" id="bn-dl-all">⬇ 下載全部勾選畫版</button><div class="bn-dl-progress" id="bn-dl-progress"></div>';
+      bar.innerHTML='<div class="bn-ms-terms-line"><input type="checkbox" id="bn-ms-terms-check" aria-label="我已閱讀並接受廣告套裝版位素材編輯器使用條款"><label for="bn-ms-terms-check">我已閱讀並接受 <a href="#ms-terms-modal" id="bn-ms-terms-link">「廣告套裝版位素材編輯器使用條款」</a></label></div><button class="bn-dl-btn" id="bn-dl-all">⬇ 下載全部勾選畫版</button><div class="bn-dl-progress" id="bn-dl-progress"></div>';
       /* 加到 sidebar 最底部（sidebar-scroll 下方）*/
       var scroll=document.getElementById('sidebar-scroll');
       if(scroll && scroll.nextSibling) sidebar.insertBefore(bar, scroll.nextSibling);
       else sidebar.appendChild(bar);
       var check=document.getElementById('bn-ms-terms-check'), link=document.getElementById('bn-ms-terms-link'), button=document.getElementById('bn-dl-all');
-      /* 蝦皮資產使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 上互相讀不到）。 */
+      /* 廣告套裝版位素材編輯器使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 上互相讀不到）。 */
       function parentTermsAccepted(){ return bnHostTermsAccepted(); }
       function parentTermsOpen(){ bnHostTermsPost('ms-asset-terms-open'); }
       function parentTermsSet(value){ bnHostTermsPost('ms-asset-terms-set', {accepted:!!value}); }
@@ -4377,7 +4377,7 @@
       if(_layoutSynced!==true&&window._bnDownloadBusy)return;
       if(!bnHostTermsAccepted()){
         bnHostTermsPost('ms-asset-terms-open');
-        _bnSettleCollect(new Error('尚未同意蝦皮資產使用條款'));
+        _bnSettleCollect(new Error('尚未同意廣告套裝版位素材編輯器使用條款'));
         return;
       }
       /* 字數硬擋／內容警語未確認：直接擋在 modal，不呼叫 setProgress，

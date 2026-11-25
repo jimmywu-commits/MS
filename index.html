@@ -419,8 +419,6 @@ html,body{height:100%;background:var(--bg);color:var(--ink);
 /* 法務權利提醒：固定在 MS 編輯器內容區最上方，涵蓋「製作」四步與整包下載。 */
 #ms-rights-notice{position:absolute;z-index:20;left:10px;right:10px;top:7px;min-height:28px;padding:5px 10px;border:1px solid #b9c9d8;border-radius:5px;background:rgba(239,246,255,.94);color:#526272;font-size:11px;line-height:1.55;box-shadow:0 1px 3px rgba(20,40,35,.06);}
 #ms-rights-notice a{color:#2563eb;text-decoration:underline;cursor:pointer;white-space:nowrap;}
-#ms-rights-modal{display:none;position:fixed;inset:0;z-index:2147483100;background:rgba(0,0,0,.56);align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);}
-#ms-rights-modal.show{display:flex;}
 .ms-rights-box{width:min(680px,92vw);max-height:82vh;background:#fff;border:1px solid #d5dfdc;border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;}
 .ms-rights-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #e4ebe9;}
 .ms-rights-head h3{font-size:14px;color:var(--ink);margin:0;}
@@ -429,6 +427,38 @@ html,body{height:100%;background:var(--bg);color:var(--ink);
 .ms-rights-body p{margin:0 0 11px;}.ms-rights-body p:last-child{margin-bottom:0;}
 .ms-rights-foot{padding:11px 16px;border-top:1px solid #e4ebe9;text-align:right;}
 .ms-rights-ok{background:#ee4d2d;border:1px solid #ee4d2d;color:#fff;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:700;cursor:pointer;}
+.ms-terms-agree:disabled{background:#f3b4a6;border-color:#f3b4a6;cursor:not-allowed;}
+.ms-terms-close-btn{border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:6px;padding:7px 15px;font-size:12px;font-weight:700;cursor:pointer;}
+.ms-terms-close-btn:hover{background:#f1f5f9;}
+/* 廣告套裝版位素材編輯器使用條款：內文層級 */
+.ms-terms-body{padding:18px 22px 10px;}
+.ms-terms-body .ms-terms-doc-title{margin:0 0 12px;font-size:14px;color:var(--ink);text-align:center;letter-spacing:.04em;}
+.ms-terms-body h4{display:flex;gap:6px;margin:18px 0 6px;font-size:12.5px;color:var(--ink);}
+.ms-terms-body .ms-terms-clause,.ms-terms-body .ms-terms-item{display:flex;gap:6px;margin:0 0 6px;}
+.ms-terms-body .ms-terms-item{padding-left:34px;}
+.ms-terms-body .ms-terms-clause .no{flex:0 0 28px;color:var(--ink3);font-variant-numeric:tabular-nums;}
+.ms-terms-body .ms-terms-item .no{flex:0 0 16px;color:var(--ink3);}
+.ms-terms-body a{color:#2563eb;text-decoration:underline;text-underline-offset:2px;}
+.ms-terms-body .ms-terms-date{margin-top:22px;text-align:right;color:var(--ink3);}
+/* 「滑到條款底部」：介於內文與下框之間，上緣漸層壓在內文尾端 */
+.ms-terms-more{position:relative;display:flex;justify-content:center;padding:6px 0 10px;margin-top:-30px;padding-top:30px;max-height:90px;
+  background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 26px);pointer-events:none;
+  transition:max-height .35s ease,padding .35s ease,margin .35s ease,opacity .25s ease;}
+.ms-terms-more.is-done{max-height:0;padding-top:0;padding-bottom:0;margin-top:0;opacity:0;overflow:hidden;}
+.ms-terms-scroll{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:216px;height:38px;
+  border:1px solid #cbd5e1;border-radius:999px;background:#f8fafc;color:#475569;font-size:12px;font-weight:600;cursor:pointer;
+  box-shadow:0 4px 14px rgba(15,23,42,.08);transition:background .2s,border-color .2s,color .2s,transform .2s;}
+.ms-terms-scroll:hover{background:#fff4f1;border-color:#f3b4a6;color:#d73b1d;transform:translateY(-1px);}
+.ms-terms-scroll:active{transform:translateY(0);}
+/* 下箭頭：兩個 V 依序往下流動，像在催促往下讀；滑上去流得更快 */
+.ms-terms-chev{position:relative;width:14px;height:16px;flex:0 0 14px;}
+.ms-terms-chev svg{position:absolute;left:0;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  animation:msTermsChev 1.6s ease-in-out infinite;}
+.ms-terms-chev svg:nth-child(1){top:-3px;}
+.ms-terms-chev svg:nth-child(2){top:3px;animation-delay:.2s;}
+.ms-terms-scroll:hover .ms-terms-chev svg{animation-duration:.9s;}
+@keyframes msTermsChev{0%{transform:translateY(-2px);opacity:0;}35%{opacity:1;}70%{transform:translateY(3px);opacity:1;}100%{transform:translateY(5px);opacity:0;}}
+@media (prefers-reduced-motion:reduce){.ms-terms-chev svg{animation:none;opacity:1;}}
 /* 下載條款勾選：放在各右側下載按鈕正上方。 */
 .ms-terms-line{display:flex;align-items:flex-start;gap:5px;margin:0 0 7px;color:var(--ink3);font-size:10.5px;line-height:1.45;}
 .ms-terms-line input{width:13px;height:13px;margin:1px 0 0;accent-color:#ee4d2d;flex:0 0 auto;}
@@ -1811,7 +1841,8 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
 
   <div id="views">
     <div id="ms-rights-notice" role="note">
-      您自行上傳或使用之圖片、文字、Logo、商標及其他素材，應確認已取得合法權利或授權，且不得侵害第三人之著作權、商標權、肖像權或其他權利。本編輯器提供之平台素材，僅得於指定用途、範圍及期間內使用。因素材上傳、編輯、下載、發布或使用所生之爭議及法律責任，由使用者自行負責。<a href="#ms-rights-modal" id="ms-rights-link">了解更多</a>
+      <!-- 節錄自 docs/廣告套裝版位素材編輯器使用條款_20261124.pdf 第 1.3 條後段＋第 5.1 條，原文一字不改 -->
+      賣家應自行決定其所使用之素材、編輯方式及最終產出內容，並於下載、發布及使用前自行確認其內容之正確性、適法性及是否符合相關使用規範。賣家聲明並保證，其自行上傳、匯入、輸入或使用之所有賣家素材，均為賣家合法享有權利之素材，或已事前取得相關權利人之充分且有效之授權、同意或其他合法使用依據。<a href="#ms-terms-modal" id="ms-rights-link">了解更多</a>
     </div>
 
     <!-- ══════════════ 首頁：入口 ══════════════ -->
@@ -1892,8 +1923,8 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
             <button class="btn ghost" id="btn-clear-cache" title="清掉這個工具存在瀏覽器裡的暫存（上次畫面、畫布內容、縮放等），重新整理回到全新狀態">🧹 清除本機暫存並重新整理</button>
             <div id="generator-primary-action">
               <div class="ms-terms-line" data-ms-terms-line>
-                <input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款">
-                <label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label>
+                <input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受廣告套裝版位素材編輯器使用條款">
+                <label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「廣告套裝版位素材編輯器使用條款」</a></label>
               </div>
               <button class="btn primary" id="btn-all">⬇ 下載此資源檔案</button>
             </div>
@@ -2163,8 +2194,8 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
             <!-- UI-012 第六輪（2026-11-13）：「活動頁完成」沿用隱藏的 #step-actions [data-step-act="done"]（finishCurrentWorkflowStep('done')，active view=import → key import），不另建狀態；不觸發下載。 -->
             <button type="button" id="boda-import-done-btn">活動頁完成</button>
             <div class="ms-terms-line" data-ms-terms-line>
-              <input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款">
-              <label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label>
+              <input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受廣告套裝版位素材編輯器使用條款">
+              <label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「廣告套裝版位素材編輯器使用條款」</a></label>
             </div>
             <button class="btn primary" id="btn-download-import-package"><svg class="line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m7.8 10.2 4.2 4.2 4.2-4.2"/><path d="M4 20h16"/></svg> 單獨下載活動頁資源檔案</button><!-- UI-012 第六輪：原「下載此資源檔案」 -->
             <div class="dl-hint">只下載活動頁資源目前畫布的合成 PNG、副區整排 PNG 與 MSBN 單張 PNG；完整工單、曝光、色票、吸底及暫存檔請使用最左側「整包下載」。</div>
@@ -2273,17 +2304,6 @@ body.tutorial-msbn #canvas-area{min-height:100vh;overflow:visible;}
   <button class="relock" id="btn-relock">鎖上</button>
 </div>
 
-<div id="ms-rights-modal" role="dialog" aria-modal="true" aria-labelledby="ms-rights-title">
-  <div class="ms-rights-box">
-    <div class="ms-rights-head"><h3 id="ms-rights-title">素材使用權利與責任說明</h3><button type="button" class="ms-rights-close" aria-label="關閉">×</button></div>
-    <div class="ms-rights-body">
-      <p>本編輯器所提供之平台 Logo、背景圖片及其他素材，僅得於本公司指定或授權之用途、範圍及期間內使用。</p>
-      <p>您自行上傳、匯入或使用之圖片、文字、商標、Logo、人物肖像及其他素材，應自行確認已取得合法權利或完整授權，並確保其使用不侵害任何第三人之著作權、商標權、肖像權、個人資料或其他權利，亦不得違反相關法令及平台規範。</p>
-      <p>因您上傳、編輯、下載、發布或使用相關內容所生之爭議、損害或法律責任，應由您自行負責；如因此致本公司或第三人受有損害，您並應負相關賠償責任。</p>
-    </div>
-    <div class="ms-rights-foot"><button type="button" class="ms-rights-ok" id="ms-rights-ok">我確定</button></div>
-  </div>
-</div>
 
 <div id="app-loading" aria-hidden="true">
   <div id="app-loading-card" role="status" aria-live="polite">
@@ -26906,7 +26926,7 @@ function showPackageDownloadPreview(bundle) {
     }
     /* 條款勾選與「確認下載 ZIP」是同一組：條款在按鈕左邊緊貼，未勾選前按鈕反灰不能按。 */
     html += '</div><div class="bdp-foot"><span class="bdp-foot-note">切到左側其他頁面會取消這次下載</span><button type="button" class="bdp-btn" data-v="0">取消</button>' +
-      '<div class="bdp-terms-confirm"><div class="ms-terms-line"><input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受蝦皮資產使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「蝦皮資產使用條款」</a></label></div>' +
+      '<div class="bdp-terms-confirm"><div class="ms-terms-line"><input type="checkbox" data-ms-terms-check aria-label="我已閱讀並接受廣告套裝版位素材編輯器使用條款"><label>我已閱讀並接受 <a href="#ms-terms-modal" data-ms-terms-link>「廣告套裝版位素材編輯器使用條款」</a></label></div>' +
       '<button type="button" class="bdp-btn bdp-primary" data-v="1" data-ms-terms-confirm' +
       (typeof window.msAssetTermsAccepted === 'function' && !window.msAssetTermsAccepted() ? ' disabled' : '') +
       '>確認下載 ZIP</button></div></div></div>';
@@ -32451,22 +32471,107 @@ ensureBlocksLoaded(function () {
 /* MS 編輯器法務提醒／下載同意流程：與 shopee2 內嵌工具共用 localStorage。 */
 (function () {
   'use strict';
-  var VERSION = '2026-11-19-v1';
+  /* 條款內容換版時要改 VERSION：同意紀錄版本不同，使用者下次下載會重新看到條款並重新同意。 */
+  var VERSION = '2026-11-24-ad-package-terms';
   var KEY = 'bn-asset-terms-consent-v1';
+  var TERMS_TITLE = '廣告套裝版位素材編輯器使用條款';
+  /* 內文以 docs/廣告套裝版位素材編輯器使用條款_20261124.pdf 為準（含原文用字與標點），連結同 PDF。
+     p＝段落、h＝條標題、c＝條項（1.1）、s＝款（a.）、d＝修改日期 */
+  var LINK_TOS = 'https://help.shopee.tw/portal/article/77267?previousPage=other%20articles';
+  var LINK_CREATIVE = 'https://help.shopee.tw/portal/4/article/99170-%5b%E6%A2%9D%E6%AC%BE%E8%88%87%E6%94%BF%E7%AD%96%5d-%E8%9D%A6%E7%9A%AE%E5%89%B5%E6%84%8F%E8%B3%87%E7%94%A2%E4%BD%BF%E7%94%A8%E6%A2%9D%E6%AC%BE';
+  var LINK_AD_RULES = 'https://seller.shopee.tw/edu/article/1424';
+  function termsLink(url, text) { return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + text + '</a>'; }
   var TERMS = [
-    '一、工具功能與使用方式',
-    'MS 編輯器為前端網頁工具。使用者可匯入工單與圖片、選擇版型、裁切與排版，並輸出圖片、試算表、暫存檔或 ZIP。',
-    '二、素材與使用範圍',
-    '本工具提供的平台 Logo、背景圖片、版位模板、字型及其他平台素材，僅得於公司指定或授權的用途、範圍及期間內使用。未經書面同意，不得移作其他平台或其他用途，不得散布、轉售、授權第三方或暗示官方背書。',
-    '三、自行上傳素材',
-    '您自行上傳、匯入或使用的圖片、文字、商標、Logo、人物肖像及其他素材，應自行確認已取得合法權利或完整授權，且不得侵害第三人著作權、商標權、肖像權、個人資料或其他權利。',
-    '四、文案與法令遵循',
-    '禁用語與字數檢查僅作為輔助提醒，不代表內容已符合所有法令或平台規範。使用者仍應自行確認文案不得不實、誇大、易生誤解或涉及未經證實的療效宣稱。',
-    '五、外部連線與資料處理',
-    '本工具可能透過 GitHub／GitLab Pages、CDN、Google Fonts、Google Form 或其他前端服務載入程式與資源。正式上線前，仍應依公司法務、資訊安全、品牌及權限政策完成必要審查。',
-    '六、責任說明',
-    '因素材上傳、編輯、下載、發布或使用所生的爭議、損害或法律責任，由使用者自行負責；如因此造成公司或第三人損害，使用者應負相關責任。'
+    ['p', '為協助賣家製作蝦皮購物平台指定廣告套裝版位之素材，Shopee提供符合資格之賣家使用本廣告套裝版位素材編輯器編輯器（下稱「本編輯器」），使賣家得將自行提供之素材與Shopee提供之圖像（可能包含蝦皮相關Logo、蝦皮相關商標等）、圖樣及/或Shopee提供之任何創意資產（下合稱「創意資產」）結合後製作並下載供指定用途使用之廣告素材。'],
+    ['p', '本廣告套裝版位素材編輯器使用條款（下稱「本條款」）為蝦皮購物服務條款之一部分，除本條款外，' + termsLink(LINK_TOS, '蝦皮購物服務條款') + '、' + termsLink(LINK_CREATIVE, 'Shopee創意資產使用條款') + '及其他蝦皮購物使用規則仍繼續適用。除本條款另有定義外，本條款所使用之文字應適用蝦皮購物服務條款所指稱之定義。'],
+    ['p', '賣家同意，當賣家下載或使用創意資產即代表賣家不可撤回且無條件的同意本條款內容，Shopee得視營運需求調整或變更本編輯器之功能、使用資格、創意資產內容及相關使用規範，並得依蝦皮購物服務條款所定方式更新本條款。賣家於本條款更新後持續下載與使用創意資產，視為賣家不可撤回且無條件的同意本條款之更新內容，'],
+    ['h', '1.', '本編輯器之功能及性質'],
+    ['c', '1.1.', '本編輯器為一前端網頁素材編輯工具，提供賣家選擇既有版型、匯入圖片、裁切、排版、編輯及輸出廣告橫幅（Banner）圖檔等功能。'],
+    ['c', '1.2.', '賣家於本編輯器匯入之圖片、文字及相關編輯內容，僅供賣家所使用之本機進行處理。本編輯器未另行設置用以接收或儲存該等素材及編輯內容之後端系統或資料庫。賣家如將產出素材另行上傳至蝦皮購物平台，其相關資料之處理及利用仍應依蝦皮購物服務條款、隱私權政策及其他相關規範辦理。'],
+    ['c', '1.3.', '本編輯器僅為協助賣家自行製作廣告素材之工具，Shopee並未因此受賣家委託設計、製作、審查或確認廣告素材之內容。賣家應自行決定其所使用之素材、編輯方式及最終產出內容，並於下載、發布及使用前自行確認其內容之正確性、適法性及是否符合相關使用規範。'],
+    ['h', '2.', '使用資格、目的及範圍限制'],
+    ['c', '2.1.', '本編輯器所提供之蝦皮相關Logo、蝦皮相關商標、字型、背景圖片、圖樣、活動標識、版位模板及其他設計元素等（下合稱「Shopee素材」），以及賣家透過本編輯器編輯、組合或合成後所產出之廣告素材（下稱「產出素材」），僅專供已購買Shopee指定廣告套裝版位（下稱「指定廣告版位」），且符合Shopee所訂使用資格之賣家（下稱「指定賣家」）使用。'],
+    ['c', '2.2.', '指定賣家於同意本條款後，Shopee於本條款指定之期限、區域及使用範圍內，授予指定賣家非排他性、不可轉讓、不可再授權、得依本條款撤銷且範圍有限之使用權利，使指定賣家得下載透過本編輯器所製作之產出素材，並於其所購買指定廣告版位之指定期間內，將產出素材使用於該指定賣家於蝦皮購物平台內符合活動資格之賣場（下稱「使用同意」）。賣家於同意本條款前操作本編輯器及使用Shopee素材，僅限於本編輯器內進行素材之編輯、製作及預覽，不因此取得下載、發布或以其他方式使用產出素材之權利。'],
+    ['c', '2.3.', '賣家僅得於前述指定用途、期間及範圍內使用Shopee素材及產出素材。未經Shopee事前書面同意，賣家不得將Shopee素材或產出素材使用、發布、上傳、展示、散布或提供予蝦皮購物平台以外之任何網站、平台、媒體或其他管道。'],
+    ['c', '2.4.', '非Shopee於本條款明示同意之使用方式、使用目的、使用期間及使用範圍之其餘使用方式均不得擴張解釋為Shopee同意賣家使用之範圍。'],
+    ['c', '2.5.', '除前述規範外，賣家知悉並承諾，未經Shopee事前書面同意，不得從事下列行為：'],
+    ['s', 'a.', '於本編輯器提供之功能及允許之操作方式以外，另行修改、變更、改作、拆解或重製Shopee素材；'],
+    ['s', 'b.', '將Shopee素材自本編輯器或產出素材中單獨擷取、下載、複製、轉載、散布或另行使用；'],
+    ['s', 'c.', '於下載產出素材後，自行或委由第三人修改、變更、遮蔽、移除或擷取產出素材所包含之Shopee素材；'],
+    ['s', 'd.', '將Shopee素材或產出素材轉讓、再授權或提供予其他賣家或第三人使用，或使用於其他賣場、其他行銷促銷活動或非Shopee指定之用途；'],
+    ['s', 'e.', '將Shopee素材或產出素材另行營利，包括但不限於銷售、出租、授權第三人使用、提供素材製作服務，或製造、銷售、經銷任何含有Shopee素材一部或全部之商品或服務；'],
+    ['s', 'f.', '以任何方式使用Shopee素材或產出素材詆毀或誹謗Shopee，或對Shopee之商譽或聲譽造成損害；'],
+    ['s', 'g.', '明示或暗示Shopee對賣家及/或賣家之商品、服務、品牌、代言人或其他第三人提供背書、認證、推薦或官方贊助，或使他人誤認賣家與Shopee間具有超出實際情形之合作、授權或其他官方關係；及'],
+    ['s', 'h.', '以其他違反本條款、Shopee相關規範或法令之方式使用Shopee素材或產出素材。'],
+    ['c', '2.6.', '賣家取得本編輯器之使用權限或得以下載產出素材，並不表示賣家當然取得或持續享有該等素材之使用權利。賣家仍應符合本條款及Shopee就指定廣告版位所訂之相關資格及使用規範，始得使用產出素材。'],
+    ['h', '3.', '適用區域、使用期限與終止'],
+    ['c', '3.1.', '本條款僅同意指定賣家於本條款所定範圍使用Shopee素材及產出素材。'],
+    ['c', '3.2.', '各產出素材之使用期限僅限其所對應之指定廣告版位期間，實際起訖時間以Shopee就該指定廣告版位所公告或通知之期間為準。'],
+    ['c', '3.3.', 'Shopee得於指定廣告版位開始前開放本編輯器供指定賣家預先製作及下載產出素材，惟除Shopee另有明示同意外，賣家不得於指定廣告版位開始前公開展示、發布或使用產出素材，亦不得於指定廣告版位結束後繼續使用產出素材。'],
+    ['c', '3.4.', '產出素材之使用期限不因賣家使用本編輯器、製作、下載或首次使用產出素材之時間而延長，亦不因本編輯器持續開放使用或產出素材仍得下載而延長。'],
+    ['c', '3.5.', '有下列情形之一者，Shopee就相關Shopee素材及產出素材所提供之使用同意即告終止：'],
+    ['s', 'a.', '指定廣告版位期間屆滿；'],
+    ['s', 'b.', '賣家取消購買指定廣告版位之廣告服務、相關廣告服務遭取消或終止，或賣家因其他原因不再符合指定廣告版位之使用資格；'],
+    ['s', 'c.', '賣家之Shopee帳號或相關賣場遭停權、凍結或終止；或'],
+    ['s', 'd.', 'Shopee依本條款撤銷或終止賣家之使用同意。'],
+    ['c', '3.6.', 'Shopee得基於營運需求、素材授權限制、法令遵循、第三人權利保護或其他合理事由，通知賣家提前終止全部或一部Shopee素材或產出素材之使用同意；如有違反法令、侵害第三人權利或違反本條款之虞，Shopee得立即終止相關使用同意。'],
+    ['c', '3.7.', '當Shopee之使用同意終止或屆期時，賣家應立即停止使用相關Shopee素材及產出素材，並立即取下或刪除任何包含相關Shopee素材或產出素材之廣告、商品圖片、賣場圖片、圖文、網頁或其他公開展示之內容，且不得再次上傳、發布或使用該等素材。'],
+    ['h', '4.', '智慧財產權及權利歸屬'],
+    ['c', '4.1.', '賣家知悉並同意，本編輯器及Shopee素材之著作權、商標權、其他智慧財產權及相關權利與利益，均歸屬於Shopee或其相關權利人所有。'],
+    ['c', '4.2.', '賣家不因使用本編輯器、編輯Shopee素材或製作、下載產出素材，而取得本編輯器或Shopee素材之所有權、智慧財產權或其他權利與利益，亦不得就本編輯器或Shopee素材之全部或一部向主管機關申請權利登記或主張任何權利。'],
+    ['c', '4.3.', '賣家自行匯入或使用之圖片、文字、商標、Logo、人物肖像及其他素材（下合稱「賣家素材」），其原有之智慧財產權及其他相關權利仍歸屬賣家或其相關權利人所有，不因使用本編輯器或與Shopee素材結合而有所變更。'],
+    ['c', '4.4.', '無論賣家是否參與產出素材之編輯、設計或製作，或依法就產出素材之新增創作部分取得任何權利，均不因此取得超出本條款所定範圍之Shopee素材或產出素材使用權利。賣家不得以其就賣家素材或產出素材享有任何權利為由，逾越本條款所定之使用目的、期間、區域或範圍。'],
+    ['h', '5.', '賣家素材之使用及權利擔保'],
+    ['c', '5.1.', '賣家聲明並保證，其自行上傳、匯入、輸入或使用之所有賣家素材，均為賣家合法享有權利之素材，或已事前取得相關權利人之充分且有效之授權、同意或其他合法使用依據。'],
+    ['c', '5.2.', '如賣家素材包含第三人之著作、商品圖片、商標、Logo、姓名、人物肖像、代言人圖片、個人資料或其他受法律保護之內容，賣家應自行確認其已取得依法所需之授權、同意或其他合法使用依據。'],
+    ['c', '5.3.', '賣家應確保其匯入、編輯、下載、發布及使用賣家素材或產出素材之行為，不侵害任何第三人之著作權、商標權、肖像權、人格權、個人資料相關權益或其他合法權益，亦不得違反相關法令、公序良俗及Shopee相關政策或使用規範。'],
+    ['c', '5.4.', '賣家不得僅因素材係透過本編輯器所產出，即主張Shopee已就賣家素材或產出素材之權利歸屬、授權範圍、合法性或適法性進行審查、確認、認證或提供任何保證。'],
+    ['c', '5.5.', 'Shopee得要求賣家提供相關權利證明、授權文件、肖像使用同意書或其他足以證明其有權使用賣家素材之文件，賣家應於Shopee指定之合理期限內提供。'],
+    ['h', '6.', '廣告素材規範及禁用語檢查'],
+    ['c', '6.1.', '賣家使用本編輯器及製作、下載、發布或使用產出素材時，應遵守Shopee所公告或不時更新之' + termsLink(LINK_AD_RULES, '賣場客製化廣告功能規範') + '、指定廣告版位規範、創意資產使用指南及其他相關廣告素材規範與平台政策。'],
+    ['c', '6.2.', '賣家知悉並同意，本編輯器所提供之禁用語檢查功能，僅係依據Shopee內部廣告素材規範所建置之輔助提醒機制，並非就賣家所輸入之文字、賣家素材或產出素材進行完整之法規檢視、法律審查或適法性判斷。'],
+    ['c', '6.3.', '即使賣家所輸入之文字、賣家素材或產出素材通過本編輯器之禁用語檢查、未觸發任何提醒、警示或限制，或得以順利輸出及下載，均不代表相關內容已符合所有適用法令、Shopee相關規範或業經Shopee審查、核准、認可或提供任何適法性保證。'],
+    ['c', '6.4.', '賣家應自行確認其所使用之文字、圖像、商品資訊、廣告宣稱及其他內容，符合《公平交易法》、《消費者保護法》、《化粧品衛生安全管理法》、《食品安全衛生管理法》、《藥事法》及其他適用法令與Shopee相關廣告素材規範，不得為虛偽不實、誇大、引人錯誤、依法不得為之療效宣稱或其他違反法令之表示或表徵。'],
+    ['c', '6.5.', '賣家不得透過拆分文字、使用諧音、符號、圖片或其他方式規避本編輯器之禁用語檢查或Shopee相關廣告素材規範。'],
+    ['c', '6.6.', '賣家應於發布或使用產出素材前，自行完成必要之內容及法規確認。賣家不因本編輯器提供禁用語檢查或其他輔助功能，而免除或減輕其作為廣告主依法應負之責任。'],
+    ['h', '7.', '違規處理'],
+    ['c', '7.1.', '如Shopee有合理理由認為賣家違反本條款、賣場客製化廣告功能規範、指定廣告版位規範、其他Shopee政策或相關法令，或賣家素材或產出素材有侵害第三人權利之虞，Shopee得視情節採取下列一項或數項措施：'],
+    ['s', 'a.', '要求賣家停止使用、取下、刪除或修改相關Shopee素材、賣家素材、產出素材及包含該等素材之圖文、廣告或其他內容，包括賣家違反本條款於Shopee購物平台以外之管道所發布之內容；'],
+    ['s', 'b.', '直接移除、限制顯示或停止刊登於Shopee購物平台內之相關素材或廣告內容；'],
+    ['s', 'c.', '限制、暫停或終止賣家使用本編輯器、下載產出素材或使用相關Shopee素材之權利；'],
+    ['s', 'd.', '撤銷或終止Shopee依本條款授予賣家之全部或一部使用同意；及'],
+    ['s', 'e.', '依Shopee購物服務條款、廣告服務相關條款或其他適用之Shopee政策採取相關措施，或依法行使其他權利。'],
+    ['c', '7.2.', '賣家接獲Shopee之通知後，應立即停止相關違規使用行為，並於Shopee指定之期限內完成取下、刪除、修改或其他必要處理措施，且應依Shopee要求提供相關處理結果之證明。'],
+    ['c', '7.3.', 'Shopee保留就賣家違反本條款之行為依法請求停止侵害、排除侵害、損害賠償及採取其他法律行動之權利。'],
+    ['h', '8.', '聲明、保證及責任限制'],
+    ['c', '8.1.', '本編輯器、Shopee素材及產出素材均係以現狀提供。除法令另有規定外，Shopee不就本編輯器之功能、持續可用性、產出素材之品質、特定用途之適用性、禁用語檢查之完整性或使用產出素材所能達成之廣告、行銷或銷售成效提供任何明示或默示之保證。'],
+    ['c', '8.2.', '賣家應自行就其所提供之賣家素材、所選擇之編輯方式、產出素材所包含之賣家資訊及廣告宣稱，以及其發布、使用產出素材之行為負責。'],
+    ['c', '8.3.', '因可歸責於賣家之素材匯入、編輯、下載、發布或使用行為，包括但不限於賣家未取得合法授權、侵害第三人權利、違反廣告相關法令、違反Shopee相關規範或逾越本條款所定使用範圍，所生之爭議、損害、主管機關裁罰、第三人求償或其他法律責任，應由賣家自行承擔；除依法應由Shopee負責之情形外，Shopee不因此承擔相關責任。'],
+    ['c', '8.4.', '在適用法令允許之範圍內，除依法應由Shopee負責之情形外，Shopee不對賣家因使用或無法使用本編輯器、Shopee素材、產出素材或相關輔助功能所生之損失、成本、損害或其他法律責任承擔責任，亦不對因此所生之間接、附帶、特別或衍生性損害、業務機會損失、收益損失、利潤損失或商譽損失承擔責任。'],
+    ['h', '9.', '賠償及擔保'],
+    ['p', '賣家應擔保Shopee及其股東、子公司、關係企業、董事、經理人、代理人、聯名廠商、其他合作夥伴及員工（以下統稱「受擔保方」），使其免於承擔因可歸責於賣家之下列事由所導致或相關之第三人主張、請求、行政調查、程序及訴訟，並協助受擔保方進行抗辯：'],
+    ['s', 'a.', '賣家違反本條款之任何聲明、保證或義務；'],
+    ['s', 'b.', '賣家素材或因賣家提供之內容、編輯方式或使用行為所致之產出素材侵害第三人之智慧財產權、肖像權、人格權、個人資料相關權益或其他合法權益；'],
+    ['s', 'c.', '賣家素材或因賣家提供之內容、編輯方式或使用行為所致之產出素材涉及不實、誇大、引人錯誤、依法不得為之療效宣稱或其他違反法令之內容；或'],
+    ['s', 'd.', '賣家逾越本條款所定之目的、期限、區域或範圍使用Shopee素材或產出素材。'],
+    ['s', 'e.', '如因前述事由致受擔保方或第三人受有損害，賣家應依法負相關賠償責任，並於法令允許之範圍內，賠償受擔保方因此所受之損害及支出之合理必要費用，包括但不限於損害賠償金、和解金、罰鍰、律師費、訴訟費用及其他爭議處理費用。'],
+    ['h', '10.', '準據法與管轄法院'],
+    ['p', '本條款應以中華民國法律作為準據法並據此解釋，且不適用法律衝突原則。除適用法律另有規定外，因本條款引起或與其有關之針對Shopee或受擔保方，或與其相關之任何爭議、爭論、主張或歧見，應以臺灣臺北地方法院為第一審管轄法院。'],
+    ['h', '11.', '條款存續性'],
+    ['p', '本條款第2條有關Shopee素材及產出素材之使用限制、第3.7條、第4條、第5條、第6條至第11條，以及其他依其性質應於本條款或使用同意終止或屆期後繼續有效之規定，於本條款或使用同意終止或屆期後仍有效力。'],
+    ['d', '最新修改日期：2026年11月27日']
   ];
+  function renderTerms(body) {
+    var html = '<h2 class="ms-terms-doc-title">' + TERMS_TITLE + '</h2>';
+    TERMS.forEach(function (b) {
+      if (b[0] === 'p') html += '<p>' + b[1] + '</p>';
+      else if (b[0] === 'h') html += '<h4><span class="no">' + b[1] + '</span>' + b[2] + '</h4>';
+      else if (b[0] === 'c') html += '<div class="ms-terms-clause"><span class="no">' + b[1] + '</span><span>' + b[2] + '</span></div>';
+      else if (b[0] === 's') html += '<div class="ms-terms-item"><span class="no">' + b[1] + '</span><span>' + b[2] + '</span></div>';
+      else if (b[0] === 'd') html += '<p class="ms-terms-date">' + b[1] + '</p>';
+    });
+    body.innerHTML = html;
+  }
 
   function readConsent() {
     try {
@@ -32491,26 +32596,48 @@ ensureBlocksLoaded(function () {
     box.style.maxHeight = '88vh';
     var head = document.createElement('div');
     head.className = 'ms-rights-head';
-    head.innerHTML = '<h3>蝦皮資產使用條款</h3><button type="button" class="ms-rights-close" aria-label="關閉">×</button>';
+    head.innerHTML = '<h3>' + TERMS_TITLE + '</h3><button type="button" class="ms-rights-close" aria-label="關閉">×</button>';
     var body = document.createElement('div');
-    body.className = 'ms-rights-body';
+    body.className = 'ms-rights-body ms-terms-body';
     body.style.maxHeight = '58vh';
-    TERMS.forEach(function (line) { var p = document.createElement('p'); p.textContent = line; body.appendChild(p); });
+    renderTerms(body);
+    /* 「滑到條款底部」：夾在內文與下方按鈕列之間，上緣漸層蓋住內文尾端，暗示下面還有內容；讀到底後收起。 */
+    var more = document.createElement('div');
+    more.className = 'ms-terms-more';
+    more.innerHTML = '<button type="button" class="ms-terms-scroll"><span class="ms-terms-chev" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3.5 4.5 8 9l4.5-4.5"/></svg><svg viewBox="0 0 16 16"><path d="M3.5 4.5 8 9l4.5-4.5"/></svg></span>滑到條款底部</button>';
     var foot = document.createElement('div');
     foot.className = 'ms-rights-foot';
     foot.style.display = 'flex'; foot.style.alignItems = 'center'; foot.style.gap = '8px';
-    foot.innerHTML = '<button type="button" class="ms-terms-scroll" style="margin-right:auto;border:1px solid #cbd5e1;background:#f1f5f9;color:#475569;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer">↓ 滑到條款底部</button><span class="ms-terms-hint" style="font-size:10px;color:#64748b">請閱讀至最底部</span><button type="button" class="ms-rights-ok ms-terms-agree" disabled>我已同意條款</button>';
-    box.appendChild(head); box.appendChild(body); box.appendChild(foot); modal.appendChild(box); document.body.appendChild(modal);
-    var agree = foot.querySelector('.ms-terms-agree'), hint = foot.querySelector('.ms-terms-hint');
+    foot.innerHTML = '<span class="ms-terms-hint" style="margin-left:auto;font-size:10px;color:#64748b">請閱讀至最底部</span><button type="button" class="ms-rights-ok ms-terms-agree" disabled>我已同意條款</button><button type="button" class="ms-terms-close-btn" hidden>關閉</button>';
+    box.appendChild(head); box.appendChild(body); box.appendChild(more); box.appendChild(foot); modal.appendChild(box); document.body.appendChild(modal);
+    var agree = foot.querySelector('.ms-terms-agree'), hint = foot.querySelector('.ms-terms-hint'), closeBtn = foot.querySelector('.ms-terms-close-btn');
+    var reachedOnce = false, viewOnly = false;
     function update() {
-      var reached = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
-      agree.disabled = !reached;
-      hint.textContent = reached ? '已閱讀至條款底部' : '請閱讀至最底部';
+      if (viewOnly) {
+        /* 已同意過：只是回來查閱，不必再捲到底、也不必再按同意 */
+        hint.textContent = '您已同意本條款';
+        agree.hidden = true; closeBtn.hidden = false;
+        more.classList.add('is-done');
+        return;
+      }
+      agree.hidden = false; closeBtn.hidden = true;
+      /* 讀到底一次就算讀過：之後往回捲，同意按鈕也不再鎖回去 */
+      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 4) reachedOnce = true;
+      agree.disabled = !reachedOnce;
+      hint.textContent = reachedOnce ? '已閱讀至條款底部' : '請閱讀至最底部';
+      more.classList.toggle('is-done', reachedOnce);
     }
     body.addEventListener('scroll', update);
-    foot.querySelector('.ms-terms-scroll').addEventListener('click', function () { body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }); });
+    more.querySelector('.ms-terms-scroll').addEventListener('click', function () {
+      var from = body.scrollTop;
+      body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+      /* 保險：瀏覽器沒有執行平滑捲動（分頁在背景等）時，1 秒後直接跳到底 */
+      setTimeout(function () { if (body.scrollTop === from) { body.scrollTop = body.scrollHeight; update(); } }, 1000);
+    });
+    modal._msReset = function () { reachedOnce = false; viewOnly = accepted(); body.scrollTop = 0; };
     function close() { modal.style.display = 'none'; }
     head.querySelector('.ms-rights-close').addEventListener('click', close);
+    closeBtn.addEventListener('click', close);
     modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
     agree.addEventListener('click', function () { writeConsent(true); close(); syncTermsUi(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.style.display === 'flex') close(); });
@@ -32520,11 +32647,8 @@ ensureBlocksLoaded(function () {
   function openTerms() {
     var modal = ensureTermsModal();
     modal.style.display = 'flex';
+    if (modal._msReset) modal._msReset();
     if (modal._msUpdate) modal._msUpdate();
-  }
-  function openRights() {
-    var modal = document.getElementById('ms-rights-modal');
-    if (modal) modal.classList.add('show');
   }
   function accepted() { return readConsent(); }
   function requireTerms() {
@@ -32595,14 +32719,9 @@ ensureBlocksLoaded(function () {
     if (e.source) postTermsState(e.source);
   });
   function init() {
-    var rights = document.getElementById('ms-rights-modal'), link = document.getElementById('ms-rights-link');
-    if (link) link.addEventListener('click', function (e) { e.preventDefault(); openRights(); });
-    if (rights) {
-      var close = function () { rights.classList.remove('show'); };
-      rights.querySelector('.ms-rights-close').addEventListener('click', close);
-      rights.querySelector('#ms-rights-ok').addEventListener('click', close);
-      rights.addEventListener('click', function (e) { if (e.target === rights) close(); });
-    }
+    /* 上方節錄文字的「了解更多」：開同一個使用條款視窗（未同意者可在此同意；已同意者只查閱） */
+    var link = document.getElementById('ms-rights-link');
+    if (link) link.addEventListener('click', function (e) { e.preventDefault(); openTerms(); });
     markDownloadButtons(); bindTermsLines(); syncTermsUi();
     window.addEventListener('storage', function (e) { if (e.key === KEY) syncTermsUi(); });
   }

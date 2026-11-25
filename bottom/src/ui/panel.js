@@ -24,7 +24,7 @@
     return el("div", { class: "note" }, [text]);
   }
 
-  /* 蝦皮資產使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 規則）。
+  /* 廣告套裝版位素材編輯器使用條款由 MS 主頁管理；主頁與 iframe 之間只用 postMessage（TP 規則）。
      被主頁嵌入（網址 bridge=1）時，主頁回覆前先視為未同意；獨立開啟時不擋。 */
   var hostedByMs = window.parent !== window && /(?:^|[?&])bridge=1(?:&|$)/.test(location.search);
   var hostTermsAccepted = null;
@@ -56,9 +56,9 @@
 
   function buildMsTermsLine(button) {
     var wrap = el("div", { class: "ms-terms-line" });
-    var check = el("input", { type: "checkbox", "aria-label": "我已閱讀並接受蝦皮資產使用條款" });
+    var check = el("input", { type: "checkbox", "aria-label": "我已閱讀並接受廣告套裝版位素材編輯器使用條款" });
     var label = el("label", {});
-    var link = el("a", { href: "#ms-terms-modal" }, ["「蝦皮資產使用條款」"]);
+    var link = el("a", { href: "#ms-terms-modal" }, ["「廣告套裝版位素材編輯器使用條款」"]);
     label.appendChild(document.createTextNode("我已閱讀並接受 "));
     label.appendChild(link);
     wrap.appendChild(check); wrap.appendChild(label);
